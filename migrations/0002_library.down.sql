@@ -1,0 +1,5 @@
+DROP TABLE IF EXISTS yeasts;
+DROP TABLE IF EXISTS mash_steps;
+DROP TABLE IF EXISTS mash_profiles;
+DROP TABLE IF EXISTS equipment_profiles;
+DROP TABLE IF EXISTS styles;

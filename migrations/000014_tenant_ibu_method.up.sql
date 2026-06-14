@@ -1,0 +1,1 @@
+ALTER TABLE tenants ADD COLUMN ibu_method VARCHAR(20) NOT NULL DEFAULT 'tinseth';

@@ -1,0 +1,18 @@
+ALTER TABLE equipment_profiles
+  ADD COLUMN IF NOT EXISTS batch_volume_target_liters   NUMERIC,
+  ADD COLUMN IF NOT EXISTS element_power_watts          NUMERIC,
+  ADD COLUMN IF NOT EXISTS pre_boil_volume_liters       NUMERIC,
+  ADD COLUMN IF NOT EXISTS mash_tun_deadspace_liters    NUMERIC,
+  ADD COLUMN IF NOT EXISTS mash_tun_loss_liters         NUMERIC,
+  ADD COLUMN IF NOT EXISTS hlt_deadspace_liters         NUMERIC,
+  ADD COLUMN IF NOT EXISTS fermenter_loss_liters        NUMERIC,
+  ADD COLUMN IF NOT EXISTS top_up_liters                NUMERIC,
+  ADD COLUMN IF NOT EXISTS hop_utilisation_pct          NUMERIC,
+  ADD COLUMN IF NOT EXISTS aroma_hop_utilisation_pct    NUMERIC,
+  ADD COLUMN IF NOT EXISTS hop_stand_temp_c             NUMERIC,
+  ADD COLUMN IF NOT EXISTS altitude_m                   NUMERIC,
+  ADD COLUMN IF NOT EXISTS boil_temp_c                  NUMERIC,
+  ADD COLUMN IF NOT EXISTS cooling_shrinkage_pct        NUMERIC,
+  ADD COLUMN IF NOT EXISTS water_to_grain_ratio         NUMERIC,
+  ADD COLUMN IF NOT EXISTS sparge_water_reminder_liters NUMERIC,
+  ADD COLUMN IF NOT EXISTS mash_time_minutes            INTEGER;

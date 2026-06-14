@@ -1,0 +1,18 @@
+ALTER TABLE equipment_profiles
+  DROP COLUMN IF EXISTS batch_volume_target_liters,
+  DROP COLUMN IF EXISTS element_power_watts,
+  DROP COLUMN IF EXISTS pre_boil_volume_liters,
+  DROP COLUMN IF EXISTS mash_tun_deadspace_liters,
+  DROP COLUMN IF EXISTS mash_tun_loss_liters,
+  DROP COLUMN IF EXISTS hlt_deadspace_liters,
+  DROP COLUMN IF EXISTS fermenter_loss_liters,
+  DROP COLUMN IF EXISTS top_up_liters,
+  DROP COLUMN IF EXISTS hop_utilisation_pct,
+  DROP COLUMN IF EXISTS aroma_hop_utilisation_pct,
+  DROP COLUMN IF EXISTS hop_stand_temp_c,
+  DROP COLUMN IF EXISTS altitude_m,
+  DROP COLUMN IF EXISTS boil_temp_c,
+  DROP COLUMN IF EXISTS cooling_shrinkage_pct,
+  DROP COLUMN IF EXISTS water_to_grain_ratio,
+  DROP COLUMN IF EXISTS sparge_water_reminder_liters,
+  DROP COLUMN IF EXISTS mash_time_minutes;
