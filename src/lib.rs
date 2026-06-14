@@ -7,5 +7,9 @@
 //! - [`platform`] — cross-cutting infrastructure (config, db, errors, web, …).
 //! - domain modules (auth, inventory, recipe, …) are added phase by phase.
 
+pub mod app;
+pub mod auth;
 pub mod pkg;
 pub mod platform;
+pub mod state;
+pub mod tenant;
