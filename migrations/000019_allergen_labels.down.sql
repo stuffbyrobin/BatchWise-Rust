@@ -1,0 +1,2 @@
+DROP TABLE IF EXISTS label_records;
+ALTER TABLE tenants DROP COLUMN IF EXISTS address;

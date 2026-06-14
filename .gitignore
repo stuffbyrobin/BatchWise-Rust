@@ -1,0 +1,25 @@
+# Rust
+/target/
+**/*.rs.bk
+*.pdb
+
+# Environment
+.env
+.env.local
+
+# sqlx offline query cache (regenerate with `cargo sqlx prepare`)
+# .sqlx/  — committed intentionally once query macros are introduced
+
+# Editor
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Claude Code project config (local only)
+.claude/
