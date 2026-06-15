@@ -3,17 +3,19 @@
 //! Port of the Go `internal/traceability/service.go`. The trace-graph assembly
 //! is reproduced exactly: forward (lot → batches → runs → movements), backward
 //! (run → batch → ingredient lots), and recall scope (lot → batches → runs →
-//! affected customers/orders). The Go fire-and-forget audit write in
-//! `RecallScope` is omitted (no audit module yet).
+//! affected customers/orders). A recall query records a fire-and-forget
+//! compliance audit event.
 
 use std::collections::HashMap;
 
+use serde_json::json;
 use uuid::Uuid;
 
 use super::models::{
     BackwardTrace, BatchForwardNode, ForwardTrace, PackagingForwardNode, RecallScope,
 };
 use super::repository as repo;
+use crate::audit;
 use crate::platform::errors::ApiError;
 use crate::state::AppState;
 
@@ -91,6 +93,7 @@ pub async fn trace_packaging_run(
 pub async fn recall_scope(
     state: &AppState,
     tenant_id: Uuid,
+    actor_id: Option<Uuid>,
     lot_number: &str,
 ) -> Result<RecallScope, ApiError> {
     let ingredient = repo::ingredient_lot_by_number(&state.pool, tenant_id, lot_number).await?;
@@ -106,14 +109,32 @@ pub async fn recall_scope(
 
     let affected_orders: i64 = customers.iter().map(|c| c.order_ids.len() as i64).sum();
 
-    // The Go RecallScope.Write audit call is omitted (no audit module yet).
-
-    Ok(RecallScope {
+    let scope = RecallScope {
         lot_number: lot_number.to_string(),
         ingredient,
         affected_batches: batches.len() as i64,
         affected_packaging: runs.len() as i64,
         affected_orders,
         customers,
-    })
+    };
+
+    audit::service::write(
+        &state.pool,
+        audit::models::WriteRequest {
+            tenant_id,
+            event_type: audit::models::EVENT_RECALL_QUERIED,
+            entity_type: "ingredient_lot",
+            entity_id: Some(scope.ingredient.lot_id),
+            actor_user_id: actor_id,
+            event_data: json!({
+                "lot_number": lot_number,
+                "affected_batches": scope.affected_batches,
+                "affected_orders": scope.affected_orders,
+                "affected_customers": scope.customers.len(),
+            }),
+        },
+    )
+    .await;
+
+    Ok(scope)
 }

@@ -9,6 +9,7 @@
 
 pub mod allergens;
 pub mod app;
+pub mod audit;
 pub mod auth;
 pub mod batch;
 pub mod calendar;

@@ -53,7 +53,7 @@ Legend: `[x]` done · `[~]` in progress · `[ ]` not started
 | 12 | beer duty & excise records | [x] duty-returns compile/submit (SPR via pkg::duty), tier-gated, integration-tested |
 | 13 | allergen & label compliance | [x] /recipes/{id}/allergens + label-records (auto-populated), tier-gated, integration-tested |
 | 14 | packaging / distribution / traceability | [x] packaging-runs + distribution-movements (stock-remaining math, insufficient-stock 422) + forward/backward/recall traceability, both tier-gated, integration-tested |
-| 15 | trading standards audit | [ ] |
+| 15 | trading standards audit | [x] compliance-audit log (read-only, tenant-scoped, NOT feature-gated) + fire-and-forget audit writes wired into packaging, traceability, labels, duty & allergens, integration-tested |
 | 16 | procurement | [ ] |
 | 17 | yeast banking | [ ] |
 | 18 | fermentation tracking | [ ] |
@@ -82,3 +82,9 @@ framework (Leptos/Yew). Revisit once the backend port is functional.
   `006_allergen_lots.sql` inserts 31 system rows all sharing `lot_number =
   'SYSTEM'`, violating `ingredients UNIQUE(tenant_id, lot_number)`; it will be
   fixed (unique lot numbers) when the allergen phase is ported.
+- Audit (Phase 15): Go reads the acting user from `context.Context` inside the
+  audit service. Rust has no ambient context in the service layer, so the actor
+  (`ctx.actor_id`) is threaded explicitly from each handler into the service
+  functions that emit audit events. The Phase 5/12 notes about "audit writes
+  omitted" no longer apply — duty, labels, allergens, packaging and traceability
+  now write their events fire-and-forget via `audit::service::write`.

@@ -54,7 +54,7 @@ async fn create(
     ctx: RequestContext,
     ValidatedJson(req): ValidatedJson<CreateRequest>,
 ) -> Result<Response, ApiError> {
-    let rec = service::create(&state, ctx.tenant_id()?, req).await?;
+    let rec = service::create(&state, ctx.tenant_id()?, ctx.actor_id, req).await?;
     let location = format!("/api/v1/label-records/{}", rec.id);
     Ok((
         StatusCode::CREATED,
@@ -96,7 +96,7 @@ async fn patch(
     Path(id): Path<Uuid>,
     ValidatedJson(req): ValidatedJson<PatchRequest>,
 ) -> Result<Response, ApiError> {
-    let rec = service::patch(&state, ctx.tenant_id()?, id, req).await?;
+    let rec = service::patch(&state, ctx.tenant_id()?, id, ctx.actor_id, req).await?;
     Ok(Json(rec).into_response())
 }
 
@@ -105,6 +105,6 @@ async fn delete(
     ctx: RequestContext,
     Path(id): Path<Uuid>,
 ) -> Result<Response, ApiError> {
-    service::delete(&state, ctx.tenant_id()?, id).await?;
+    service::delete(&state, ctx.tenant_id()?, ctx.actor_id, id).await?;
     Ok(StatusCode::NO_CONTENT.into_response())
 }

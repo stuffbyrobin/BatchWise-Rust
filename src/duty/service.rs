@@ -6,14 +6,16 @@
 //! Small Producer Relief is applied here via [`crate::pkg::duty::spr_relief_rate`]
 //! over the tenant's `sbr_annual_production_hl_pa`.
 //!
-//! The Go service also wrote `audit` events on compile/submit. This port has no
-//! audit module (matching the `reporting` port), so those writes are omitted.
+//! Compiling and submitting a return each record a fire-and-forget compliance
+//! audit event.
 
 use chrono::{Duration, NaiveDate, NaiveTime, Utc};
+use serde_json::json;
 use uuid::Uuid;
 
 use super::models::{CompileRequest, Page, PatchRequest, Return, ReturnFilter};
 use super::repository::{self as repo, ReturnWrite};
+use crate::audit;
 use crate::pkg::duty;
 use crate::platform::errors::ApiError;
 use crate::state::AppState;
@@ -27,6 +29,7 @@ fn round_half_away(x: f64) -> i64 {
 pub async fn compile_return(
     state: &AppState,
     tenant_id: Uuid,
+    actor_id: Option<Uuid>,
     req: CompileRequest,
 ) -> Result<Return, ApiError> {
     let from_date = NaiveDate::parse_from_str(&req.period_start, "%Y-%m-%d")
@@ -79,7 +82,26 @@ pub async fn compile_return(
         net_duty_pence: summary.gross_duty_pence - relief_pence,
     };
 
-    Ok(repo::upsert_return(&state.pool, tenant_id, &w).await?)
+    let ret = repo::upsert_return(&state.pool, tenant_id, &w).await?;
+
+    audit::service::write(
+        &state.pool,
+        audit::models::WriteRequest {
+            tenant_id,
+            event_type: audit::models::EVENT_DUTY_COMPILED,
+            entity_type: "duty_return",
+            entity_id: Some(ret.id),
+            actor_user_id: actor_id,
+            event_data: json!({
+                "period_start": req.period_start,
+                "period_end": req.period_end,
+                "gross_duty_pence": ret.gross_duty_pence,
+                "net_duty_pence": ret.net_duty_pence,
+            }),
+        },
+    )
+    .await;
+    Ok(ret)
 }
 
 /// Lists duty returns.
@@ -104,6 +126,7 @@ pub async fn patch_return(
     state: &AppState,
     tenant_id: Uuid,
     id: Uuid,
+    actor_id: Option<Uuid>,
     req: PatchRequest,
 ) -> Result<Return, ApiError> {
     if req.status.as_deref() != Some("submitted") {
@@ -134,7 +157,25 @@ pub async fn patch_return(
     let now = Utc::now();
     repo::update_return_status(&state.pool, tenant_id, id, "submitted", Some(now)).await?;
 
-    repo::select_return_by_id(&state.pool, tenant_id, id)
+    let updated = repo::select_return_by_id(&state.pool, tenant_id, id)
         .await?
-        .ok_or_else(|| ApiError::not_found("duty_return"))
+        .ok_or_else(|| ApiError::not_found("duty_return"))?;
+
+    audit::service::write(
+        &state.pool,
+        audit::models::WriteRequest {
+            tenant_id,
+            event_type: audit::models::EVENT_DUTY_SUBMITTED,
+            entity_type: "duty_return",
+            entity_id: Some(id),
+            actor_user_id: actor_id,
+            event_data: json!({
+                "period_start": updated.period_start,
+                "period_end": updated.period_end,
+                "net_duty_pence": updated.net_duty_pence,
+            }),
+        },
+    )
+    .await;
+    Ok(updated)
 }

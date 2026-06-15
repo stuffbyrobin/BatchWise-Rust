@@ -56,7 +56,7 @@ async fn compile(
     ctx: RequestContext,
     ValidatedJson(req): ValidatedJson<CompileRequest>,
 ) -> Result<Response, ApiError> {
-    let ret = service::compile_return(&state, ctx.tenant_id()?, req).await?;
+    let ret = service::compile_return(&state, ctx.tenant_id()?, ctx.actor_id, req).await?;
     Ok(Json(ret).into_response())
 }
 
@@ -92,6 +92,6 @@ async fn patch(
     Path(id): Path<Uuid>,
     ValidatedJson(req): ValidatedJson<PatchRequest>,
 ) -> Result<Response, ApiError> {
-    let ret = service::patch_return(&state, ctx.tenant_id()?, id, req).await?;
+    let ret = service::patch_return(&state, ctx.tenant_id()?, id, ctx.actor_id, req).await?;
     Ok(Json(ret).into_response())
 }

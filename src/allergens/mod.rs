@@ -2,8 +2,9 @@
 //! inventory-lot allergen arrays (tenant + system lots) and unions the result.
 //!
 //! Port of the Go `internal/compliance/allergens` package. Mounted at
-//! `GET /recipes/{id}/allergens`, gated by the `allergens` feature flag. The
-//! Go service's fire-and-forget audit write is omitted (no audit module yet).
+//! `GET /recipes/{id}/allergens`, gated by the `allergens` feature flag.
+//! Computing a recipe's declaration records a fire-and-forget compliance audit
+//! event (matching Go, this fires from both the endpoint and label creation).
 
 use std::collections::HashMap;
 
@@ -13,8 +14,10 @@ use axum::response::{IntoResponse, Response};
 use axum::routing::get;
 use axum::{Json, Router};
 use serde::Serialize;
+use serde_json::json;
 use uuid::Uuid;
 
+use crate::audit;
 use crate::pkg::allergen;
 use crate::platform::context::RequestContext;
 use crate::platform::errors::ApiError;
@@ -53,13 +56,14 @@ async fn compute(
     Path(recipe_id): Path<Uuid>,
 ) -> Result<Response, ApiError> {
     let tenant_id = ctx.tenant_id()?;
-    Ok(Json(compute_for_recipe(&state, tenant_id, recipe_id).await?).into_response())
+    Ok(Json(compute_for_recipe(&state, tenant_id, ctx.actor_id, recipe_id).await?).into_response())
 }
 
-/// Computes the allergen declaration for a recipe.
+/// Computes the allergen declaration for a recipe, recording an audit event.
 pub async fn compute_for_recipe(
     state: &AppState,
     tenant_id: Uuid,
+    actor_id: Option<Uuid>,
     recipe_id: Uuid,
 ) -> Result<AllergenResult, ApiError> {
     let names = ingredient_names_by_recipe(state, tenant_id, recipe_id).await?;
@@ -80,12 +84,31 @@ pub async fn compute_for_recipe(
         }
     }
 
-    Ok(AllergenResult {
+    let result = AllergenResult {
         recipe_id,
         allergens: combined,
         ingredient_names: dedup_sorted(matched),
         unmatched: dedup_sorted(unmatched),
-    })
+    };
+
+    audit::service::write(
+        &state.pool,
+        audit::models::WriteRequest {
+            tenant_id,
+            event_type: audit::models::EVENT_ALLERGEN_COMPUTED,
+            entity_type: "recipe",
+            entity_id: Some(recipe_id),
+            actor_user_id: actor_id,
+            event_data: json!({
+                "recipe_id": recipe_id,
+                "allergens": result.allergens,
+                "unmatched": result.unmatched,
+            }),
+        },
+    )
+    .await;
+
+    Ok(result)
 }
 
 /// Case-insensitively de-duplicates and sorts a list of names.

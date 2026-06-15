@@ -3,8 +3,7 @@
 //! Port of the Go `internal/traceability/handler.go`. The Go module mounts three
 //! read-only routes under `/traceability`; here they are combined into one router
 //! merged by the orchestrator. All routes require auth and the `traceability`
-//! feature flag. The Go fire-and-forget audit write in `RecallScope` is omitted
-//! (no audit module yet).
+//! feature flag. A recall query records a fire-and-forget compliance audit event.
 
 use axum::extract::{Path, Query, State};
 use axum::middleware::from_fn_with_state;
@@ -85,6 +84,6 @@ async fn recall_scope(
             "required query parameter",
         ));
     }
-    let scope = service::recall_scope(&state, ctx.tenant_id()?, &lot_number).await?;
+    let scope = service::recall_scope(&state, ctx.tenant_id()?, ctx.actor_id, &lot_number).await?;
     Ok(Json(scope).into_response())
 }

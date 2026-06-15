@@ -17,7 +17,7 @@ use ulid::Ulid;
 use crate::platform::context::RequestContext;
 use crate::state::AppState;
 use crate::{
-    allergens, auth, batch, calendar, dashboard, duty, inventory, labels, library, openapi,
+    allergens, audit, auth, batch, calendar, dashboard, duty, inventory, labels, library, openapi,
     packaging, recipe, reporting, sales, tenant, traceability, tracking, water, yeastkinetics,
 };
 
@@ -44,7 +44,8 @@ pub fn build_router(state: AppState) -> Router {
         .merge(sales::routes(state.clone()))
         .merge(water::routes(state.clone()))
         .merge(packaging::routes(state.clone()))
-        .merge(traceability::routes(state.clone()));
+        .merge(traceability::routes(state.clone()))
+        .merge(audit::routes(state.clone()));
 
     Router::new()
         .route("/healthz", get(healthz))

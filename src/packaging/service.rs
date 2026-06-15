@@ -1,8 +1,8 @@
 //! Packaging business logic: packaging-run lifecycle and distribution movements.
 //!
-//! Port of the Go `internal/packaging/service.go`. Audit writes are omitted (no
-//! audit module yet). Outbound movements are checked against remaining stock
-//! before being recorded.
+//! Port of the Go `internal/packaging/service.go`. Mutating operations record a
+//! compliance audit event (fire-and-forget). Outbound movements are checked
+//! against remaining stock before being recorded.
 
 use std::collections::BTreeMap;
 
@@ -15,6 +15,7 @@ use super::models::{
     ListPackagingRunsFilter, PackagingRun, Page, PatchPackagingRunRequest, OUTBOUND_MOVEMENTS,
 };
 use super::repository as repo;
+use crate::audit;
 use crate::platform::errors::ApiError;
 use crate::state::AppState;
 
@@ -29,9 +30,10 @@ fn is_unique_violation(e: &sqlx::Error) -> bool {
 pub async fn create_run(
     state: &AppState,
     tenant_id: Uuid,
+    actor_id: Option<Uuid>,
     req: CreatePackagingRunRequest,
 ) -> Result<PackagingRun, ApiError> {
-    match repo::insert_run(
+    let run = match repo::insert_run(
         &state.pool,
         tenant_id,
         req.batch_id,
@@ -45,10 +47,33 @@ pub async fn create_run(
     )
     .await
     {
-        Ok(run) => Ok(run),
-        Err(e) if is_unique_violation(&e) => Err(ApiError::conflict("packaging_run", "lot_number")),
-        Err(e) => Err(e.into()),
-    }
+        Ok(run) => run,
+        Err(e) if is_unique_violation(&e) => {
+            return Err(ApiError::conflict("packaging_run", "lot_number"))
+        }
+        Err(e) => return Err(e.into()),
+    };
+
+    audit::service::write(
+        &state.pool,
+        audit::models::WriteRequest {
+            tenant_id,
+            event_type: audit::models::EVENT_PACKAGING_RUN_CREATED,
+            entity_type: "packaging_run",
+            entity_id: Some(run.id),
+            actor_user_id: actor_id,
+            event_data: json!({
+                "batch_id": run.batch_id,
+                "format": run.format,
+                "lot_number": run.lot_number,
+                "quantity": run.quantity,
+                "unit_volume_ml": run.unit_volume_ml,
+                "packaged_at": run.packaged_at,
+            }),
+        },
+    )
+    .await;
+    Ok(run)
 }
 
 pub async fn get_run(
@@ -97,15 +122,38 @@ pub async fn patch_run(
 }
 
 /// Deletes a packaging run; blocked if it has movements.
-pub async fn delete_run(state: &AppState, tenant_id: Uuid, id: Uuid) -> Result<(), ApiError> {
+pub async fn delete_run(
+    state: &AppState,
+    tenant_id: Uuid,
+    actor_id: Option<Uuid>,
+    id: Uuid,
+) -> Result<(), ApiError> {
     if repo::has_movements(&state.pool, tenant_id, id).await? {
         return Err(ApiError::conflict("packaging_run", "has_movements"));
     }
     // Ensure the run exists (and is tenant-owned) before deleting.
-    get_run(state, tenant_id, id).await?;
+    let run = get_run(state, tenant_id, id).await?;
     if !repo::delete_run(&state.pool, tenant_id, id).await? {
         return Err(ApiError::not_found("packaging_run"));
     }
+
+    audit::service::write(
+        &state.pool,
+        audit::models::WriteRequest {
+            tenant_id,
+            event_type: audit::models::EVENT_PACKAGING_RUN_DELETED,
+            entity_type: "packaging_run",
+            entity_id: Some(id),
+            actor_user_id: actor_id,
+            event_data: json!({
+                "batch_id": run.batch_id,
+                "format": run.format,
+                "lot_number": run.lot_number,
+                "quantity": run.quantity,
+            }),
+        },
+    )
+    .await;
     Ok(())
 }
 
@@ -115,6 +163,7 @@ pub async fn delete_run(state: &AppState, tenant_id: Uuid, id: Uuid) -> Result<(
 pub async fn create_movement(
     state: &AppState,
     tenant_id: Uuid,
+    actor_id: Option<Uuid>,
     req: CreateMovementRequest,
 ) -> Result<DistributionMovement, ApiError> {
     if req.movement_type == "sale" && req.order_id.is_none() {
@@ -146,7 +195,7 @@ pub async fn create_movement(
     };
     let moved_at = req.moved_at.unwrap_or_else(Utc::now);
 
-    Ok(repo::insert_movement(
+    let created = repo::insert_movement(
         &state.pool,
         tenant_id,
         req.packaging_run_id,
@@ -159,7 +208,27 @@ pub async fn create_movement(
         req.notes.as_deref(),
         moved_at,
     )
-    .await?)
+    .await?;
+
+    audit::service::write(
+        &state.pool,
+        audit::models::WriteRequest {
+            tenant_id,
+            event_type: audit::models::EVENT_MOVEMENT_CREATED,
+            entity_type: "distribution_movement",
+            entity_id: Some(created.id),
+            actor_user_id: actor_id,
+            event_data: json!({
+                "packaging_run_id": created.packaging_run_id,
+                "movement_type": created.movement_type,
+                "quantity": created.quantity,
+                "to_location": created.to_location,
+                "order_id": created.order_id,
+            }),
+        },
+    )
+    .await;
+    Ok(created)
 }
 
 pub async fn get_movement(
@@ -180,11 +249,34 @@ pub async fn list_movements(
     Ok(repo::select_movements(&state.pool, tenant_id, &filter).await?)
 }
 
-pub async fn delete_movement(state: &AppState, tenant_id: Uuid, id: Uuid) -> Result<(), ApiError> {
+pub async fn delete_movement(
+    state: &AppState,
+    tenant_id: Uuid,
+    actor_id: Option<Uuid>,
+    id: Uuid,
+) -> Result<(), ApiError> {
     // Ensure the movement exists (and is tenant-owned) before deleting.
-    get_movement(state, tenant_id, id).await?;
+    let m = get_movement(state, tenant_id, id).await?;
     if !repo::delete_movement(&state.pool, tenant_id, id).await? {
         return Err(ApiError::not_found("distribution_movement"));
     }
+
+    audit::service::write(
+        &state.pool,
+        audit::models::WriteRequest {
+            tenant_id,
+            event_type: audit::models::EVENT_MOVEMENT_DELETED,
+            entity_type: "distribution_movement",
+            entity_id: Some(id),
+            actor_user_id: actor_id,
+            event_data: json!({
+                "packaging_run_id": m.packaging_run_id,
+                "movement_type": m.movement_type,
+                "quantity": m.quantity,
+                "to_location": m.to_location,
+            }),
+        },
+    )
+    .await;
     Ok(())
 }
