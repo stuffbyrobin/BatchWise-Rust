@@ -47,6 +47,7 @@ jsonwebtoken = "9"
 argon2 = "0.5"
 sha2 = "0.6"
 rand = "0.8"
+base64 = "0.22"
 
 # Validation
 validator = { version = "0.18", features = ["derive"] }
@@ -68,6 +69,10 @@ tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
 # Errors
 thiserror = "1"
 anyhow = "1"
+
+# QR code generation (tracking module)
+qrcode = "0.14"
+image = { version = "0.25", default-features = false, features = ["png"] }
 
 [dev-dependencies]
 # Real Postgres in tests (mirrors testcontainers-go)

@@ -66,6 +66,20 @@ impl ApiError {
         Self::base("forbidden", reason, StatusCode::FORBIDDEN)
     }
 
+    /// 403 — the tenant's subscription does not enable the required feature.
+    /// Mirrors the Go `FeatureGate` response body.
+    pub fn feature_disabled(required_feature: &str, current_tier: &str) -> Self {
+        let mut d = BTreeMap::new();
+        d.insert("required_feature".into(), json!(required_feature));
+        d.insert("current_tier".into(), json!(current_tier));
+        Self::base(
+            "forbidden",
+            "This feature is not enabled for your subscription.",
+            StatusCode::FORBIDDEN,
+        )
+        .with_details(d)
+    }
+
     /// 422 — a business rule was violated. `rule` is merged into details.
     pub fn business_rule(rule: &str, message: &str, details: BTreeMap<String, Value>) -> Self {
         let mut merged = BTreeMap::new();
