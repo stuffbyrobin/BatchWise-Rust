@@ -71,7 +71,7 @@ async fn create_run(
     ctx: RequestContext,
     ValidatedJson(req): ValidatedJson<CreatePackagingRunRequest>,
 ) -> Result<Response, ApiError> {
-    let run = service::create_run(&state, ctx.tenant_id()?, req).await?;
+    let run = service::create_run(&state, ctx.tenant_id()?, ctx.actor_id, req).await?;
     let location = format!("/api/v1/packaging-runs/{}", run.id);
     Ok((
         StatusCode::CREATED,
@@ -117,7 +117,7 @@ async fn delete_run(
     ctx: RequestContext,
     Path(id): Path<Uuid>,
 ) -> Result<Response, ApiError> {
-    service::delete_run(&state, ctx.tenant_id()?, id).await?;
+    service::delete_run(&state, ctx.tenant_id()?, ctx.actor_id, id).await?;
     Ok(StatusCode::NO_CONTENT.into_response())
 }
 
@@ -128,7 +128,7 @@ async fn create_movement(
     ctx: RequestContext,
     ValidatedJson(req): ValidatedJson<CreateMovementRequest>,
 ) -> Result<Response, ApiError> {
-    let m = service::create_movement(&state, ctx.tenant_id()?, req).await?;
+    let m = service::create_movement(&state, ctx.tenant_id()?, ctx.actor_id, req).await?;
     let location = format!("/api/v1/distribution-movements/{}", m.id);
     Ok((StatusCode::CREATED, [(header::LOCATION, location)], Json(m)).into_response())
 }
@@ -161,6 +161,6 @@ async fn delete_movement(
     ctx: RequestContext,
     Path(id): Path<Uuid>,
 ) -> Result<Response, ApiError> {
-    service::delete_movement(&state, ctx.tenant_id()?, id).await?;
+    service::delete_movement(&state, ctx.tenant_id()?, ctx.actor_id, id).await?;
     Ok(StatusCode::NO_CONTENT.into_response())
 }

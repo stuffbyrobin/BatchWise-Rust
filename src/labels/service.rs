@@ -5,10 +5,11 @@
 //! record is auto-populated from the batch's recipe snapshot, the tenant's
 //! identity/address, the computed allergen declaration (via
 //! [`crate::allergens`]), and ABV-derived nutrition values (via
-//! [`crate::pkg::nutrition`]). Approved records are immutable. The Go service's
-//! fire-and-forget audit writes are omitted (no audit module ported yet).
+//! [`crate::pkg::nutrition`]). Approved records are immutable. Create, update,
+//! approve, and delete each record a fire-and-forget compliance audit event.
 
 use chrono::NaiveDate;
+use serde_json::json;
 use uuid::Uuid;
 
 use super::models::{CreateRequest, LabelRecord, ListFilter, Page, PatchRequest};
@@ -16,13 +17,14 @@ use super::repository::{self as repo, LabelInsert};
 use crate::pkg::{allergen, nutrition};
 use crate::platform::errors::ApiError;
 use crate::state::AppState;
-use crate::{allergens, tenant};
+use crate::{allergens, audit, tenant};
 
 /// Creates a draft label record for a batch, auto-populating compliance and
 /// voluntary fields.
 pub async fn create(
     state: &AppState,
     tenant_id: Uuid,
+    actor_id: Option<Uuid>,
     req: CreateRequest,
 ) -> Result<LabelRecord, ApiError> {
     let batch = repo::select_batch_info(&state.pool, tenant_id, req.batch_id)
@@ -36,7 +38,7 @@ pub async fn create(
     // Allergens are computed from the batch's recipe, if any; failures are
     // tolerated (Go discards the error and falls back to an empty list).
     let allergen_list = match batch.recipe_id {
-        Some(recipe_id) => allergens::compute_for_recipe(state, tenant_id, recipe_id)
+        Some(recipe_id) => allergens::compute_for_recipe(state, tenant_id, actor_id, recipe_id)
             .await
             .map(|r| r.allergens)
             .unwrap_or_default(),
@@ -81,7 +83,28 @@ pub async fn create(
         serving_volume_ml: req.serving_volume_ml,
     };
 
-    repo::insert(&state.pool, tenant_id, &ins).await
+    let rec = repo::insert(&state.pool, tenant_id, &ins).await?;
+
+    audit::service::write(
+        &state.pool,
+        audit::models::WriteRequest {
+            tenant_id,
+            event_type: audit::models::EVENT_LABEL_CREATED,
+            entity_type: "label_record",
+            entity_id: Some(rec.id),
+            actor_user_id: actor_id,
+            event_data: json!({
+                "product_name": rec.product_name,
+                "abv_percent": rec.abv_percent,
+                "allergens": rec.allergens,
+                "net_volume_ml": rec.net_volume_ml,
+                "lot_identifier": rec.lot_identifier,
+                "status": rec.status,
+            }),
+        },
+    )
+    .await;
+    Ok(rec)
 }
 
 /// Lists label records.
@@ -117,6 +140,7 @@ pub async fn patch(
     state: &AppState,
     tenant_id: Uuid,
     id: Uuid,
+    actor_id: Option<Uuid>,
     req: PatchRequest,
 ) -> Result<LabelRecord, ApiError> {
     let mut rec = repo::select_by_id(&state.pool, tenant_id, id)
@@ -130,6 +154,11 @@ pub async fn patch(
             Default::default(),
         ));
     }
+
+    // Capture audit metadata from the request before its fields are consumed.
+    let changed_fields = changed_fields(&req);
+    let patch_values = patch_values(&req);
+    let approving = req.status.as_deref() == Some("approved");
 
     if let Some(v) = req.product_name {
         rec.product_name = v;
@@ -185,13 +214,48 @@ pub async fn patch(
 
     repo::update_full(&state.pool, tenant_id, &rec).await?;
 
+    let (event_type, event_data) = if approving {
+        (
+            audit::models::EVENT_LABEL_APPROVED,
+            json!({
+                "product_name": rec.product_name,
+                "lot_identifier": rec.lot_identifier,
+            }),
+        )
+    } else {
+        (
+            audit::models::EVENT_LABEL_UPDATED,
+            json!({
+                "fields_changed": changed_fields,
+                "new_values": patch_values,
+            }),
+        )
+    };
+    audit::service::write(
+        &state.pool,
+        audit::models::WriteRequest {
+            tenant_id,
+            event_type,
+            entity_type: "label_record",
+            entity_id: Some(id),
+            actor_user_id: actor_id,
+            event_data,
+        },
+    )
+    .await;
+
     repo::select_by_id(&state.pool, tenant_id, id)
         .await?
         .ok_or_else(|| ApiError::not_found("label_record"))
 }
 
 /// Deletes a label record. Approved records cannot be deleted.
-pub async fn delete(state: &AppState, tenant_id: Uuid, id: Uuid) -> Result<(), ApiError> {
+pub async fn delete(
+    state: &AppState,
+    tenant_id: Uuid,
+    actor_id: Option<Uuid>,
+    id: Uuid,
+) -> Result<(), ApiError> {
     let rec = repo::select_by_id(&state.pool, tenant_id, id)
         .await?
         .ok_or_else(|| ApiError::not_found("label_record"))?;
@@ -207,7 +271,69 @@ pub async fn delete(state: &AppState, tenant_id: Uuid, id: Uuid) -> Result<(), A
     if !repo::delete_by_id(&state.pool, tenant_id, id).await? {
         return Err(ApiError::not_found("label_record"));
     }
+
+    audit::service::write(
+        &state.pool,
+        audit::models::WriteRequest {
+            tenant_id,
+            event_type: audit::models::EVENT_LABEL_DELETED,
+            entity_type: "label_record",
+            entity_id: Some(id),
+            actor_user_id: actor_id,
+            event_data: json!({
+                "product_name": rec.product_name,
+                "lot_identifier": rec.lot_identifier,
+                "status_at_delete": rec.status,
+            }),
+        },
+    )
+    .await;
     Ok(())
+}
+
+/// The list of label fields touched by a patch request (for the audit log).
+fn changed_fields(req: &PatchRequest) -> Vec<&'static str> {
+    let mut fields = Vec::new();
+    if req.product_name.is_some() {
+        fields.push("product_name");
+    }
+    if req.abv_percent.is_some() {
+        fields.push("abv_percent");
+    }
+    if req.allergens.is_some() {
+        fields.push("allergens");
+    }
+    if req.net_volume_ml.is_some() {
+        fields.push("net_volume_ml");
+    }
+    if req.status.is_some() {
+        fields.push("status");
+    }
+    if req.best_before_date.is_some() {
+        fields.push("best_before_date");
+    }
+    if req.lot_identifier.is_some() {
+        fields.push("lot_identifier");
+    }
+    fields
+}
+
+/// The subset of patched values recorded in the audit log.
+fn patch_values(req: &PatchRequest) -> serde_json::Value {
+    let mut vals = serde_json::Map::new();
+    if let Some(v) = &req.product_name {
+        vals.insert("product_name".to_string(), json!(v));
+    }
+    if let Some(v) = req.abv_percent {
+        vals.insert("abv_percent".to_string(), json!(v));
+    }
+    if let Some(v) = &req.status {
+        vals.insert("status".to_string(), json!(v));
+    }
+    if let Some(v) = &req.lot_identifier {
+        vals.insert("lot_identifier".to_string(), json!(v));
+    }
+    serde_json::Value::Object(vals)
 }
 
 /// Ensures all mandatory label fields are present before approval.
