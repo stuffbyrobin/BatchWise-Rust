@@ -10,5 +10,6 @@ pub mod color;
 pub mod duty;
 pub mod energy;
 pub mod gravity;
+pub mod labelkit;
 pub mod nutrition;
 pub mod water;
