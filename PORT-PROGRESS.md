@@ -56,7 +56,7 @@ Legend: `[x]` done · `[~]` in progress · `[ ]` not started
 | 15 | trading standards audit | [x] compliance-audit log (read-only, tenant-scoped, NOT feature-gated) + fire-and-forget audit writes wired into packaging, traceability, labels, duty & allergens, integration-tested |
 | 16 | procurement | [x] suppliers + purchase-orders (nested lines, PO-number gen via FOR UPDATE, status FSM, partial/full receive), tier-gated "procurement", integration-tested |
 | 17 | yeast banking | [x] yeast-bank entries (computed days_in_storage, harvest → generation bump, discarded terminal guard) + nested propagation events, home-tier "yeast_banking", integration-tested |
-| 18 | fermentation tracking | [ ] |
+| 18 | fermentation tracking | [x] fermentation readings (gravity/temp/pH/stage) under /batches/{id}/fermentation, batch-scoped, home-tier "fermentation", integration-tested |
 | 19 | label & print design | [ ] |
 | 20 | equipment maintenance | [ ] |
 
