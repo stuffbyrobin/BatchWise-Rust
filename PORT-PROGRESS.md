@@ -49,7 +49,7 @@ Legend: `[x]` done · `[~]` in progress · `[ ]` not started
 | 06 | dashboard + OpenAPI serving | [x] aggregated stats + /openapi.yaml + /docs, integration-tested |
 | 09 | sales | [x] customers + order FSM + line items + duty events (tier-gated), integration-tested |
 | 10 | batch cost / profitability | [ ] |
-| 11 | water chemistry | [ ] |
+| 11 | water chemistry | [x] profiles (system union) + adjustments + /calculate via pkg::water, integration-tested |
 | 12 | beer duty & excise records | [ ] |
 | 13 | allergen & label compliance | [ ] |
 | 14 | packaging / distribution / traceability | [ ] |
