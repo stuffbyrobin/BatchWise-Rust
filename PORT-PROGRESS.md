@@ -27,12 +27,13 @@ Legend: `[x]` done · `[~]` in progress · `[ ]` not started
 | `main.rs` + `GET /healthz` | [x] | request-id middleware |
 | CI workflow (fmt/clippy/test) | [x] | |
 
-## Platform middleware (next)
+## Platform middleware
 
 | Item | Status |
 |---|---|
-| Auth (JWT parse) + TenantContext middleware | [ ] |
-| RateLimit middleware | [ ] |
+| Auth (JWT parse) → RequestContext middleware | [x] |
+| RateLimit middleware (per-IP sliding window) | [x] |
+| Request-id + error-body stamping | [x] |
 | CORS / SecurityHeaders | [ ] |
 | FeatureGate / TierGate | [ ] |
 
@@ -40,7 +41,7 @@ Legend: `[x]` done · `[~]` in progress · `[ ]` not started
 
 | # | Module | Status |
 |---|---|---|
-| 01 | auth + tenant | [ ] |
+| 01 | auth + tenant | [x] argon2 + JWT + refresh rotation, integration-tested |
 | 02 | library + inventory (FIFO) | [ ] |
 | 03 | recipe | [ ] |
 | 04 | batch + calendar + yeastkinetics | [ ] |

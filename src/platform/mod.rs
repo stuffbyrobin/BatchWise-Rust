@@ -14,4 +14,5 @@ pub mod context;
 pub mod database;
 pub mod errors;
 pub mod logger;
+pub mod middleware;
 pub mod web;
