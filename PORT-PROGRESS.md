@@ -35,7 +35,7 @@ Legend: `[x]` done · `[~]` in progress · `[ ]` not started
 | RateLimit middleware (per-IP sliding window) | [x] |
 | Request-id + error-body stamping | [x] |
 | CORS / SecurityHeaders | [ ] |
-| FeatureGate / TierGate | [ ] |
+| FeatureGate / TierGate | [x] feature-flag gate (403 with required_feature/current_tier) |
 
 ## Domain modules (mirrors original phases)
 
@@ -45,7 +45,7 @@ Legend: `[x]` done · `[~]` in progress · `[ ]` not started
 | 02 | library + inventory (FIFO) | [x] seed runner + FIFO/overdraft, integration-tested |
 | 03 | recipe | [x] nested children + physics calc + BeerXML/Brewfather import, integration-tested |
 | 04 | batch + calendar + yeastkinetics | [x] FSM + snapshot + calendar-gen + deferred deduction, integration-tested |
-| 05 | tracking + reporting (tier-gated) | [ ] |
+| 05 | tracking + reporting (tier-gated) | [x] FeatureGate + QR codes + cost reports/duty, integration-tested |
 | 06 | dashboard + OpenAPI serving | [ ] |
 | 09 | sales | [ ] |
 | 10 | batch cost / profitability | [ ] |

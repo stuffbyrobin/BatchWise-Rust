@@ -16,6 +16,8 @@ pub mod library;
 pub mod pkg;
 pub mod platform;
 pub mod recipe;
+pub mod reporting;
 pub mod state;
 pub mod tenant;
+pub mod tracking;
 pub mod yeastkinetics;
