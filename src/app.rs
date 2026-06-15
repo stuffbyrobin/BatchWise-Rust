@@ -18,7 +18,7 @@ use crate::platform::context::RequestContext;
 use crate::state::AppState;
 use crate::{
     auth, batch, calendar, dashboard, inventory, library, openapi, recipe, reporting, sales,
-    tenant, tracking, yeastkinetics,
+    tenant, tracking, water, yeastkinetics,
 };
 
 /// Builds the full application router, mounting auth and tenant under `/api/v1`.
@@ -36,7 +36,8 @@ pub fn build_router(state: AppState) -> Router {
         .nest("/dashboard", dashboard::routes(state.clone()))
         .merge(openapi::routes())
         .merge(tracking::routes(state.clone()))
-        .merge(sales::routes(state.clone()));
+        .merge(sales::routes(state.clone()))
+        .merge(water::routes(state.clone()));
 
     Router::new()
         .route("/healthz", get(healthz))

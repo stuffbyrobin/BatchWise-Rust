@@ -23,4 +23,5 @@ pub mod sales;
 pub mod state;
 pub mod tenant;
 pub mod tracking;
+pub mod water;
 pub mod yeastkinetics;
