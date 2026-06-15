@@ -48,10 +48,10 @@ Legend: `[x]` done · `[~]` in progress · `[ ]` not started
 | 05 | tracking + reporting (tier-gated) | [x] FeatureGate + QR codes + cost reports/duty, integration-tested |
 | 06 | dashboard + OpenAPI serving | [x] aggregated stats + /openapi.yaml + /docs, integration-tested |
 | 09 | sales | [x] customers + order FSM + line items + duty events (tier-gated), integration-tested |
-| 10 | batch cost / profitability | [ ] |
+| 10 | batch cost / profitability | [x] covered by reporting (batch-costs compute) in Phase 5 |
 | 11 | water chemistry | [x] profiles (system union) + adjustments + /calculate via pkg::water, integration-tested |
 | 12 | beer duty & excise records | [x] duty-returns compile/submit (SPR via pkg::duty), tier-gated, integration-tested |
-| 13 | allergen & label compliance | [ ] |
+| 13 | allergen & label compliance | [x] /recipes/{id}/allergens + label-records (auto-populated), tier-gated, integration-tested |
 | 14 | packaging / distribution / traceability | [ ] |
 | 15 | trading standards audit | [ ] |
 | 16 | procurement | [ ] |
