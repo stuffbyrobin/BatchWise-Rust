@@ -20,7 +20,7 @@ path = "src/lib.rs"
 tokio = { version = "1", features = ["full"] }
 
 # HTTP framework
-axum = { version = "0.8", features = ["macros"] }
+axum = { version = "0.8", features = ["macros", "multipart"] }
 tower = { version = "0.5", features = ["util"] }
 tower-http = { version = "0.6", features = ["cors", "trace", "set-header"] }
 http = "1"
@@ -72,13 +72,16 @@ anyhow = "1"
 
 # QR code generation (tracking module)
 qrcode = "0.14"
-image = { version = "0.25", default-features = false, features = ["png"] }
+image = { version = "0.25", default-features = false, features = ["png", "jpeg"] }
+
+# PDF generation (label-design module)
+printpdf = { version = "0.7", features = ["embedded_images"] }
 
 [dev-dependencies]
 # Real Postgres in tests (mirrors testcontainers-go)
 testcontainers = "0.23"
 testcontainers-modules = { version = "0.11", features = ["postgres"] }
-reqwest = { version = "0.12", features = ["json"] }
+reqwest = { version = "0.12", features = ["json", "multipart"] }
 approx = "0.5"
 base64 = "0.22"
 
