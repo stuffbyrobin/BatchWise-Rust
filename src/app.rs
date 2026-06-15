@@ -16,13 +16,15 @@ use ulid::Ulid;
 
 use crate::platform::context::RequestContext;
 use crate::state::AppState;
-use crate::{auth, tenant};
+use crate::{auth, inventory, library, tenant};
 
 /// Builds the full application router, mounting auth and tenant under `/api/v1`.
 pub fn build_router(state: AppState) -> Router {
     let api = Router::new()
         .nest("/auth", auth::routes(state.clone()))
-        .nest("/tenants", tenant::routes(state.clone()));
+        .nest("/tenants", tenant::routes(state.clone()))
+        .nest("/inventory", inventory::routes(state.clone()))
+        .nest("/library", library::routes(state.clone()));
 
     Router::new()
         .route("/healthz", get(healthz))
