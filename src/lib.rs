@@ -12,6 +12,7 @@ pub mod auth;
 pub mod batch;
 pub mod calendar;
 pub mod dashboard;
+pub mod duty;
 pub mod inventory;
 pub mod library;
 pub mod openapi;
