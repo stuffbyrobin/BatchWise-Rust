@@ -17,8 +17,8 @@ use ulid::Ulid;
 use crate::platform::context::RequestContext;
 use crate::state::AppState;
 use crate::{
-    auth, batch, calendar, dashboard, duty, inventory, library, openapi, recipe, reporting, sales,
-    tenant, tracking, water, yeastkinetics,
+    allergens, auth, batch, calendar, dashboard, duty, inventory, labels, library, openapi, recipe,
+    reporting, sales, tenant, tracking, water, yeastkinetics,
 };
 
 /// Builds the full application router, mounting auth and tenant under `/api/v1`.
@@ -28,13 +28,17 @@ pub fn build_router(state: AppState) -> Router {
         .nest("/tenants", tenant::routes(state.clone()))
         .nest("/inventory", inventory::routes(state.clone()))
         .nest("/library", library::routes(state.clone()))
-        .nest("/recipes", recipe::routes(state.clone()))
+        .nest(
+            "/recipes",
+            recipe::routes(state.clone()).merge(allergens::routes(state.clone())),
+        )
         .nest("/batches", batch::routes(state.clone()))
         .nest("/calendar-events", calendar::routes(state.clone()))
         .nest("/yeast-kinetics", yeastkinetics::routes(state.clone()))
         .nest("/reporting", reporting::routes(state.clone()))
         .nest("/dashboard", dashboard::routes(state.clone()))
         .nest("/duty-returns", duty::routes(state.clone()))
+        .nest("/label-records", labels::routes(state.clone()))
         .merge(openapi::routes())
         .merge(tracking::routes(state.clone()))
         .merge(sales::routes(state.clone()))

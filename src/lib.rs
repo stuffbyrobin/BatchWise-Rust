@@ -7,6 +7,7 @@
 //! - [`platform`] — cross-cutting infrastructure (config, db, errors, web, …).
 //! - domain modules (auth, inventory, recipe, …) are added phase by phase.
 
+pub mod allergens;
 pub mod app;
 pub mod auth;
 pub mod batch;
@@ -14,6 +15,7 @@ pub mod calendar;
 pub mod dashboard;
 pub mod duty;
 pub mod inventory;
+pub mod labels;
 pub mod library;
 pub mod openapi;
 pub mod pkg;
