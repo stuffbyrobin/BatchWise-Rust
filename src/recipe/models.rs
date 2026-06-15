@@ -77,7 +77,7 @@ pub struct RecipeWithIngredients {
 }
 
 /// A single fermentable addition.
-#[derive(Debug, Clone, Serialize, FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct Fermentable {
     pub id: Uuid,
     pub recipe_id: Uuid,
@@ -90,12 +90,12 @@ pub struct Fermentable {
     pub r#type: Option<String>,
     pub addition: Option<String>,
     #[sqlx(default)]
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub inventory_lot_id: Option<Uuid>,
 }
 
 /// A single hop addition.
-#[derive(Debug, Clone, Serialize, FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct Hop {
     pub id: Uuid,
     pub recipe_id: Uuid,
@@ -108,12 +108,12 @@ pub struct Hop {
     pub form: Option<String>,
     pub r#use: Option<String>,
     #[sqlx(default)]
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub inventory_lot_id: Option<Uuid>,
 }
 
 /// A single yeast addition.
-#[derive(Debug, Clone, Serialize, FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct Yeast {
     pub id: Uuid,
     pub recipe_id: Uuid,
@@ -123,12 +123,12 @@ pub struct Yeast {
     pub unit: String,
     pub attenuation_pct: Option<f64>,
     #[sqlx(default)]
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub inventory_lot_id: Option<Uuid>,
 }
 
 /// A single mash step.
-#[derive(Debug, Clone, Serialize, FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct MashStep {
     pub id: Uuid,
     pub recipe_id: Uuid,
