@@ -17,6 +17,7 @@ pub mod dashboard;
 pub mod duty;
 pub mod fermentation;
 pub mod inventory;
+pub mod labeldesign;
 pub mod labels;
 pub mod library;
 pub mod openapi;

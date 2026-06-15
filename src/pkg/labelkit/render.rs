@@ -6,7 +6,10 @@
 //! Content, fonts, colours, and the per-kind/option field logic mirror the Go
 //! renderer; a logo that cannot be decoded is skipped (matching Go's behaviour).
 
-use printpdf::{BuiltinFont, Color, Image, ImageTransform, IndirectFontRef, Mm, PdfDocumentReference, PdfLayerReference, Rgb};
+use printpdf::{
+    BuiltinFont, Color, Image, ImageTransform, IndirectFontRef, Mm, PdfDocumentReference,
+    PdfLayerReference, Rgb,
+};
 
 use super::format::format_allergens;
 use super::model::RenderModel;
@@ -117,7 +120,12 @@ pub fn render_pdf(m: &RenderModel, logo: &[u8]) -> Result<Vec<u8>, printpdf::Err
                 put(y, 9.0, &f_reg, &format!("Style: {style}"));
                 y += 5.0;
             }
-            put(y, 10.0, &f_reg, &format!("ABV {:.1}%", m.fields.abv_percent));
+            put(
+                y,
+                10.0,
+                &f_reg,
+                &format!("ABV {:.1}%", m.fields.abv_percent),
+            );
             y += 5.0;
             if !m.fields.allergens.is_empty() {
                 put(
@@ -182,7 +190,12 @@ pub fn render_pdf(m: &RenderModel, logo: &[u8]) -> Result<Vec<u8>, printpdf::Err
                 put(y, 10.0, &f_italic, &format!("Style: {style}"));
                 y += 5.0;
             }
-            put(y, 12.0, &f_reg, &format!("ABV {:.1}%", m.fields.abv_percent));
+            put(
+                y,
+                12.0,
+                &f_reg,
+                &format!("ABV {:.1}%", m.fields.abv_percent),
+            );
             y += 5.0;
             if !m.brand.brewery_name.is_empty() {
                 put(y, 9.0, &f_reg, &m.brand.brewery_name);

@@ -57,7 +57,7 @@ Legend: `[x]` done · `[~]` in progress · `[ ]` not started
 | 16 | procurement | [x] suppliers + purchase-orders (nested lines, PO-number gen via FOR UPDATE, status FSM, partial/full receive), tier-gated "procurement", integration-tested |
 | 17 | yeast banking | [x] yeast-bank entries (computed days_in_storage, harvest → generation bump, discarded terminal guard) + nested propagation events, home-tier "yeast_banking", integration-tested |
 | 18 | fermentation tracking | [x] fermentation readings (gravity/temp/pH/stage) under /batches/{id}/fermentation, batch-scoped, home-tier "fermentation", integration-tested |
-| 19 | label & print design | [ ] |
+| 19 | label & print design | [x] brand-assets (BYTEA upload/serve) + brand-profiles + label-designs (kind/size validation) + render model & print-ready PDF (printpdf), tier-gated "label_design", integration-tested |
 | 20 | equipment maintenance | [ ] |
 
 ## Frontend

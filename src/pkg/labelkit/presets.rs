@@ -20,16 +20,52 @@ pub struct TemplateSpec {
 }
 
 const SIZES: [SizeSpec; 5] = [
-    SizeSpec { key: "bottle_front_90x120", kind: "bottle", shape: "rect", width_mm: 90.0, height_mm: 120.0 },
-    SizeSpec { key: "can_wrap_200x100", kind: "can", shape: "rect", width_mm: 200.0, height_mm: 100.0 },
-    SizeSpec { key: "pumpclip_round_114", kind: "pump_clip", shape: "circle", width_mm: 114.0, height_mm: 114.0 },
-    SizeSpec { key: "pumpclip_rect_140x90", kind: "pump_clip", shape: "rect", width_mm: 140.0, height_mm: 90.0 },
-    SizeSpec { key: "lens_round_100", kind: "cask_lens", shape: "circle", width_mm: 100.0, height_mm: 100.0 },
+    SizeSpec {
+        key: "bottle_front_90x120",
+        kind: "bottle",
+        shape: "rect",
+        width_mm: 90.0,
+        height_mm: 120.0,
+    },
+    SizeSpec {
+        key: "can_wrap_200x100",
+        kind: "can",
+        shape: "rect",
+        width_mm: 200.0,
+        height_mm: 100.0,
+    },
+    SizeSpec {
+        key: "pumpclip_round_114",
+        kind: "pump_clip",
+        shape: "circle",
+        width_mm: 114.0,
+        height_mm: 114.0,
+    },
+    SizeSpec {
+        key: "pumpclip_rect_140x90",
+        kind: "pump_clip",
+        shape: "rect",
+        width_mm: 140.0,
+        height_mm: 90.0,
+    },
+    SizeSpec {
+        key: "lens_round_100",
+        kind: "cask_lens",
+        shape: "circle",
+        width_mm: 100.0,
+        height_mm: 100.0,
+    },
 ];
 
 const TEMPLATES: [TemplateSpec; 2] = [
-    TemplateSpec { key: "compliance_standard", description: "Full compliance layout for bottle/can" },
-    TemplateSpec { key: "clip_standard", description: "Pump clip / cask lens layout" },
+    TemplateSpec {
+        key: "compliance_standard",
+        description: "Full compliance layout for bottle/can",
+    },
+    TemplateSpec {
+        key: "clip_standard",
+        description: "Pump clip / cask lens layout",
+    },
 ];
 
 /// Returns the [`SizeSpec`] for the given key if it exists.

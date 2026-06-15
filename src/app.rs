@@ -17,9 +17,9 @@ use ulid::Ulid;
 use crate::platform::context::RequestContext;
 use crate::state::AppState;
 use crate::{
-    allergens, audit, auth, batch, calendar, dashboard, duty, fermentation, inventory, labels,
-    library, openapi, packaging, procurement, recipe, reporting, sales, tenant, traceability,
-    tracking, water, yeastbanking, yeastkinetics,
+    allergens, audit, auth, batch, calendar, dashboard, duty, fermentation, inventory, labeldesign,
+    labels, library, openapi, packaging, procurement, recipe, reporting, sales, tenant,
+    traceability, tracking, water, yeastbanking, yeastkinetics,
 };
 
 /// Builds the full application router, mounting auth and tenant under `/api/v1`.
@@ -49,6 +49,7 @@ pub fn build_router(state: AppState) -> Router {
         .merge(water::routes(state.clone()))
         .merge(packaging::routes(state.clone()))
         .merge(procurement::routes(state.clone()))
+        .merge(labeldesign::routes(state.clone()))
         .merge(yeastbanking::routes(state.clone()))
         .merge(traceability::routes(state.clone()))
         .merge(audit::routes(state.clone()));
