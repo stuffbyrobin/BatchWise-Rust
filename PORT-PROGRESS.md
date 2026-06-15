@@ -46,7 +46,7 @@ Legend: `[x]` done · `[~]` in progress · `[ ]` not started
 | 03 | recipe | [x] nested children + physics calc + BeerXML/Brewfather import, integration-tested |
 | 04 | batch + calendar + yeastkinetics | [x] FSM + snapshot + calendar-gen + deferred deduction, integration-tested |
 | 05 | tracking + reporting (tier-gated) | [x] FeatureGate + QR codes + cost reports/duty, integration-tested |
-| 06 | dashboard + OpenAPI serving | [ ] |
+| 06 | dashboard + OpenAPI serving | [x] aggregated stats + /openapi.yaml + /docs, integration-tested |
 | 09 | sales | [ ] |
 | 10 | batch cost / profitability | [ ] |
 | 11 | water chemistry | [ ] |
