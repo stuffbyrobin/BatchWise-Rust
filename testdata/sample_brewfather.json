@@ -1,0 +1,83 @@
+{
+  "name": "Sample Pale Ale BF",
+  "type": "All Grain",
+  "batchSize": 20.0,
+  "boilSize": 25.0,
+  "boilTime": 60,
+  "efficiency": 75,
+  "notes": "Brewfather fixture for import tests.",
+  "fermentables": [
+    {
+      "name": "Pale Malt (Maris Otter)",
+      "amount": 4.0,
+      "unit": "kg",
+      "color": 5.9,
+      "potential": 1.037,
+      "type": "Grain"
+    },
+    {
+      "name": "Crystal 60",
+      "amount": 0.3,
+      "unit": "kg",
+      "color": 157.8,
+      "potential": 1.033,
+      "type": "Crystal"
+    }
+  ],
+  "hops": [
+    {
+      "name": "Cascade",
+      "amount": 25,
+      "unit": "g",
+      "use": "Boil",
+      "time": 60,
+      "alpha": 5.5,
+      "form": "Pellet"
+    },
+    {
+      "name": "Cascade",
+      "amount": 15,
+      "unit": "g",
+      "use": "Boil",
+      "time": 15,
+      "alpha": 5.5,
+      "form": "Pellet"
+    },
+    {
+      "name": "Cascade",
+      "amount": 30,
+      "unit": "g",
+      "use": "Dry Hop",
+      "time": 0,
+      "alpha": 5.5,
+      "form": "Pellet"
+    }
+  ],
+  "yeasts": [
+    {
+      "name": "Safale S-04",
+      "amount": 11.5,
+      "unit": "g",
+      "attenuation": 72,
+      "type": "Ale",
+      "form": "Dry"
+    }
+  ],
+  "mash": {
+    "steps": [
+      {
+        "name": "Saccharification",
+        "type": "Infusion",
+        "stepTemp": 66.0,
+        "stepTime": 75,
+        "amount": 12.0
+      },
+      {
+        "name": "Mash Out",
+        "type": "Temperature",
+        "stepTemp": 76.0,
+        "stepTime": 10
+      }
+    ]
+  }
+}
