@@ -47,7 +47,7 @@ Legend: `[x]` done · `[~]` in progress · `[ ]` not started
 | 04 | batch + calendar + yeastkinetics | [x] FSM + snapshot + calendar-gen + deferred deduction, integration-tested |
 | 05 | tracking + reporting (tier-gated) | [x] FeatureGate + QR codes + cost reports/duty, integration-tested |
 | 06 | dashboard + OpenAPI serving | [x] aggregated stats + /openapi.yaml + /docs, integration-tested |
-| 09 | sales | [ ] |
+| 09 | sales | [x] customers + order FSM + line items + duty events (tier-gated), integration-tested |
 | 10 | batch cost / profitability | [ ] |
 | 11 | water chemistry | [ ] |
 | 12 | beer duty & excise records | [ ] |
