@@ -16,7 +16,7 @@ use ulid::Ulid;
 
 use crate::platform::context::RequestContext;
 use crate::state::AppState;
-use crate::{auth, inventory, library, recipe, tenant};
+use crate::{auth, batch, calendar, inventory, library, recipe, tenant, yeastkinetics};
 
 /// Builds the full application router, mounting auth and tenant under `/api/v1`.
 pub fn build_router(state: AppState) -> Router {
@@ -25,7 +25,10 @@ pub fn build_router(state: AppState) -> Router {
         .nest("/tenants", tenant::routes(state.clone()))
         .nest("/inventory", inventory::routes(state.clone()))
         .nest("/library", library::routes(state.clone()))
-        .nest("/recipes", recipe::routes(state.clone()));
+        .nest("/recipes", recipe::routes(state.clone()))
+        .nest("/batches", batch::routes(state.clone()))
+        .nest("/calendar-events", calendar::routes(state.clone()))
+        .nest("/yeast-kinetics", yeastkinetics::routes(state.clone()));
 
     Router::new()
         .route("/healthz", get(healthz))

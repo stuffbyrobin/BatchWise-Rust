@@ -9,6 +9,8 @@
 
 pub mod app;
 pub mod auth;
+pub mod batch;
+pub mod calendar;
 pub mod inventory;
 pub mod library;
 pub mod pkg;
@@ -16,3 +18,4 @@ pub mod platform;
 pub mod recipe;
 pub mod state;
 pub mod tenant;
+pub mod yeastkinetics;
