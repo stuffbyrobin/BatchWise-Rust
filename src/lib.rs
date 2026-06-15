@@ -9,6 +9,8 @@
 
 pub mod app;
 pub mod auth;
+pub mod inventory;
+pub mod library;
 pub mod pkg;
 pub mod platform;
 pub mod state;

@@ -24,6 +24,13 @@ async fn main() -> anyhow::Result<()> {
         tracing::info!("migrations applied");
     }
 
+    // `batchwise --seed` applies idempotent reference data and exits.
+    if std::env::args().any(|a| a == "--seed") {
+        batchwise::platform::seed::run(&pool).await?;
+        tracing::info!("seed data applied");
+        return Ok(());
+    }
+
     let http_port = cfg.http_port;
     let state = AppState::new(pool.clone(), cfg);
 

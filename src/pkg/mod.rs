@@ -4,6 +4,7 @@
 //! dependencies on the rest of the crate — they are the Rust equivalents of the
 //! Go `pkg/` packages and may be used by any service layer.
 
+pub mod allergen;
 pub mod bitterness;
 pub mod color;
 pub mod duty;

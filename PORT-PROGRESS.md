@@ -42,7 +42,7 @@ Legend: `[x]` done · `[~]` in progress · `[ ]` not started
 | # | Module | Status |
 |---|---|---|
 | 01 | auth + tenant | [x] argon2 + JWT + refresh rotation, integration-tested |
-| 02 | library + inventory (FIFO) | [ ] |
+| 02 | library + inventory (FIFO) | [x] seed runner + FIFO/overdraft, integration-tested |
 | 03 | recipe | [ ] |
 | 04 | batch + calendar + yeastkinetics | [ ] |
 | 05 | tracking + reporting (tier-gated) | [ ] |
@@ -75,3 +75,10 @@ framework (Leptos/Yew). Revisit once the backend port is functional.
 - Physics packages that used Go string-typed enums with runtime "unknown type"
   errors now use real Rust enums, making some error paths unrepresentable
   (and a few `Result` returns became infallible).
+- Inventory deduct: a manual deduction (empty `reference_type`) records the
+  movement as `"manual"` to satisfy the `stock_movements.reference_type` check
+  constraint (the Go service left it empty, which would violate the constraint).
+- Seed: `seed::run` is scoped to the Phase 2 files (`001`–`004`). The source
+  `006_allergen_lots.sql` inserts 31 system rows all sharing `lot_number =
+  'SYSTEM'`, violating `ingredients UNIQUE(tenant_id, lot_number)`; it will be
+  fixed (unique lot numbers) when the allergen phase is ported.
