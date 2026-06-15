@@ -52,7 +52,7 @@ Legend: `[x]` done · `[~]` in progress · `[ ]` not started
 | 11 | water chemistry | [x] profiles (system union) + adjustments + /calculate via pkg::water, integration-tested |
 | 12 | beer duty & excise records | [x] duty-returns compile/submit (SPR via pkg::duty), tier-gated, integration-tested |
 | 13 | allergen & label compliance | [x] /recipes/{id}/allergens + label-records (auto-populated), tier-gated, integration-tested |
-| 14 | packaging / distribution / traceability | [ ] |
+| 14 | packaging / distribution / traceability | [x] packaging-runs + distribution-movements (stock-remaining math, insufficient-stock 422) + forward/backward/recall traceability, both tier-gated, integration-tested |
 | 15 | trading standards audit | [ ] |
 | 16 | procurement | [ ] |
 | 17 | yeast banking | [ ] |
