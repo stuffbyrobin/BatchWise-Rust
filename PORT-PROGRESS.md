@@ -43,7 +43,7 @@ Legend: `[x]` done · `[~]` in progress · `[ ]` not started
 |---|---|---|
 | 01 | auth + tenant | [x] argon2 + JWT + refresh rotation, integration-tested |
 | 02 | library + inventory (FIFO) | [x] seed runner + FIFO/overdraft, integration-tested |
-| 03 | recipe | [ ] |
+| 03 | recipe | [x] nested children + physics calc + BeerXML/Brewfather import, integration-tested |
 | 04 | batch + calendar + yeastkinetics | [ ] |
 | 05 | tracking + reporting (tier-gated) | [ ] |
 | 06 | dashboard + OpenAPI serving | [ ] |

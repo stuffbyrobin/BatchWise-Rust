@@ -13,5 +13,6 @@ pub mod inventory;
 pub mod library;
 pub mod pkg;
 pub mod platform;
+pub mod recipe;
 pub mod state;
 pub mod tenant;
