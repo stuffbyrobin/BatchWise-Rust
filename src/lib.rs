@@ -15,6 +15,7 @@ pub mod batch;
 pub mod calendar;
 pub mod dashboard;
 pub mod duty;
+pub mod equipment;
 pub mod fermentation;
 pub mod inventory;
 pub mod labeldesign;
