@@ -31,4 +31,5 @@ pub mod tenant;
 pub mod traceability;
 pub mod tracking;
 pub mod water;
+pub mod yeastbanking;
 pub mod yeastkinetics;

@@ -55,7 +55,7 @@ Legend: `[x]` done · `[~]` in progress · `[ ]` not started
 | 14 | packaging / distribution / traceability | [x] packaging-runs + distribution-movements (stock-remaining math, insufficient-stock 422) + forward/backward/recall traceability, both tier-gated, integration-tested |
 | 15 | trading standards audit | [x] compliance-audit log (read-only, tenant-scoped, NOT feature-gated) + fire-and-forget audit writes wired into packaging, traceability, labels, duty & allergens, integration-tested |
 | 16 | procurement | [x] suppliers + purchase-orders (nested lines, PO-number gen via FOR UPDATE, status FSM, partial/full receive), tier-gated "procurement", integration-tested |
-| 17 | yeast banking | [ ] |
+| 17 | yeast banking | [x] yeast-bank entries (computed days_in_storage, harvest → generation bump, discarded terminal guard) + nested propagation events, home-tier "yeast_banking", integration-tested |
 | 18 | fermentation tracking | [ ] |
 | 19 | label & print design | [ ] |
 | 20 | equipment maintenance | [ ] |
