@@ -22,6 +22,7 @@ pub mod openapi;
 pub mod packaging;
 pub mod pkg;
 pub mod platform;
+pub mod procurement;
 pub mod recipe;
 pub mod reporting;
 pub mod sales;

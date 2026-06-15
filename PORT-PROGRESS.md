@@ -54,7 +54,7 @@ Legend: `[x]` done · `[~]` in progress · `[ ]` not started
 | 13 | allergen & label compliance | [x] /recipes/{id}/allergens + label-records (auto-populated), tier-gated, integration-tested |
 | 14 | packaging / distribution / traceability | [x] packaging-runs + distribution-movements (stock-remaining math, insufficient-stock 422) + forward/backward/recall traceability, both tier-gated, integration-tested |
 | 15 | trading standards audit | [x] compliance-audit log (read-only, tenant-scoped, NOT feature-gated) + fire-and-forget audit writes wired into packaging, traceability, labels, duty & allergens, integration-tested |
-| 16 | procurement | [ ] |
+| 16 | procurement | [x] suppliers + purchase-orders (nested lines, PO-number gen via FOR UPDATE, status FSM, partial/full receive), tier-gated "procurement", integration-tested |
 | 17 | yeast banking | [ ] |
 | 18 | fermentation tracking | [ ] |
 | 19 | label & print design | [ ] |
