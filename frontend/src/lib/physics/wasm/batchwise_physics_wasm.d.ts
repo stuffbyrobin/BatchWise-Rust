@@ -1,67 +1,90 @@
 /* tslint:disable */
 /* eslint-disable */
 /**
- * Energy (kcal) per 100 ml from ABV %.
+ * Computes OG/FG/ABV/IBU/colour from a recipe-form JSON payload.
  */
-export function energyKcalPer100ml(abv_pct: number): number;
-/**
- * UK beer duty in **pence** for a volume (litres) at a given ABV %.
- */
-export function calculateBeerDutyGbPence(volume_liters: number, abv_pct: number): number;
-/**
- * Apparent attenuation % from original and final gravity.
- */
-export function calculateAttenuation(og: number, fg: number): number;
-/**
- * UK alcohol units for a serving (ABV % and volume in ml).
- */
-export function alcoholUnits(abv_pct: number, volume_ml: number): number;
-/**
- * Estimated calories per 12 oz from original and final gravity.
- */
-export function calculateCalories(og: number, fg: number): number;
+export function computeRecipeCalcs(input_json: string): RecipeCalcs;
 /**
  * EBC → SRM.
  */
 export function ebcToSrm(ebc: number): number;
 /**
- * Specific gravity → degrees Plato.
+ * Energy (kJ) per 100 ml from ABV %.
  */
-export function sgToPlato(sg: number): number;
+export function energyKjPer100ml(abv_pct: number): number;
+/**
+ * UK alcohol units for a serving (ABV % and volume in ml).
+ */
+export function alcoholUnits(abv_pct: number, volume_ml: number): number;
+/**
+ * UK beer duty in **pence** for a volume (litres) at a given ABV %.
+ */
+export function calculateBeerDutyGbPence(volume_liters: number, abv_pct: number): number;
 /**
  * Degrees Plato → specific gravity.
  */
 export function platoToSg(plato: number): number;
 /**
- * Small Producer Relief rate (0.0–1.0) for an annual production in hl/year.
+ * Energy (kcal) per 100 ml from ABV %.
  */
-export function sprReliefRate(annual_production_hl_pa: number): number;
+export function energyKcalPer100ml(abv_pct: number): number;
 /**
- * Energy (kJ) per 100 ml from ABV %.
+ * Estimated calories per 12 oz from original and final gravity.
  */
-export function energyKjPer100ml(abv_pct: number): number;
+export function calculateCalories(og: number, fg: number): number;
+/**
+ * Degrees Lovibond → EBC.
+ */
+export function lovibondToEbc(lovibond: number): number;
 /**
  * ABV % from original and final gravity (e.g. `1.050, 1.010` → `5.25`).
  */
 export function calculateAbv(og: number, fg: number): number;
 /**
+ * Apparent attenuation % from original and final gravity.
+ */
+export function calculateAttenuation(og: number, fg: number): number;
+/**
+ * Small Producer Relief rate (0.0–1.0) for an annual production in hl/year.
+ */
+export function sprReliefRate(annual_production_hl_pa: number): number;
+/**
  * SRM → EBC.
  */
 export function srmToEbc(srm: number): number;
 /**
- * Degrees Lovibond → EBC.
+ * Specific gravity → degrees Plato.
  */
-export function lovibondToEbc(lovibond: number): number;
+export function sgToPlato(sg: number): number;
+/**
+ * The computed recipe values, surfaced to JS with camelCase getters.
+ */
+export class RecipeCalcs {
+  private constructor();
+  free(): void;
+  readonly calc_abv_pct: number;
+  readonly calc_color_ebc: number;
+  readonly calc_fg: number;
+  readonly calc_og: number;
+  readonly calc_ibu: number;
+}
 
 export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembly.Module;
 
 export interface InitOutput {
   readonly memory: WebAssembly.Memory;
+  readonly __wbg_recipecalcs_free: (a: number, b: number) => void;
   readonly calculateAbv: (a: number, b: number, c: number) => void;
   readonly calculateAttenuation: (a: number, b: number, c: number) => void;
   readonly calculateBeerDutyGbPence: (a: number, b: number) => number;
   readonly calculateCalories: (a: number, b: number, c: number) => void;
+  readonly computeRecipeCalcs: (a: number, b: number, c: number) => void;
   readonly platoToSg: (a: number) => number;
+  readonly recipecalcs_calc_abv_pct: (a: number) => number;
+  readonly recipecalcs_calc_color_ebc: (a: number) => number;
+  readonly recipecalcs_calc_fg: (a: number) => number;
+  readonly recipecalcs_calc_ibu: (a: number) => number;
+  readonly recipecalcs_calc_og: (a: number) => number;
   readonly alcoholUnits: (a: number, b: number) => number;
   readonly sprReliefRate: (a: number) => number;
   readonly srmToEbc: (a: number) => number;
@@ -71,6 +94,8 @@ export interface InitOutput {
   readonly energyKjPer100ml: (a: number) => number;
   readonly ebcToSrm: (a: number) => number;
   readonly __wbindgen_add_to_stack_pointer: (a: number) => number;
+  readonly __wbindgen_export_0: (a: number, b: number) => number;
+  readonly __wbindgen_export_1: (a: number, b: number, c: number, d: number) => number;
 }
 
 export type SyncInitInput = BufferSource | WebAssembly.Module;

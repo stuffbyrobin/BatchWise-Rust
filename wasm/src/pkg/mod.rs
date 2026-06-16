@@ -2,11 +2,13 @@
 //! WASM bundle and the server compile the same source. Paths are relative to this
 //! file's directory (`wasm/src/pkg/`).
 
-#[path = "../../../src/pkg/gravity.rs"]
-pub mod gravity;
+#[path = "../../../src/pkg/bitterness.rs"]
+pub mod bitterness;
 #[path = "../../../src/pkg/color.rs"]
 pub mod color;
-#[path = "../../../src/pkg/nutrition.rs"]
-pub mod nutrition;
 #[path = "../../../src/pkg/duty.rs"]
 pub mod duty;
+#[path = "../../../src/pkg/gravity.rs"]
+pub mod gravity;
+#[path = "../../../src/pkg/nutrition.rs"]
+pub mod nutrition;

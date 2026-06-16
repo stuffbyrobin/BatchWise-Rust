@@ -18,6 +18,10 @@ use wasm_bindgen::prelude::*;
 /// existing directory.
 mod pkg;
 
+/// Live recipe OG/FG/ABV/IBU/colour (mirrors `src/recipe/calc.rs`).
+mod recipe_calc;
+pub use recipe_calc::{compute_recipe_calcs, RecipeCalcs};
+
 /// Maps a physics error (anything `Display`) into a thrown JS `Error`.
 fn js_err(e: impl std::fmt::Display) -> JsError {
     JsError::new(&e.to_string())

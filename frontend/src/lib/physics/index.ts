@@ -36,6 +36,39 @@ export interface Physics {
   calculateBeerDutyGbPence(volumeLiters: number, abvPct: number): number
   /** Small Producer Relief rate (0–1) for annual production hl/year. */
   sprReliefRate(annualProductionHlPa: number): number
+  /** Live recipe OG/FG/ABV/IBU/colour from the current grain & hop bill. */
+  computeRecipeCalcs(input: RecipeCalcInput): RecipeCalcResult
+}
+
+/** Input to {@link Physics.computeRecipeCalcs}. */
+export interface RecipeCalcInput {
+  batch_size_liters: number
+  efficiency_pct?: number | null
+  /** First yeast's attenuation %, if any. */
+  attenuation_pct?: number | null
+  fermentables: {
+    amount: number
+    unit: string
+    potential_ppg?: number | null
+    color_ebc?: number | null
+  }[]
+  hops: {
+    amount: number
+    unit: string
+    alpha_acid_pct?: number
+    boil_time_minutes?: number
+    form?: string | null
+    use?: string | null
+  }[]
+}
+
+/** Computed recipe values (camelCased plain object). */
+export interface RecipeCalcResult {
+  calcOg: number
+  calcFg: number
+  calcAbvPct: number
+  calcIbu: number
+  calcColorEbc: number
 }
 
 const facade: Physics = {
@@ -52,6 +85,20 @@ const facade: Physics = {
   alcoholUnits: wasm.alcoholUnits,
   calculateBeerDutyGbPence: wasm.calculateBeerDutyGbPence,
   sprReliefRate: wasm.sprReliefRate,
+  computeRecipeCalcs(input: RecipeCalcInput): RecipeCalcResult {
+    const c = wasm.computeRecipeCalcs(JSON.stringify(input))
+    try {
+      return {
+        calcOg: c.calc_og,
+        calcFg: c.calc_fg,
+        calcAbvPct: c.calc_abv_pct,
+        calcIbu: c.calc_ibu,
+        calcColorEbc: c.calc_color_ebc,
+      }
+    } finally {
+      c.free() // release the wasm-allocated struct
+    }
+  },
 }
 
 let ready: Promise<Physics> | null = null
