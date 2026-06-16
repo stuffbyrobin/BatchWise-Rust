@@ -474,9 +474,19 @@ pub async fn fulfill_order(
         }
 
         let volume_liters = item.volume_liters * item.quantity as f64;
-        // Go fails open (logs and returns 0) for unsupported jurisdictions; this
-        // port surfaces an Err which we treat as zero duty.
-        let duty_pence = duty::calculate_duty(&tenant.country, volume_liters, abv_pct).unwrap_or(0);
+        // Go fails open (logs and returns 0) for unsupported jurisdictions;
+        // mirror that here — log and treat as zero duty.
+        let duty_pence = match duty::calculate_duty(&tenant.country, volume_liters, abv_pct) {
+            Ok(d) => d,
+            Err(e) => {
+                tracing::warn!(
+                    jurisdiction = %tenant.country,
+                    error = %e,
+                    "duty calculation failed; treating as zero"
+                );
+                0
+            }
+        };
 
         let event = DutyEvent {
             id: Uuid::nil(),

@@ -9,16 +9,16 @@
 
 use sqlx::PgPool;
 
-/// Seed SQL embedded at compile time, applied in lexical order.
-///
-/// Scoped to the Phase 2 reference data (styles, yeasts, equipment,
-/// fermentables). Water profiles (`005`) and allergen lots (`006`) are seeded
-/// by their respective later phases.
+/// Seed SQL embedded at compile time, applied in lexical order: BJCP styles,
+/// yeasts, equipment, fermentables, default water profiles, and the system-tenant
+/// allergen reference lots (each with a unique lot number).
 const SEED_FILES: &[&str] = &[
     include_str!("../../migrations/seed/001_styles.sql"),
     include_str!("../../migrations/seed/002_yeasts.sql"),
     include_str!("../../migrations/seed/003_equipment.sql"),
     include_str!("../../migrations/seed/004_fermentables.sql"),
+    include_str!("../../migrations/seed/005_water_profiles.sql"),
+    include_str!("../../migrations/seed/006_allergen_lots.sql"),
 ];
 
 /// Applies all seed files. Idempotent.

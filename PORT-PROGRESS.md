@@ -76,20 +76,21 @@ See `wasm/README.md` and `frontend/src/lib/physics/`.
 
 ## Notes / deviations
 
-- `pkg::duty`: the Go `CalculateDuty` "fails open" (returns 0 + logs a warning)
-  for unknown jurisdictions. The Rust port returns `Err(DutyError)` instead, as
-  there is no logger in a pure function. To be reconciled at the reporting-service
-  port if the 0-return behaviour is relied upon.
+- `pkg::duty`: the pure `calculate_duty` returns `Err(DutyError)` for unknown
+  jurisdictions (no logger in a pure function). The reporting and sales services
+  reconcile this with Go's fail-open behaviour: on `Err` they log a
+  `tracing::warn!` and treat the duty as `0` (matching Go's "log + return 0").
 - Physics packages that used Go string-typed enums with runtime "unknown type"
   errors now use real Rust enums, making some error paths unrepresentable
   (and a few `Result` returns became infallible).
 - Inventory deduct: a manual deduction (empty `reference_type`) records the
   movement as `"manual"` to satisfy the `stock_movements.reference_type` check
   constraint (the Go service left it empty, which would violate the constraint).
-- Seed: `seed::run` is scoped to the Phase 2 files (`001`–`004`). The source
-  `006_allergen_lots.sql` inserts 31 system rows all sharing `lot_number =
-  'SYSTEM'`, violating `ingredients UNIQUE(tenant_id, lot_number)`; it will be
-  fixed (unique lot numbers) when the allergen phase is ported.
+- Seed: `seed::run` applies all six reference files (`001`–`006`). The system
+  allergen lots in `006_allergen_lots.sql` now carry unique lot numbers
+  (`SYSTEM-001`…`031`) so they satisfy `ingredients UNIQUE(tenant_id, lot_number)`;
+  water profiles (`005`) and allergen lots (`006`) are seeded again. Idempotent
+  via `ON CONFLICT (id) DO NOTHING`.
 - Audit (Phase 15): Go reads the acting user from `context.Context` inside the
   audit service. Rust has no ambient context in the service layer, so the actor
   (`ctx.actor_id`) is threaded explicitly from each handler into the service
