@@ -62,9 +62,17 @@ Legend: `[x]` done · `[~]` in progress · `[ ]` not started
 
 ## Frontend
 
-Decision deferred (per project owner). Options: keep the existing React 19
-frontend unchanged (it already speaks the same API), or rewrite in a Rust/WASM
-framework (Leptos/Yew). Revisit once the backend port is functional.
+The React 19 frontend is bundled into this repo under `frontend/` so it is a
+standalone full-stack version. It speaks the same `/api/v1` contract; the Vite
+dev server proxies `/api` to the Rust backend on `:8080`, so
+`cd frontend && pnpm install && pnpm dev` (with the backend running) brings the
+whole app up. Builds and type-checks clean (`tsc && vite build`).
+
+A Rust/WASM rewrite (Leptos/Yew) was considered and declined — marginal benefit
+for a forms-and-tables SaaS. Instead, `wasm/` is a prototype that compiles the
+pure `pkg` physics to WebAssembly (single source of truth via `#[path]`), giving
+the frontend the *same* brewing calculations the server runs without a rewrite.
+See `wasm/README.md` and `frontend/src/lib/physics/`.
 
 ## Notes / deviations
 

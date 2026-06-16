@@ -4,9 +4,8 @@ set -euo pipefail
 
 cd "$(dirname "$0")"
 
-# Output into the React app (the BatchWise repo, a sibling checkout). Override
-# with OUT_DIR=… for a different layout.
-OUT_DIR="${OUT_DIR:-../../BatchWise/frontend/src/lib/physics/wasm}"
+# Output into this repo's bundled React app. Override with OUT_DIR=… if needed.
+OUT_DIR="${OUT_DIR:-../frontend/src/lib/physics/wasm}"
 CRATE_NAME="batchwise_physics_wasm"
 
 echo "→ compiling to wasm32-unknown-unknown (release)…"
