@@ -39,7 +39,35 @@ port `6543` and disables the statement cache automatically, so the transaction
 pooler works without any further config. The direct connection and session
 pooler are unaffected.
 
-## 3. Run migrations
+## 3. Configuring secrets (`DATABASE_URL`, `JWT_SECRET`)
+
+The app reads its config from environment variables (`Config::load()` in
+`src/platform/config.rs`). The database password lives inside `DATABASE_URL`, so
+treat the whole URL as a secret. **Never commit the real password** — `.env` is
+git-ignored and `.env.example` only carries placeholders.
+
+**Local development.** Put the real values in a local `.env` file (or export them
+in your shell):
+
+```bash
+# .env (git-ignored)
+DATABASE_URL=postgresql://postgres:REAL_PASSWORD@db.YOUR_PROJECT_REF.supabase.co:5432/postgres?sslmode=require
+JWT_SECRET=...     # openssl rand -base64 48
+```
+
+**Claude Code on the web (cloud sessions).** There is no encrypted secrets store
+yet — environment variables are kept in the *environment configuration* and are
+**visible in plaintext to anyone who can edit that environment**. To add them:
+open the environment selector (cloud icon, top of the session), click the gear
+icon on your environment, and add variables in `.env` format (one `KEY=value`
+per line, **no quotes**). Use this only with a **dev/throwaway** Supabase project.
+
+**Production.** Store `DATABASE_URL` and `JWT_SECRET` in your deploy platform's
+secrets manager (Fly/Render/Railway/AWS/etc.), not in the web environment config
+or the repo. If a credential ever leaks, **rotate the database password** from
+Supabase's **Project Settings → Database** and update the secret everywhere.
+
+## 4. Run migrations
 
 Migrations are embedded (`sqlx::migrate!("./migrations")`) and run on startup
 unless `MIGRATIONS_DISABLED=true`. Point the app at the **direct connection** the
@@ -53,13 +81,13 @@ cargo run -- --seed       # optional: load reference data (styles, yeasts, water
 
 No Supabase CLI or SQL-editor steps are required — the app owns its schema.
 
-## 4. What we deliberately do *not* use
+## 5. What we deliberately do *not* use
 
 Supabase bundles Auth (GoTrue), PostgREST, Storage, and Realtime. BatchWise has
 its own JWT auth, tenant scoping, and Axum API, so we treat Supabase as **just
 managed Postgres** and ignore those layers.
 
-## 5. Row Level Security (RLS) — deferred, on purpose
+## 6. Row Level Security (RLS) — deferred, on purpose
 
 RLS enforces per-row access inside Postgres. Its big payoff is when *untrusted
 clients query the database directly* (Supabase's default PostgREST/`supabase-js`
