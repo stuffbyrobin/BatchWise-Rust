@@ -1,0 +1,36 @@
+:root {
+  /* ── Landing page — V2 beer-tones palette ── */
+  --lp-bg: #faf3df;
+  --lp-bg-alt: #f5ebcb;
+  --lp-card: #ffffff;
+  --lp-card-soft: #fcf8ec;
+  --lp-ink: #1c1108;
+  --lp-muted: #6b5a4a;
+  --lp-faint: #a8967f;
+  --lp-rule: #e8ddc2;
+  --lp-malt: #a3651d;
+  --lp-malt-deep: #7a3b14;
+  --lp-malt-soft: #f3deb5;
+  --lp-hop: #6a8b3a;
+  --lp-hop-soft: #dfe8c8;
+  --lp-alert: #c0533c;
+  --lp-alert-soft: #f8dccd;
+
+  --srm-1: #f3f0c5; --srm-2: #ead999; --srm-3: #e0c069; --srm-4: #d6a13d;
+  --srm-5: #c47c2c; --srm-6: #ab5c1f; --srm-7: #8a4318; --srm-8: #5e2c0f;
+  --srm-9: #361909; --srm-10: #1a0c05;
+  --srm-text-on-1: #1a0c05; --srm-text-on-2: #1a0c05; --srm-text-on-3: #1a0c05; --srm-text-on-4: #1a0c05;
+  --srm-text-on-5: #ffffff; --srm-text-on-6: #ffffff; --srm-text-on-7: #ffffff;
+  --srm-text-on-8: #ffffff; --srm-text-on-9: #ffffff; --srm-text-on-10: #ffffff;
+  --color-bg: #faf7ef; --color-fg: #1a0c05; --color-surface: #ffffff;
+  --color-border: #e0d8c2; --color-muted: #6b6357; --color-accent: var(--srm-5);
+  --color-danger: #b3261e; --color-success: #2e7d32; --color-warning: var(--srm-4);
+  --color-success-bg: rgba(46, 125, 50, 0.12); --color-danger-bg: rgba(179, 38, 30, 0.10); --color-warning-bg: rgba(180, 120, 40, 0.12);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg: #1a0c05; --color-fg: #faf7ef; --color-surface: #2c1a10;
+    --color-border: #4a3424; --color-muted: #b0a597;
+    --color-success-bg: rgba(46, 125, 50, 0.28); --color-danger-bg: rgba(179, 38, 30, 0.30); --color-warning-bg: rgba(180, 120, 40, 0.28);
+  }
+}

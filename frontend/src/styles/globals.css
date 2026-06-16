@@ -1,0 +1,16 @@
+@import './tokens.css';
+@import 'tailwindcss';
+
+@theme {
+  --font-dm-sans: "DM Sans", system-ui, sans-serif;
+  --font-dm-mono: "DM Mono", ui-monospace, monospace;
+}
+
+body { background: var(--color-bg); color: var(--color-fg); font-family: system-ui, sans-serif; }
+*, *::before, *::after { box-sizing: border-box; }
+
+@keyframes lp-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(1.4); }
+}
+.lp-pulse { animation: lp-pulse 1.8s ease-in-out infinite; }
