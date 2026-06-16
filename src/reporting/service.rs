@@ -260,9 +260,18 @@ pub async fn compute_batch_cost(
     if let (Some(vol), Some(og), Some(fg)) = (b.actual_volume_liters, b.actual_og, b.actual_fg) {
         if let Ok(abv) = gravity::calculate_abv(og, fg) {
             // Go's CalculateDuty fails open (logs WARN, returns 0) for
-            // unsupported jurisdictions; the Rust helper returns Err, which we
-            // treat as zero to preserve that behaviour.
-            estimated_duty = duty::calculate_duty(&tn.country, vol, abv).unwrap_or(0);
+            // unsupported jurisdictions; mirror that here — log and treat as zero.
+            estimated_duty = match duty::calculate_duty(&tn.country, vol, abv) {
+                Ok(d) => d,
+                Err(e) => {
+                    tracing::warn!(
+                        jurisdiction = %tn.country,
+                        error = %e,
+                        "duty calculation failed; treating as zero"
+                    );
+                    0
+                }
+            };
         }
     }
 
