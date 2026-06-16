@@ -186,3 +186,51 @@ fn compute_ibu(hops: &[HopInput], batch_vol_l: f64, og: f64) -> f64 {
         .collect();
     bitterness::calculate_tinseth(&additions, batch_vol_l, og)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // Same golden fixture + expected values as the backend parity test in
+    // `src/recipe/calc.rs::tests`. If these two ever disagree, this module has
+    // drifted from the canonical backend calc — keep them in sync.
+    const GOLDEN_OG: f64 = 1.055_129_738_824;
+    const GOLDEN_FG: f64 = 1.012_128_542_541_28;
+    const GOLDEN_ABV: f64 = 5.643_907_012_106_99;
+    const GOLDEN_IBU: f64 = 39.072_379_101_953_366;
+    const GOLDEN_EBC: f64 = 17.699_029_979_284_365;
+
+    const FIXTURE: &str = r#"{
+        "batch_size_liters": 20, "efficiency_pct": 72, "attenuation_pct": 78,
+        "fermentables": [
+            {"amount": 4.5, "unit": "kg", "potential_ppg": 37, "color_ebc": 6},
+            {"amount": 0.5, "unit": "kg", "potential_ppg": 34, "color_ebc": 120}
+        ],
+        "hops": [
+            {"amount": 25, "unit": "g", "alpha_acid_pct": 11, "boil_time_minutes": 60, "form": "pellet", "use": "boil"},
+            {"amount": 20, "unit": "g", "alpha_acid_pct": 11, "boil_time_minutes": 10, "form": "pellet", "use": "boil"}
+        ]
+    }"#;
+
+    #[test]
+    fn matches_golden_fixture() {
+        let c = compute_recipe_calcs(FIXTURE).expect("compute");
+        assert!((c.calc_og() - GOLDEN_OG).abs() < 1e-9, "og {}", c.calc_og());
+        assert!((c.calc_fg() - GOLDEN_FG).abs() < 1e-9, "fg {}", c.calc_fg());
+        assert!(
+            (c.calc_abv_pct() - GOLDEN_ABV).abs() < 1e-9,
+            "abv {}",
+            c.calc_abv_pct()
+        );
+        assert!(
+            (c.calc_ibu() - GOLDEN_IBU).abs() < 1e-9,
+            "ibu {}",
+            c.calc_ibu()
+        );
+        assert!(
+            (c.calc_color_ebc() - GOLDEN_EBC).abs() < 1e-9,
+            "ebc {}",
+            c.calc_color_ebc()
+        );
+    }
+}
