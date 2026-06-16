@@ -112,6 +112,29 @@ function takeObject(idx) {
     return ret;
 }
 /**
+ * Computes the treated-water profile + predicted mash pH from a JSON payload.
+ * @param {string} input_json
+ * @returns {WaterTreatment}
+ */
+export function computeWaterTreatment(input_json) {
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        const ptr0 = passStringToWasm0(input_json, wasm.__wbindgen_export_0, wasm.__wbindgen_export_1);
+        const len0 = WASM_VECTOR_LEN;
+        wasm.computeWaterTreatment(retptr, ptr0, len0);
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+        if (r2) {
+            throw takeObject(r1);
+        }
+        return WaterTreatment.__wrap(r0);
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+}
+
+/**
  * Computes OG/FG/ABV/IBU/colour from a recipe-form JSON payload.
  * @param {string} input_json
  * @returns {RecipeCalcs}
@@ -362,6 +385,105 @@ export class RecipeCalcs {
      */
     get calc_ibu() {
         const ret = wasm.recipecalcs_calc_ibu(this.__wbg_ptr);
+        return ret;
+    }
+}
+
+const WaterTreatmentFinalization = (typeof FinalizationRegistry === 'undefined')
+    ? { register: () => {}, unregister: () => {} }
+    : new FinalizationRegistry(ptr => wasm.__wbg_watertreatment_free(ptr >>> 0, 1));
+/**
+ * The computed water-treatment values, surfaced to JS with snake_case getters.
+ */
+export class WaterTreatment {
+
+    static __wrap(ptr) {
+        ptr = ptr >>> 0;
+        const obj = Object.create(WaterTreatment.prototype);
+        obj.__wbg_ptr = ptr;
+        WaterTreatmentFinalization.register(obj, obj.__wbg_ptr, obj);
+        return obj;
+    }
+
+    __destroy_into_raw() {
+        const ptr = this.__wbg_ptr;
+        this.__wbg_ptr = 0;
+        WaterTreatmentFinalization.unregister(this);
+        return ptr;
+    }
+
+    free() {
+        const ptr = this.__destroy_into_raw();
+        wasm.__wbg_watertreatment_free(ptr, 0);
+    }
+    /**
+     * @returns {number}
+     */
+    get alkalinity() {
+        const ret = wasm.watertreatment_alkalinity(this.__wbg_ptr);
+        return ret;
+    }
+    /**
+     * @returns {number}
+     */
+    get sodium_ppm() {
+        const ret = wasm.watertreatment_sodium_ppm(this.__wbg_ptr);
+        return ret;
+    }
+    /**
+     * @returns {number}
+     */
+    get calcium_ppm() {
+        const ret = wasm.watertreatment_calcium_ppm(this.__wbg_ptr);
+        return ret;
+    }
+    /**
+     * @returns {number}
+     */
+    get sulfate_ppm() {
+        const ret = wasm.watertreatment_sulfate_ppm(this.__wbg_ptr);
+        return ret;
+    }
+    /**
+     * @returns {number}
+     */
+    get chloride_ppm() {
+        const ret = wasm.watertreatment_chloride_ppm(this.__wbg_ptr);
+        return ret;
+    }
+    /**
+     * @returns {number}
+     */
+    get residual_alk() {
+        const ret = wasm.watertreatment_residual_alk(this.__wbg_ptr);
+        return ret;
+    }
+    /**
+     * @returns {number}
+     */
+    get magnesium_ppm() {
+        const ret = wasm.watertreatment_magnesium_ppm(this.__wbg_ptr);
+        return ret;
+    }
+    /**
+     * @returns {number}
+     */
+    get bicarbonate_ppm() {
+        const ret = wasm.watertreatment_bicarbonate_ppm(this.__wbg_ptr);
+        return ret;
+    }
+    /**
+     * @returns {number}
+     */
+    get sulfate_to_chloride() {
+        const ret = wasm.watertreatment_sulfate_to_chloride(this.__wbg_ptr);
+        return ret;
+    }
+    /**
+     * @returns {number}
+     */
+    get mash_ph() {
+        const ret = wasm.watertreatment_mash_ph(this.__wbg_ptr);
         return ret;
     }
 }

@@ -12,3 +12,5 @@ pub mod duty;
 pub mod gravity;
 #[path = "../../../src/pkg/nutrition.rs"]
 pub mod nutrition;
+#[path = "../../../src/pkg/water.rs"]
+pub mod water;

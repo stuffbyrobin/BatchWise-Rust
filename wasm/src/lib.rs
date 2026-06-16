@@ -22,6 +22,10 @@ mod pkg;
 mod recipe_calc;
 pub use recipe_calc::{compute_recipe_calcs, RecipeCalcs};
 
+/// Live water-treatment / mash-pH preview (mirrors `src/water/service.rs`).
+mod water_calc;
+pub use water_calc::{compute_water_treatment, WaterTreatment};
+
 /// Maps a physics error (anything `Display`) into a thrown JS `Error`.
 fn js_err(e: impl std::fmt::Display) -> JsError {
     JsError::new(&e.to_string())

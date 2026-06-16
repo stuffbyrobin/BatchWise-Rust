@@ -885,7 +885,7 @@ export default function RecipeEditorPage() {
             </button>
             {showWater && (
               <div className="mt-2">
-                <RecipeWaterChemistry recipeId={id} />
+                <RecipeWaterChemistry recipeId={id} fermentables={fermentables} />
               </div>
             )}
           </div>

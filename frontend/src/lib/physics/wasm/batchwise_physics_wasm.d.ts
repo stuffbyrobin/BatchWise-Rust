@@ -1,6 +1,10 @@
 /* tslint:disable */
 /* eslint-disable */
 /**
+ * Computes the treated-water profile + predicted mash pH from a JSON payload.
+ */
+export function computeWaterTreatment(input_json: string): WaterTreatment;
+/**
  * Computes OG/FG/ABV/IBU/colour from a recipe-form JSON payload.
  */
 export function computeRecipeCalcs(input_json: string): RecipeCalcs;
@@ -68,23 +72,52 @@ export class RecipeCalcs {
   readonly calc_og: number;
   readonly calc_ibu: number;
 }
+/**
+ * The computed water-treatment values, surfaced to JS with snake_case getters.
+ */
+export class WaterTreatment {
+  private constructor();
+  free(): void;
+  readonly alkalinity: number;
+  readonly sodium_ppm: number;
+  readonly calcium_ppm: number;
+  readonly sulfate_ppm: number;
+  readonly chloride_ppm: number;
+  readonly residual_alk: number;
+  readonly magnesium_ppm: number;
+  readonly bicarbonate_ppm: number;
+  readonly sulfate_to_chloride: number;
+  readonly mash_ph: number;
+}
 
 export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembly.Module;
 
 export interface InitOutput {
   readonly memory: WebAssembly.Memory;
   readonly __wbg_recipecalcs_free: (a: number, b: number) => void;
+  readonly __wbg_watertreatment_free: (a: number, b: number) => void;
   readonly calculateAbv: (a: number, b: number, c: number) => void;
   readonly calculateAttenuation: (a: number, b: number, c: number) => void;
   readonly calculateBeerDutyGbPence: (a: number, b: number) => number;
   readonly calculateCalories: (a: number, b: number, c: number) => void;
   readonly computeRecipeCalcs: (a: number, b: number, c: number) => void;
+  readonly computeWaterTreatment: (a: number, b: number, c: number) => void;
   readonly platoToSg: (a: number) => number;
   readonly recipecalcs_calc_abv_pct: (a: number) => number;
   readonly recipecalcs_calc_color_ebc: (a: number) => number;
   readonly recipecalcs_calc_fg: (a: number) => number;
   readonly recipecalcs_calc_ibu: (a: number) => number;
   readonly recipecalcs_calc_og: (a: number) => number;
+  readonly watertreatment_alkalinity: (a: number) => number;
+  readonly watertreatment_bicarbonate_ppm: (a: number) => number;
+  readonly watertreatment_calcium_ppm: (a: number) => number;
+  readonly watertreatment_chloride_ppm: (a: number) => number;
+  readonly watertreatment_magnesium_ppm: (a: number) => number;
+  readonly watertreatment_mash_ph: (a: number) => number;
+  readonly watertreatment_residual_alk: (a: number) => number;
+  readonly watertreatment_sodium_ppm: (a: number) => number;
+  readonly watertreatment_sulfate_ppm: (a: number) => number;
+  readonly watertreatment_sulfate_to_chloride: (a: number) => number;
   readonly alcoholUnits: (a: number, b: number) => number;
   readonly sprReliefRate: (a: number) => number;
   readonly srmToEbc: (a: number) => number;

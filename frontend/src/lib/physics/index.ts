@@ -38,6 +38,37 @@ export interface Physics {
   sprReliefRate(annualProductionHlPa: number): number
   /** Live recipe OG/FG/ABV/IBU/colour from the current grain & hop bill. */
   computeRecipeCalcs(input: RecipeCalcInput): RecipeCalcResult
+  /** Live treated-water profile + predicted mash pH from source + additions. */
+  computeWaterTreatment(input: WaterTreatmentInput): WaterTreatmentResult
+}
+
+/** Input to {@link Physics.computeWaterTreatment}. */
+export interface WaterTreatmentInput {
+  source: {
+    calcium_ppm: number
+    magnesium_ppm: number
+    sodium_ppm: number
+    sulfate_ppm: number
+    chloride_ppm: number
+    bicarbonate_ppm: number
+  }
+  volume_liters: number
+  minerals: { type: string; amount: number }[]
+  grains: { grain_type: string; weight_kg: number; colour_lovibond: number }[]
+}
+
+/** Computed water-treatment values (plain object; snake_case to match server). */
+export interface WaterTreatmentResult {
+  calcium_ppm: number
+  magnesium_ppm: number
+  sodium_ppm: number
+  sulfate_ppm: number
+  chloride_ppm: number
+  bicarbonate_ppm: number
+  alkalinity: number
+  residual_alk: number
+  sulfate_to_chloride: number
+  mash_ph: number
 }
 
 /** Input to {@link Physics.computeRecipeCalcs}. */
@@ -97,6 +128,25 @@ const facade: Physics = {
       }
     } finally {
       c.free() // release the wasm-allocated struct
+    }
+  },
+  computeWaterTreatment(input: WaterTreatmentInput): WaterTreatmentResult {
+    const w = wasm.computeWaterTreatment(JSON.stringify(input))
+    try {
+      return {
+        calcium_ppm: w.calcium_ppm,
+        magnesium_ppm: w.magnesium_ppm,
+        sodium_ppm: w.sodium_ppm,
+        sulfate_ppm: w.sulfate_ppm,
+        chloride_ppm: w.chloride_ppm,
+        bicarbonate_ppm: w.bicarbonate_ppm,
+        alkalinity: w.alkalinity,
+        residual_alk: w.residual_alk,
+        sulfate_to_chloride: w.sulfate_to_chloride,
+        mash_ph: w.mash_ph,
+      }
+    } finally {
+      w.free() // release the wasm-allocated struct
     }
   },
 }

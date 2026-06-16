@@ -1,9 +1,10 @@
 import React from 'react'
 import { APIError } from '../../api/error'
-import { useWaterProfiles, useCalculateWater, useWaterAdjustments, useCreateWaterAdjustment, useUpdateWaterAdjustment } from '../water/hooks/useWater'
-import type { components } from '../../api/generated'
+import { useWaterProfiles, useWaterAdjustments, useCreateWaterAdjustment, useUpdateWaterAdjustment } from '../water/hooks/useWater'
+import { useBrewingPhysics } from '../../lib/physics/useBrewingPhysics'
+import type { WaterTreatmentResult } from '../../lib/physics'
 
-type WaterResult = components['schemas']['WaterResult']
+type WaterResult = WaterTreatmentResult
 
 const MINERALS = [
   { type: 'CaSO4', label: 'Gypsum (CaSO₄)', hint: 'Ca²⁺, SO₄²⁻' },
@@ -42,11 +43,23 @@ const blankInline = () => ({
   bicarbonate_ppm: '',
 })
 
-export function RecipeWaterChemistry({ recipeId }: { recipeId?: string }) {
+interface RecipeFermentable {
+  amount: number
+  unit: string
+  color_ebc?: number
+}
+
+export function RecipeWaterChemistry({
+  recipeId,
+  fermentables = [],
+}: {
+  recipeId?: string
+  fermentables?: RecipeFermentable[]
+}) {
   const { data: profilesData } = useWaterProfiles({ page_size: 100, sort: 'name' })
   const { data: adjustmentsData } = useWaterAdjustments({ recipe_id: recipeId, page_size: 1, sort: '-created_at' })
-  const calcMut = useCalculateWater()
   const createMut = useCreateWaterAdjustment()
+  const physics = useBrewingPhysics()
 
   const [sourceMode, setSourceMode] = React.useState<SourceMode>('profile')
   const [profileId, setProfileId] = React.useState('')
@@ -54,8 +67,6 @@ export function RecipeWaterChemistry({ recipeId }: { recipeId?: string }) {
   const [volumeLiters, setVolumeLiters] = React.useState('20')
   const [minerals, setMinerals] = React.useState<MineralRow[]>([])
   const [nextId, setNextId] = React.useState(1)
-  const [calcError, setCalcError] = React.useState<string | null>(null)
-  const [result, setResult] = React.useState<WaterResult | null>(null)
   const [name, setName] = React.useState('Recipe water')
   const [saveError, setSaveError] = React.useState<string | null>(null)
   const [saveOk, setSaveOk] = React.useState(false)
@@ -96,41 +107,65 @@ export function RecipeWaterChemistry({ recipeId }: { recipeId?: string }) {
     setMinerals((prev) => prev.filter((m) => m.id !== id))
   }
 
-  const handleCalculate = async () => {
-    setCalcError(null)
-    setResult(null)
+  // Resolve the source ions client-side: from the selected saved profile, or
+  // from the inline numeric fields. Returns null when no source is available.
+  const source = React.useMemo(() => {
+    if (sourceMode === 'profile') {
+      if (!profileId) return null
+      const p = profilesData?.items?.find((x) => x.id === profileId)
+      if (!p) return null
+      return {
+        calcium_ppm: p.calcium_ppm ?? 0,
+        magnesium_ppm: p.magnesium_ppm ?? 0,
+        sodium_ppm: p.sodium_ppm ?? 0,
+        sulfate_ppm: p.sulfate_ppm ?? 0,
+        chloride_ppm: p.chloride_ppm ?? 0,
+        bicarbonate_ppm: p.bicarbonate_ppm ?? 0,
+      }
+    }
+    return {
+      calcium_ppm: Number(inline.calcium_ppm) || 0,
+      magnesium_ppm: Number(inline.magnesium_ppm) || 0,
+      sodium_ppm: Number(inline.sodium_ppm) || 0,
+      sulfate_ppm: Number(inline.sulfate_ppm) || 0,
+      chloride_ppm: Number(inline.chloride_ppm) || 0,
+      bicarbonate_ppm: Number(inline.bicarbonate_ppm) || 0,
+    }
+  }, [sourceMode, profileId, inline, profilesData])
 
-    const body: Record<string, unknown> = {
+  // Derive water-chemistry grains from the recipe grain bill. The recipe model
+  // has no explicit water grain-type, so we classify by EBC colour (estimate).
+  const grains = React.useMemo(
+    () =>
+      fermentables
+        .filter((f) => f.color_ebc != null && f.amount > 0)
+        .map((f) => {
+          const ebc = f.color_ebc as number
+          const grain_type = ebc < 20 ? 'base' : ebc < 300 ? 'crystal' : 'roast'
+          return {
+            grain_type,
+            weight_kg: f.unit === 'g' ? f.amount / 1000 : f.amount,
+            colour_lovibond: ebc / 2.65,
+          }
+        }),
+    [fermentables]
+  )
+
+  // Live treated-water profile + mash pH, recomputed in-browser by the same Rust
+  // physics the server runs. Null when physics isn't ready or no source is set.
+  const liveResult: WaterResult | null = React.useMemo(() => {
+    if (!physics.ready || !source) return null
+    return physics.computeWaterTreatment({
+      source,
       volume_liters: Number(volumeLiters) || 0,
-      mineral_additions: minerals
+      minerals: minerals
         .filter((m) => m.amount !== '' && Number(m.amount) > 0)
         .map((m) => ({ type: m.type, amount: Number(m.amount) })),
-    }
-
-    if (sourceMode === 'profile') {
-      if (!profileId) {
-        setCalcError('Select a source water profile.')
-        return
-      }
-      body.source_profile_id = profileId
-    } else {
-      body.source_profile = {
-        calcium_ppm: Number(inline.calcium_ppm) || 0,
-        magnesium_ppm: Number(inline.magnesium_ppm) || 0,
-        sodium_ppm: Number(inline.sodium_ppm) || 0,
-        sulfate_ppm: Number(inline.sulfate_ppm) || 0,
-        chloride_ppm: Number(inline.chloride_ppm) || 0,
-        bicarbonate_ppm: Number(inline.bicarbonate_ppm) || 0,
-      }
-    }
-
-    try {
-      const res = await calcMut.mutateAsync(body)
-      setResult(res)
-    } catch (e) {
-      setCalcError(e instanceof APIError ? e.message : 'Calculation failed')
-    }
-  }
+      grains,
+    })
+    // physics.computeWaterTreatment is a stable module singleton; gate on `ready`.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [physics.ready, source, volumeLiters, minerals, grains])
 
   const handleSave = async () => {
     setSaveError(null)
@@ -159,9 +194,9 @@ export function RecipeWaterChemistry({ recipeId }: { recipeId?: string }) {
     }
   }
 
-  const sc = result
-    ? result.sulfate_to_chloride != null
-      ? Number(result.sulfate_to_chloride).toFixed(2)
+  const sc = liveResult
+    ? liveResult.sulfate_to_chloride != null
+      ? Number(liveResult.sulfate_to_chloride).toFixed(2)
       : '—'
     : null
 
@@ -313,11 +348,6 @@ export function RecipeWaterChemistry({ recipeId }: { recipeId?: string }) {
         </div>
       </div>
 
-      {calcError && (
-        <div className="mb-3 p-2 rounded text-sm text-[var(--color-danger)] border border-[var(--color-danger)]">
-          {calcError}
-        </div>
-      )}
       {saveError && (
         <div className="mb-3 p-2 rounded text-sm text-[var(--color-danger)] border border-[var(--color-danger)]">
           {saveError}
@@ -329,13 +359,6 @@ export function RecipeWaterChemistry({ recipeId }: { recipeId?: string }) {
         </div>
       )}
       <div className="flex gap-3 mb-6">
-        <button
-          onClick={handleCalculate}
-          disabled={calcMut.isPending}
-          className="px-5 py-2 rounded text-sm bg-[var(--color-accent)] text-white hover:opacity-90 disabled:opacity-50"
-        >
-          {calcMut.isPending ? 'Calculating…' : 'Calculate'}
-        </button>
         <button
           onClick={handleSave}
           disabled={
@@ -358,7 +381,7 @@ export function RecipeWaterChemistry({ recipeId }: { recipeId?: string }) {
         <p className='text-xs text-[var(--color-muted)] mt-1'>Saving requires a saved water profile.</p>
       )}
 
-      {result && (
+      {liveResult && (
         <div
           className="p-4 rounded border"
           style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)' }}
@@ -370,7 +393,7 @@ export function RecipeWaterChemistry({ recipeId }: { recipeId?: string }) {
               <div key={f.key} className="text-center">
                 <p className="text-xs text-[var(--color-muted)] mb-0.5">{f.label}</p>
                 <p className="text-lg font-semibold text-[var(--color-fg)] tabular-nums">
-                  {result[f.key] != null ? Number(result[f.key]).toFixed(1) : '—'}
+                  {liveResult[f.key] != null ? Number(liveResult[f.key]).toFixed(1) : '—'}
                 </p>
                 <p className="text-xs text-[var(--color-muted)]">ppm</p>
               </div>
@@ -381,14 +404,14 @@ export function RecipeWaterChemistry({ recipeId }: { recipeId?: string }) {
             <div className="text-center">
               <p className="text-xs text-[var(--color-muted)] mb-0.5">Alkalinity</p>
               <p className="text-base font-semibold text-[var(--color-fg)] tabular-nums">
-                {result.alkalinity != null ? Number(result.alkalinity).toFixed(1) : '—'}
+                {liveResult.alkalinity != null ? Number(liveResult.alkalinity).toFixed(1) : '—'}
               </p>
               <p className="text-xs text-[var(--color-muted)]">ppm as CaCO₃</p>
             </div>
             <div className="text-center">
               <p className="text-xs text-[var(--color-muted)] mb-0.5">Residual Alk.</p>
               <p className="text-base font-semibold text-[var(--color-fg)] tabular-nums">
-                {result.residual_alk != null ? Number(result.residual_alk).toFixed(1) : '—'}
+                {liveResult.residual_alk != null ? Number(liveResult.residual_alk).toFixed(1) : '—'}
               </p>
               <p className="text-xs text-[var(--color-muted)]">ppm as CaCO₃</p>
             </div>
@@ -396,7 +419,7 @@ export function RecipeWaterChemistry({ recipeId }: { recipeId?: string }) {
               <p className="text-xs text-[var(--color-muted)] mb-0.5">SO₄ : Cl</p>
               <p
                 className="text-base font-semibold tabular-nums"
-                style={{ color: scColor(result.sulfate_to_chloride) }}
+                style={{ color: scColor(liveResult.sulfate_to_chloride) }}
               >
                 {sc}
               </p>
@@ -404,19 +427,24 @@ export function RecipeWaterChemistry({ recipeId }: { recipeId?: string }) {
             </div>
           </div>
 
-          {result.mash_ph != null && result.mash_ph > 0 && (
+          {liveResult.mash_ph != null && liveResult.mash_ph > 0 && (
             <div
-              className="border-t mt-3 pt-3 flex items-center gap-3"
+              className="border-t mt-3 pt-3"
               style={{ borderColor: 'var(--color-border)' }}
             >
-              <p className="text-xs text-[var(--color-muted)]">Predicted mash pH</p>
-              <p
-                className="text-xl font-bold tabular-nums"
-                style={{ color: phColor(result.mash_ph) }}
-              >
-                {Number(result.mash_ph).toFixed(2)}
+              <div className="flex items-center gap-3">
+                <p className="text-xs text-[var(--color-muted)]">Predicted mash pH</p>
+                <p
+                  className="text-xl font-bold tabular-nums"
+                  style={{ color: phColor(liveResult.mash_ph) }}
+                >
+                  {Number(liveResult.mash_ph).toFixed(2)}
+                </p>
+                <p className="text-xs text-[var(--color-muted)]">(target: 5.2 – 5.4)</p>
+              </div>
+              <p className="text-xs text-[var(--color-muted)] mt-1">
+                Estimated from the grain bill (colour-classified)
               </p>
-              <p className="text-xs text-[var(--color-muted)]">(target: 5.2 – 5.4)</p>
             </div>
           )}
         </div>
