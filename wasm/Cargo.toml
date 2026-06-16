@@ -1,0 +1,22 @@
+[package]
+name = "batchwise-physics-wasm"
+version = "0.1.0"
+edition = "2021"
+description = "WebAssembly bindings for the BatchWise brewing-physics calculations (src/pkg)."
+publish = false
+
+# Standalone: not part of the main batchwise crate's build.
+[workspace]
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+# Must match the installed wasm-bindgen CLI version exactly.
+wasm-bindgen = "=0.2.100"
+
+[profile.release]
+opt-level = "s"
+lto = true
+codegen-units = 1
+strip = true
