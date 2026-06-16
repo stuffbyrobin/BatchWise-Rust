@@ -58,7 +58,7 @@ Legend: `[x]` done · `[~]` in progress · `[ ]` not started
 | 17 | yeast banking | [x] yeast-bank entries (computed days_in_storage, harvest → generation bump, discarded terminal guard) + nested propagation events, home-tier "yeast_banking", integration-tested |
 | 18 | fermentation tracking | [x] fermentation readings (gravity/temp/pH/stage) under /batches/{id}/fermentation, batch-scoped, home-tier "fermentation", integration-tested |
 | 19 | label & print design | [x] brand-assets (BYTEA upload/serve) + brand-profiles + label-designs (kind/size validation) + render model & print-ready PDF (printpdf), tier-gated "label_design", integration-tested |
-| 20 | equipment maintenance | [ ] |
+| 20 | equipment maintenance | [x] equipment register + nested maintenance schedules + events + cross-equipment maintenance-due feed (SQL-computed next-due/overdue/days-until/lifetime-cost), tier-gated "equipment_maintenance", integration-tested |
 
 ## Frontend
 
