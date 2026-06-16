@@ -32,25 +32,61 @@ function addHeapObject(obj) {
     heap[idx] = obj;
     return idx;
 }
-/**
- * Energy (kcal) per 100 ml from ABV %.
- * @param {number} abv_pct
- * @returns {number}
- */
-export function energyKcalPer100ml(abv_pct) {
-    const ret = wasm.energyKcalPer100ml(abv_pct);
-    return ret;
-}
 
-/**
- * UK beer duty in **pence** for a volume (litres) at a given ABV %.
- * @param {number} volume_liters
- * @param {number} abv_pct
- * @returns {number}
- */
-export function calculateBeerDutyGbPence(volume_liters, abv_pct) {
-    const ret = wasm.calculateBeerDutyGbPence(volume_liters, abv_pct);
-    return ret;
+let WASM_VECTOR_LEN = 0;
+
+const cachedTextEncoder = (typeof TextEncoder !== 'undefined' ? new TextEncoder('utf-8') : { encode: () => { throw Error('TextEncoder not available') } } );
+
+const encodeString = (typeof cachedTextEncoder.encodeInto === 'function'
+    ? function (arg, view) {
+    return cachedTextEncoder.encodeInto(arg, view);
+}
+    : function (arg, view) {
+    const buf = cachedTextEncoder.encode(arg);
+    view.set(buf);
+    return {
+        read: arg.length,
+        written: buf.length
+    };
+});
+
+function passStringToWasm0(arg, malloc, realloc) {
+
+    if (realloc === undefined) {
+        const buf = cachedTextEncoder.encode(arg);
+        const ptr = malloc(buf.length, 1) >>> 0;
+        getUint8ArrayMemory0().subarray(ptr, ptr + buf.length).set(buf);
+        WASM_VECTOR_LEN = buf.length;
+        return ptr;
+    }
+
+    let len = arg.length;
+    let ptr = malloc(len, 1) >>> 0;
+
+    const mem = getUint8ArrayMemory0();
+
+    let offset = 0;
+
+    for (; offset < len; offset++) {
+        const code = arg.charCodeAt(offset);
+        if (code > 0x7F) break;
+        mem[ptr + offset] = code;
+    }
+
+    if (offset !== len) {
+        if (offset !== 0) {
+            arg = arg.slice(offset);
+        }
+        ptr = realloc(ptr, len, len = offset + arg.length * 3, 1) >>> 0;
+        const view = getUint8ArrayMemory0().subarray(ptr + offset, ptr + len);
+        const ret = encodeString(arg, view);
+
+        offset += ret.written;
+        ptr = realloc(ptr, len, offset, 1) >>> 0;
+    }
+
+    WASM_VECTOR_LEN = offset;
+    return ptr;
 }
 
 let cachedDataViewMemory0 = null;
@@ -76,25 +112,69 @@ function takeObject(idx) {
     return ret;
 }
 /**
- * Apparent attenuation % from original and final gravity.
- * @param {number} og
- * @param {number} fg
- * @returns {number}
+ * Computes the treated-water profile + predicted mash pH from a JSON payload.
+ * @param {string} input_json
+ * @returns {WaterTreatment}
  */
-export function calculateAttenuation(og, fg) {
+export function computeWaterTreatment(input_json) {
     try {
         const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
-        wasm.calculateAttenuation(retptr, og, fg);
-        var r0 = getDataViewMemory0().getFloat64(retptr + 8 * 0, true);
+        const ptr0 = passStringToWasm0(input_json, wasm.__wbindgen_export_0, wasm.__wbindgen_export_1);
+        const len0 = WASM_VECTOR_LEN;
+        wasm.computeWaterTreatment(retptr, ptr0, len0);
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
         var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
-        var r3 = getDataViewMemory0().getInt32(retptr + 4 * 3, true);
-        if (r3) {
-            throw takeObject(r2);
+        if (r2) {
+            throw takeObject(r1);
         }
-        return r0;
+        return WaterTreatment.__wrap(r0);
     } finally {
         wasm.__wbindgen_add_to_stack_pointer(16);
     }
+}
+
+/**
+ * Computes OG/FG/ABV/IBU/colour from a recipe-form JSON payload.
+ * @param {string} input_json
+ * @returns {RecipeCalcs}
+ */
+export function computeRecipeCalcs(input_json) {
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        const ptr0 = passStringToWasm0(input_json, wasm.__wbindgen_export_0, wasm.__wbindgen_export_1);
+        const len0 = WASM_VECTOR_LEN;
+        wasm.computeRecipeCalcs(retptr, ptr0, len0);
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+        if (r2) {
+            throw takeObject(r1);
+        }
+        return RecipeCalcs.__wrap(r0);
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+}
+
+/**
+ * EBC → SRM.
+ * @param {number} ebc
+ * @returns {number}
+ */
+export function ebcToSrm(ebc) {
+    const ret = wasm.ebcToSrm(ebc);
+    return ret;
+}
+
+/**
+ * Energy (kJ) per 100 ml from ABV %.
+ * @param {number} abv_pct
+ * @returns {number}
+ */
+export function energyKjPer100ml(abv_pct) {
+    const ret = wasm.energyKjPer100ml(abv_pct);
+    return ret;
 }
 
 /**
@@ -105,6 +185,37 @@ export function calculateAttenuation(og, fg) {
  */
 export function alcoholUnits(abv_pct, volume_ml) {
     const ret = wasm.alcoholUnits(abv_pct, volume_ml);
+    return ret;
+}
+
+/**
+ * UK beer duty in **pence** for a volume (litres) at a given ABV %.
+ * @param {number} volume_liters
+ * @param {number} abv_pct
+ * @returns {number}
+ */
+export function calculateBeerDutyGbPence(volume_liters, abv_pct) {
+    const ret = wasm.calculateBeerDutyGbPence(volume_liters, abv_pct);
+    return ret;
+}
+
+/**
+ * Degrees Plato → specific gravity.
+ * @param {number} plato
+ * @returns {number}
+ */
+export function platoToSg(plato) {
+    const ret = wasm.platoToSg(plato);
+    return ret;
+}
+
+/**
+ * Energy (kcal) per 100 ml from ABV %.
+ * @param {number} abv_pct
+ * @returns {number}
+ */
+export function energyKcalPer100ml(abv_pct) {
+    const ret = wasm.energyKcalPer100ml(abv_pct);
     return ret;
 }
 
@@ -131,52 +242,12 @@ export function calculateCalories(og, fg) {
 }
 
 /**
- * EBC → SRM.
- * @param {number} ebc
+ * Degrees Lovibond → EBC.
+ * @param {number} lovibond
  * @returns {number}
  */
-export function ebcToSrm(ebc) {
-    const ret = wasm.ebcToSrm(ebc);
-    return ret;
-}
-
-/**
- * Specific gravity → degrees Plato.
- * @param {number} sg
- * @returns {number}
- */
-export function sgToPlato(sg) {
-    const ret = wasm.sgToPlato(sg);
-    return ret;
-}
-
-/**
- * Degrees Plato → specific gravity.
- * @param {number} plato
- * @returns {number}
- */
-export function platoToSg(plato) {
-    const ret = wasm.platoToSg(plato);
-    return ret;
-}
-
-/**
- * Small Producer Relief rate (0.0–1.0) for an annual production in hl/year.
- * @param {number} annual_production_hl_pa
- * @returns {number}
- */
-export function sprReliefRate(annual_production_hl_pa) {
-    const ret = wasm.sprReliefRate(annual_production_hl_pa);
-    return ret;
-}
-
-/**
- * Energy (kJ) per 100 ml from ABV %.
- * @param {number} abv_pct
- * @returns {number}
- */
-export function energyKjPer100ml(abv_pct) {
-    const ret = wasm.energyKjPer100ml(abv_pct);
+export function lovibondToEbc(lovibond) {
+    const ret = wasm.lovibondToEbc(lovibond);
     return ret;
 }
 
@@ -203,6 +274,38 @@ export function calculateAbv(og, fg) {
 }
 
 /**
+ * Apparent attenuation % from original and final gravity.
+ * @param {number} og
+ * @param {number} fg
+ * @returns {number}
+ */
+export function calculateAttenuation(og, fg) {
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        wasm.calculateAttenuation(retptr, og, fg);
+        var r0 = getDataViewMemory0().getFloat64(retptr + 8 * 0, true);
+        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+        var r3 = getDataViewMemory0().getInt32(retptr + 4 * 3, true);
+        if (r3) {
+            throw takeObject(r2);
+        }
+        return r0;
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+}
+
+/**
+ * Small Producer Relief rate (0.0–1.0) for an annual production in hl/year.
+ * @param {number} annual_production_hl_pa
+ * @returns {number}
+ */
+export function sprReliefRate(annual_production_hl_pa) {
+    const ret = wasm.sprReliefRate(annual_production_hl_pa);
+    return ret;
+}
+
+/**
  * SRM → EBC.
  * @param {number} srm
  * @returns {number}
@@ -213,13 +316,176 @@ export function srmToEbc(srm) {
 }
 
 /**
- * Degrees Lovibond → EBC.
- * @param {number} lovibond
+ * Specific gravity → degrees Plato.
+ * @param {number} sg
  * @returns {number}
  */
-export function lovibondToEbc(lovibond) {
-    const ret = wasm.lovibondToEbc(lovibond);
+export function sgToPlato(sg) {
+    const ret = wasm.sgToPlato(sg);
     return ret;
+}
+
+const RecipeCalcsFinalization = (typeof FinalizationRegistry === 'undefined')
+    ? { register: () => {}, unregister: () => {} }
+    : new FinalizationRegistry(ptr => wasm.__wbg_recipecalcs_free(ptr >>> 0, 1));
+/**
+ * The computed recipe values, surfaced to JS with camelCase getters.
+ */
+export class RecipeCalcs {
+
+    static __wrap(ptr) {
+        ptr = ptr >>> 0;
+        const obj = Object.create(RecipeCalcs.prototype);
+        obj.__wbg_ptr = ptr;
+        RecipeCalcsFinalization.register(obj, obj.__wbg_ptr, obj);
+        return obj;
+    }
+
+    __destroy_into_raw() {
+        const ptr = this.__wbg_ptr;
+        this.__wbg_ptr = 0;
+        RecipeCalcsFinalization.unregister(this);
+        return ptr;
+    }
+
+    free() {
+        const ptr = this.__destroy_into_raw();
+        wasm.__wbg_recipecalcs_free(ptr, 0);
+    }
+    /**
+     * @returns {number}
+     */
+    get calc_abv_pct() {
+        const ret = wasm.recipecalcs_calc_abv_pct(this.__wbg_ptr);
+        return ret;
+    }
+    /**
+     * @returns {number}
+     */
+    get calc_color_ebc() {
+        const ret = wasm.recipecalcs_calc_color_ebc(this.__wbg_ptr);
+        return ret;
+    }
+    /**
+     * @returns {number}
+     */
+    get calc_fg() {
+        const ret = wasm.recipecalcs_calc_fg(this.__wbg_ptr);
+        return ret;
+    }
+    /**
+     * @returns {number}
+     */
+    get calc_og() {
+        const ret = wasm.recipecalcs_calc_og(this.__wbg_ptr);
+        return ret;
+    }
+    /**
+     * @returns {number}
+     */
+    get calc_ibu() {
+        const ret = wasm.recipecalcs_calc_ibu(this.__wbg_ptr);
+        return ret;
+    }
+}
+
+const WaterTreatmentFinalization = (typeof FinalizationRegistry === 'undefined')
+    ? { register: () => {}, unregister: () => {} }
+    : new FinalizationRegistry(ptr => wasm.__wbg_watertreatment_free(ptr >>> 0, 1));
+/**
+ * The computed water-treatment values, surfaced to JS with snake_case getters.
+ */
+export class WaterTreatment {
+
+    static __wrap(ptr) {
+        ptr = ptr >>> 0;
+        const obj = Object.create(WaterTreatment.prototype);
+        obj.__wbg_ptr = ptr;
+        WaterTreatmentFinalization.register(obj, obj.__wbg_ptr, obj);
+        return obj;
+    }
+
+    __destroy_into_raw() {
+        const ptr = this.__wbg_ptr;
+        this.__wbg_ptr = 0;
+        WaterTreatmentFinalization.unregister(this);
+        return ptr;
+    }
+
+    free() {
+        const ptr = this.__destroy_into_raw();
+        wasm.__wbg_watertreatment_free(ptr, 0);
+    }
+    /**
+     * @returns {number}
+     */
+    get alkalinity() {
+        const ret = wasm.watertreatment_alkalinity(this.__wbg_ptr);
+        return ret;
+    }
+    /**
+     * @returns {number}
+     */
+    get sodium_ppm() {
+        const ret = wasm.watertreatment_sodium_ppm(this.__wbg_ptr);
+        return ret;
+    }
+    /**
+     * @returns {number}
+     */
+    get calcium_ppm() {
+        const ret = wasm.watertreatment_calcium_ppm(this.__wbg_ptr);
+        return ret;
+    }
+    /**
+     * @returns {number}
+     */
+    get sulfate_ppm() {
+        const ret = wasm.watertreatment_sulfate_ppm(this.__wbg_ptr);
+        return ret;
+    }
+    /**
+     * @returns {number}
+     */
+    get chloride_ppm() {
+        const ret = wasm.watertreatment_chloride_ppm(this.__wbg_ptr);
+        return ret;
+    }
+    /**
+     * @returns {number}
+     */
+    get residual_alk() {
+        const ret = wasm.watertreatment_residual_alk(this.__wbg_ptr);
+        return ret;
+    }
+    /**
+     * @returns {number}
+     */
+    get magnesium_ppm() {
+        const ret = wasm.watertreatment_magnesium_ppm(this.__wbg_ptr);
+        return ret;
+    }
+    /**
+     * @returns {number}
+     */
+    get bicarbonate_ppm() {
+        const ret = wasm.watertreatment_bicarbonate_ppm(this.__wbg_ptr);
+        return ret;
+    }
+    /**
+     * @returns {number}
+     */
+    get sulfate_to_chloride() {
+        const ret = wasm.watertreatment_sulfate_to_chloride(this.__wbg_ptr);
+        return ret;
+    }
+    /**
+     * @returns {number}
+     */
+    get mash_ph() {
+        const ret = wasm.watertreatment_mash_ph(this.__wbg_ptr);
+        return ret;
+    }
 }
 
 async function __wbg_load(module, imports) {
@@ -259,6 +525,9 @@ function __wbg_get_imports() {
     imports.wbg.__wbindgen_error_new = function(arg0, arg1) {
         const ret = new Error(getStringFromWasm0(arg0, arg1));
         return addHeapObject(ret);
+    };
+    imports.wbg.__wbindgen_throw = function(arg0, arg1) {
+        throw new Error(getStringFromWasm0(arg0, arg1));
     };
 
     return imports;

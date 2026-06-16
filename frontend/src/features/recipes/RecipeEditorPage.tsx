@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { useBrewingPhysics } from '../../lib/physics/useBrewingPhysics'
 import { useRecipe, useCreateRecipe, useUpdateRecipe } from './hooks/useRecipes'
 import { APIError } from '../../api/error'
 import type { components } from '../../api/generated'
@@ -139,6 +140,35 @@ export default function RecipeEditorPage() {
 
   // Water chemistry section collapse toggle
   const [showWater, setShowWater] = useState(false)
+
+  // Live (unsaved) estimates, computed client-side by the same Rust physics the
+  // server runs (compiled to WASM). Recomputed as the grain/hop bill changes,
+  // so the brewer sees OG/FG/ABV/IBU/colour update while editing — before saving.
+  const physics = useBrewingPhysics()
+  const liveCalcs = useMemo(() => {
+    if (!physics.ready || !batchSizeLiters) return null
+    return physics.computeRecipeCalcs({
+      batch_size_liters: batchSizeLiters,
+      efficiency_pct: efficiencyPct,
+      attenuation_pct: yeasts[0]?.attenuation_pct ?? null,
+      fermentables: fermentables.map((f) => ({
+        amount: f.amount,
+        unit: f.unit,
+        potential_ppg: f.potential_ppg ?? null,
+        color_ebc: f.color_ebc ?? null,
+      })),
+      hops: hops.map((h) => ({
+        amount: h.amount,
+        unit: h.unit,
+        alpha_acid_pct: h.alpha_acid_pct,
+        boil_time_minutes: h.boil_time_minutes,
+        form: h.form ?? null,
+        use: h.use ?? null,
+      })),
+    })
+    // physics.computeRecipeCalcs is a stable module singleton; gate on `ready`.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [physics.ready, batchSizeLiters, efficiencyPct, fermentables, hops, yeasts])
 
   // Populate state from loaded recipe
   useEffect(() => {
@@ -855,10 +885,46 @@ export default function RecipeEditorPage() {
             </button>
             {showWater && (
               <div className="mt-2">
-                <RecipeWaterChemistry recipeId={id} />
+                <RecipeWaterChemistry recipeId={id} fermentables={fermentables} />
               </div>
             )}
           </div>
+
+          {/* Live estimate (unsaved) — computed in-browser by the same Rust
+              physics the server runs, updating as you edit the bill. */}
+          {liveCalcs && (
+            <div className="bg-[var(--color-surface)] p-6 rounded shadow mb-4">
+              <h2 className="text-lg font-semibold mb-1 text-[var(--color-fg)]">Live estimate</h2>
+              <p className="text-xs text-[var(--color-muted)] mb-4">
+                Computed in your browser as you edit (same engine as the server). Saved values appear below.
+              </p>
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-[var(--color-muted)] mb-1">OG</label>
+                  <div className="border border-[var(--color-border)] rounded px-3 py-2 bg-[var(--color-bg)] text-[var(--color-fg)] tabular-nums">{liveCalcs.calcOg.toFixed(3)}</div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-[var(--color-muted)] mb-1">FG</label>
+                  <div className="border border-[var(--color-border)] rounded px-3 py-2 bg-[var(--color-bg)] text-[var(--color-fg)] tabular-nums">{liveCalcs.calcFg.toFixed(3)}</div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-[var(--color-muted)] mb-1">ABV %</label>
+                  <div className="border border-[var(--color-border)] rounded px-3 py-2 bg-[var(--color-bg)] text-[var(--color-fg)] tabular-nums">{liveCalcs.calcAbvPct.toFixed(1)}%</div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-[var(--color-muted)] mb-1">IBU</label>
+                  <div className="border border-[var(--color-border)] rounded px-3 py-2 bg-[var(--color-bg)] text-[var(--color-fg)] tabular-nums">{liveCalcs.calcIbu.toFixed(1)}</div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-[var(--color-muted)] mb-1">Color (EBC)</label>
+                  <div className="border border-[var(--color-border)] rounded px-3 py-2 bg-[var(--color-bg)] text-[var(--color-fg)] flex items-center gap-2 tabular-nums">
+                    <EBCSwatch ebc={liveCalcs.calcColorEbc} />
+                    {liveCalcs.calcColorEbc.toFixed(0)}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Computed Values */}
           {(calcOg !== null || calcFg !== null || calcAbvPct !== null || calcIbu !== null || calcColorEbc !== null) && (

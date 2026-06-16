@@ -1,11 +1,30 @@
 /* tslint:disable */
 /* eslint-disable */
 export const memory: WebAssembly.Memory;
+export const __wbg_recipecalcs_free: (a: number, b: number) => void;
+export const __wbg_watertreatment_free: (a: number, b: number) => void;
 export const calculateAbv: (a: number, b: number, c: number) => void;
 export const calculateAttenuation: (a: number, b: number, c: number) => void;
 export const calculateBeerDutyGbPence: (a: number, b: number) => number;
 export const calculateCalories: (a: number, b: number, c: number) => void;
+export const computeRecipeCalcs: (a: number, b: number, c: number) => void;
+export const computeWaterTreatment: (a: number, b: number, c: number) => void;
 export const platoToSg: (a: number) => number;
+export const recipecalcs_calc_abv_pct: (a: number) => number;
+export const recipecalcs_calc_color_ebc: (a: number) => number;
+export const recipecalcs_calc_fg: (a: number) => number;
+export const recipecalcs_calc_ibu: (a: number) => number;
+export const recipecalcs_calc_og: (a: number) => number;
+export const watertreatment_alkalinity: (a: number) => number;
+export const watertreatment_bicarbonate_ppm: (a: number) => number;
+export const watertreatment_calcium_ppm: (a: number) => number;
+export const watertreatment_chloride_ppm: (a: number) => number;
+export const watertreatment_magnesium_ppm: (a: number) => number;
+export const watertreatment_mash_ph: (a: number) => number;
+export const watertreatment_residual_alk: (a: number) => number;
+export const watertreatment_sodium_ppm: (a: number) => number;
+export const watertreatment_sulfate_ppm: (a: number) => number;
+export const watertreatment_sulfate_to_chloride: (a: number) => number;
 export const alcoholUnits: (a: number, b: number) => number;
 export const sprReliefRate: (a: number) => number;
 export const srmToEbc: (a: number) => number;
@@ -15,3 +34,5 @@ export const lovibondToEbc: (a: number) => number;
 export const energyKjPer100ml: (a: number) => number;
 export const ebcToSrm: (a: number) => number;
 export const __wbindgen_add_to_stack_pointer: (a: number) => number;
+export const __wbindgen_export_0: (a: number, b: number) => number;
+export const __wbindgen_export_1: (a: number, b: number, c: number, d: number) => number;
