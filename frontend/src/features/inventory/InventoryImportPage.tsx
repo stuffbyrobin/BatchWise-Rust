@@ -1,6 +1,7 @@
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useInventoryCreate } from './hooks/useInventory'
+import { APIError } from '../../api/error'
 
 const TYPES = ['fermentable', 'hop', 'yeast', 'adjunct', 'chemical', 'other'] as const
 const UNITS = ['kg', 'g', 'L', 'mL', 'count'] as const
@@ -24,10 +25,31 @@ type RowStatus = 'pending' | 'ok' | 'error'
 function validateRow(row: Omit<Row, 'error'>): string | undefined {
   if (!row.name) return 'name required'
   if (!TYPES.includes(row.type as typeof TYPES[number])) return `type must be one of: ${TYPES.join(', ')}`
-  if (!row.amount || isNaN(Number(row.amount)) || Number(row.amount) <= 0) return 'amount must be a positive number'
+  // Zero is allowed: an ingredient may be imported on-record with no stock held.
+  if (row.amount === '' || isNaN(Number(row.amount)) || Number(row.amount) < 0) return 'amount must be 0 or a positive number'
   if (!UNITS.includes(row.unit as typeof UNITS[number])) return `unit must be one of: ${UNITS.join(', ')}`
   if (!row.lot_number) return 'lot_number required'
   return undefined
+}
+
+// Inventory is lot-based: lot numbers must be 1–100 chars of [A-Za-z0-9-] and
+// unique per tenant. A Brewfather catalogue often has missing or invalid lot
+// numbers, so synthesise a unique, valid one — preserve a real lot (sanitised),
+// otherwise derive `BF-<TYPE>-<NAME-SLUG>` — de-duplicating within the import.
+function makeLotNumber(raw: unknown, type: string, name: string, seen: Set<string>): string {
+  const sanitize = (s: string) =>
+    s.replace(/[^A-Za-z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-+|-+$/g, '').slice(0, 100)
+  let base = sanitize(String(raw ?? ''))
+  if (!base) {
+    const slug = sanitize(name).toUpperCase()
+    base = sanitize(`BF-${type.slice(0, 4).toUpperCase()}-${slug || 'ITEM'}`).slice(0, 90)
+  }
+  if (!base) base = 'BF-ITEM'
+  let lot = base
+  let n = 2
+  while (seen.has(lot)) lot = `${base}-${n++}`.slice(0, 100)
+  seen.add(lot)
+  return lot
 }
 
 function parseCSV(text: string): Row[] {
@@ -131,16 +153,20 @@ function parseBrewfather(text: string): Row[] {
     const inv = dataSection?.inventory as Record<string, unknown[]> | undefined
     if (!inv) return []
     const rows: Row[] = []
+    // Whole catalogue is imported (including zero-stock items); `seen` keeps the
+    // synthesised lot numbers unique to satisfy UNIQUE(tenant_id, lot_number).
+    const seen = new Set<string>()
 
     for (const f of (inv.fermentables ?? []) as Record<string, unknown>[]) {
-      const stock = Math.max(Number(f.inventory ?? 0), Number(f.amount ?? 0))
-      if (stock <= 0) continue
+      // Clamp at 0: Brewfather can carry a negative tracking balance.
+      const stock = Math.max(0, Number(f.inventory ?? 0), Number(f.amount ?? 0))
+      const name = String(f.name ?? '')
       const base: Omit<Row, 'error'> = {
-        name: String(f.name ?? ''),
+        name,
         type: 'fermentable',
         amount: String(stock),
         unit: 'kg',
-        lot_number: String(f.lotNumber ?? ''),
+        lot_number: makeLotNumber(f.lotNumber, 'fermentable', name, seen),
         best_before_date: bfMsToDate(f.bestBeforeDate),
         supplier: String(f.supplier ?? ''),
         notes: '',
@@ -149,14 +175,14 @@ function parseBrewfather(text: string): Row[] {
     }
 
     for (const h of (inv.hops ?? []) as Record<string, unknown>[]) {
-      const stock = Math.max(Number(h.inventory ?? 0), Number(h.amount ?? 0))
-      if (stock <= 0) continue
+      const stock = Math.max(0, Number(h.inventory ?? 0), Number(h.amount ?? 0))
+      const name = String(h.name ?? '')
       const base: Omit<Row, 'error'> = {
-        name: String(h.name ?? ''),
+        name,
         type: 'hop',
         amount: String(stock),
         unit: 'g',
-        lot_number: String(h.lotNumber ?? ''),
+        lot_number: makeLotNumber(h.lotNumber, 'hop', name, seen),
         best_before_date: bfMsToDate(h.bestBeforeDate),
         supplier: String(h.supplier ?? ''),
         notes: '',
@@ -165,14 +191,14 @@ function parseBrewfather(text: string): Row[] {
     }
 
     for (const y of (inv.yeasts ?? []) as Record<string, unknown>[]) {
-      const stock = Number(y.inventory ?? 0)
-      if (stock <= 0) continue
+      const stock = Math.max(0, Number(y.inventory ?? 0))
+      const name = String(y.name ?? '')
       const base: Omit<Row, 'error'> = {
-        name: String(y.name ?? ''),
+        name,
         type: 'yeast',
         amount: String(stock),
         unit: bfNormaliseUnit(y.unit, 'g'),
-        lot_number: String(y.lotNumber ?? ''),
+        lot_number: makeLotNumber(y.lotNumber, 'yeast', name, seen),
         best_before_date: bfMsToDate(y.bestBeforeDate),
         supplier: String(y.laboratory ?? ''),
         notes: '',
@@ -185,14 +211,15 @@ function parseBrewfather(text: string): Row[] {
       'spice': 'adjunct', 'herb': 'adjunct', 'flavor': 'adjunct', 'other': 'other',
     }
     for (const m of (inv.miscs ?? []) as Record<string, unknown>[]) {
-      const stock = Number(m.inventory ?? 0)
-      if (stock <= 0) continue
+      const stock = Math.max(0, Number(m.inventory ?? 0))
+      const name = String(m.name ?? '')
+      const type = miscTypeMap[String(m.type ?? '').toLowerCase()] ?? 'adjunct'
       const base: Omit<Row, 'error'> = {
-        name: String(m.name ?? ''),
-        type: miscTypeMap[String(m.type ?? '').toLowerCase()] ?? 'adjunct',
+        name,
+        type,
         amount: String(stock),
         unit: bfNormaliseUnit(m.unit, 'g'),
-        lot_number: String(m.lotNumber ?? ''),
+        lot_number: makeLotNumber(m.lotNumber, type, name, seen),
         best_before_date: bfMsToDate(m.bestBeforeDate),
         supplier: '',
         notes: '',
@@ -323,7 +350,16 @@ export function InventoryImportPage() {
         newErrors[i] = ''
       } catch (err) {
         newStatuses[i] = 'error'
-        newErrors[i] = err instanceof Error ? err.message : 'Failed'
+        // Validation failures put the useful detail in `details.reason`
+        // (e.g. "lot_number already exists"); `message` is just "Validation failed."
+        newErrors[i] =
+          err instanceof APIError
+            ? typeof err.details?.reason === 'string'
+              ? err.details.reason
+              : err.message
+            : err instanceof Error
+              ? err.message
+              : 'Failed'
       }
       setStatuses([...newStatuses])
       setRowErrors([...newErrors])
@@ -387,7 +423,7 @@ export function InventoryImportPage() {
         )}
         {format === 'brewfather' && (
           <p className="text-sm text-[var(--color-muted)]">
-            Extracts fermentables, hops (g), yeasts (count), and miscs (g) from a Brewfather recipe export. Edit cells directly to fill in lot numbers before importing.
+            Imports the full ingredient catalogue from a Brewfather "Export All" file — fermentables, hops, yeasts, and miscs — including items with no stock on hand (imported at 0). A unique lot number is generated where Brewfather has none; real lot numbers are kept. Edit any cell before importing.
           </p>
         )}
       </div>
