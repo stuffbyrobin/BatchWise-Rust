@@ -146,9 +146,19 @@ export default function RecipeImportPage() {
         setStatuses((prev) => ({ ...prev, [i]: 'done' }))
       } catch (err) {
         newStatuses[i] = 'error'
-        newErrors[i] = err instanceof APIError ? err.message : err instanceof Error ? err.message : 'Failed'
+        // Validation failures carry the useful detail in `details.reason`
+        // (e.g. "brewfather: no yeasts"); `message` is just "Validation failed."
+        const reason =
+          err instanceof APIError
+            ? typeof err.details?.reason === 'string'
+              ? err.details.reason
+              : err.message
+            : err instanceof Error
+              ? err.message
+              : 'Failed'
+        newErrors[i] = reason
         setStatuses((prev) => ({ ...prev, [i]: 'error' }))
-        setStatusErrors((prev) => ({ ...prev, [i]: newErrors[i] }))
+        setStatusErrors((prev) => ({ ...prev, [i]: reason }))
       }
     }
     setImporting(false)
@@ -164,6 +174,8 @@ export default function RecipeImportPage() {
   }, [recipeList, search])
 
   const doneCount = Object.values(statuses).filter((s) => s === 'done').length
+  const errorCount = Object.values(statuses).filter((s) => s === 'error').length
+  const finishedCount = doneCount + errorCount
   const selectedCount = selected.size
   const currentFormat = FORMATS.find((f) => f.value === format)!
 
@@ -234,6 +246,9 @@ export default function RecipeImportPage() {
             <div className="flex items-center gap-3 text-sm text-[var(--color-muted)]">
               <span>{recipeList.length} recipes</span>
               {doneCount > 0 && <span className="text-green-600">{doneCount} imported</span>}
+              {errorCount > 0 && (
+                <span className="text-[var(--color-danger)]">{errorCount} skipped</span>
+              )}
             </div>
             <div className="flex items-center gap-2">
               <input
@@ -311,7 +326,30 @@ export default function RecipeImportPage() {
             </table>
           </div>
 
-          {doneCount > 0 && doneCount === selectedCount && !importing && (
+          {/* Skip-and-warn summary: list the recipes the importer rejected and
+              why, so a partial import (e.g. Brewfather recipes missing a yeast)
+              is visible rather than a silent per-row ✗. */}
+          {errorCount > 0 && !importing && (
+            <div
+              className="mt-4 p-3 rounded text-sm"
+              style={{ background: 'var(--color-warning-bg, #fffbeb)', color: 'var(--color-warning, #92400e)' }}
+            >
+              <div className="font-medium mb-1">
+                {errorCount} recipe{errorCount > 1 ? 's' : ''} skipped
+              </div>
+              <ul className="list-disc list-inside space-y-0.5">
+                {recipeList.map((r, i) =>
+                  statuses[i] === 'error' ? (
+                    <li key={i}>
+                      <span className="font-medium">{r.name || '(unnamed)'}</span>: {statusErrors[i]}
+                    </li>
+                  ) : null,
+                )}
+              </ul>
+            </div>
+          )}
+
+          {finishedCount > 0 && finishedCount >= selectedCount && !importing && (
             <div className="mt-4">
               <button
                 onClick={() => navigate('/recipes')}
