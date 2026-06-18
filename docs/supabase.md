@@ -31,6 +31,32 @@ already built with `tls-rustls`, so no dependency changes are needed.
 DATABASE_URL=postgresql://postgres:YOUR_PASSWORD@db.YOUR_PROJECT_REF.supabase.co:5432/postgres?sslmode=require
 ```
 
+### IPv4-only networks (use a pooler)
+
+The **direct connection** host (`db.<ref>.supabase.co`) resolves to an
+**IPv6-only** address unless you have bought Supabase's IPv4 add-on. On an
+IPv4-only network (most home/office Wi-Fi), connecting to it fails with
+`Network is unreachable (os error 101)`.
+
+Use a **pooler** endpoint (`*.pooler.supabase.com`) instead, which is reachable
+over IPv4. The **Session pooler** (port 5432) is the recommended drop-in for a
+single backend plus migrations: it still supports prepared statements, so `sqlx`
+works unchanged. The pooler URL differs from the direct URL in three ways:
+
+- **Host** becomes `aws-<N>-<REGION>.pooler.supabase.com`
+- **Username** becomes `postgres.YOUR_PROJECT_REF` (the project ref is appended)
+- **Port** stays `5432` for the session pooler
+
+```bash
+# Session pooler (IPv4-friendly), recommended on IPv4-only networks
+DATABASE_URL=postgresql://postgres.YOUR_PROJECT_REF:YOUR_PASSWORD@aws-1-YOUR_REGION.pooler.supabase.com:5432/postgres?sslmode=require
+```
+
+The host prefix may be **`aws-0-`** or **`aws-1-`** (newer projects); both
+resolve in DNS, so you cannot guess it. **Copy the exact host** from the
+dashboard (**Session pooler** tab). A wrong region or prefix still reaches
+Supavisor but fails with `(ENOTFOUND) tenant/user postgres.YOUR_PROJECT_REF not found`.
+
 ### Transaction pooler note
 
 `sqlx` caches server-side prepared statements by default, which fails on
