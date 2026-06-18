@@ -13,19 +13,32 @@
 use crate::recipe::models::{CreateRequest, FermentableInput, HopInput, MashStepInput, YeastInput};
 use serde::Deserialize;
 
+/// Deserialize an `f64` field that Brewfather may export as JSON `null`. It
+/// emits `null` for numeric values it derives rather than stores (e.g. a base
+/// malt's `potential`), and a bare `f64` field with `#[serde(default)]` only
+/// tolerates a *missing* key, not an explicit `null` — so without this the
+/// whole recipe fails to parse. A missing key or `null` both yield `0.0`; the
+/// mapping decides how a zero is treated.
+fn f64_null_default<'de, D>(de: D) -> Result<f64, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    Ok(Option::<f64>::deserialize(de)?.unwrap_or_default())
+}
+
 #[derive(Debug, Deserialize)]
 struct BfRecipe {
     #[serde(default)]
     name: String,
     #[serde(default)]
     r#type: String,
-    #[serde(rename = "batchSize", default)]
+    #[serde(rename = "batchSize", default, deserialize_with = "f64_null_default")]
     batch_size: f64,
-    #[serde(rename = "boilSize", default)]
+    #[serde(rename = "boilSize", default, deserialize_with = "f64_null_default")]
     boil_size: f64,
-    #[serde(rename = "boilTime", default)]
+    #[serde(rename = "boilTime", default, deserialize_with = "f64_null_default")]
     boil_time: f64,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "f64_null_default")]
     efficiency: f64,
     #[serde(default)]
     notes: String,
@@ -43,13 +56,13 @@ struct BfRecipe {
 struct BfFermentable {
     #[serde(default)]
     name: String,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "f64_null_default")]
     amount: f64, // kg (unless unit says otherwise)
     #[serde(default)]
     unit: String,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "f64_null_default")]
     color: f64, // EBC
-    #[serde(default)]
+    #[serde(default, deserialize_with = "f64_null_default")]
     potential: f64, // SG e.g. 1.037
     #[serde(default)]
     r#type: String,
@@ -59,15 +72,15 @@ struct BfFermentable {
 struct BfHop {
     #[serde(default)]
     name: String,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "f64_null_default")]
     amount: f64, // g (unless unit says otherwise)
     #[serde(default)]
     unit: String,
     #[serde(default)]
     r#use: String,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "f64_null_default")]
     time: f64, // minutes
-    #[serde(default)]
+    #[serde(default, deserialize_with = "f64_null_default")]
     alpha: f64, // %
     #[serde(default)]
     form: String,
@@ -77,11 +90,11 @@ struct BfHop {
 struct BfYeast {
     #[serde(default)]
     name: String,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "f64_null_default")]
     amount: f64, // g (unless unit says otherwise)
     #[serde(default)]
     unit: String,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "f64_null_default")]
     attenuation: f64, // %
 }
 
@@ -95,11 +108,11 @@ struct BfMash {
 struct BfMashStep {
     #[serde(default)]
     r#type: String,
-    #[serde(rename = "stepTemp", default)]
+    #[serde(rename = "stepTemp", default, deserialize_with = "f64_null_default")]
     step_temp: f64,
-    #[serde(rename = "stepTime", default)]
+    #[serde(rename = "stepTime", default, deserialize_with = "f64_null_default")]
     step_time: f64,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "f64_null_default")]
     amount: f64, // infusion volume L
 }
 
@@ -126,8 +139,14 @@ pub fn parse_brewfather(data: &str) -> Result<CreateRequest, String> {
         .into_iter()
         .enumerate()
         .map(|(i, f)| {
-            // Brewfather uses EBC; convert potential SG → PPG.
-            let ppg = (f.potential - 1.0) * 1000.0;
+            // Brewfather uses EBC; convert potential SG → PPG. A missing or
+            // null potential (<= 1.0 SG) is left unknown rather than converted
+            // into a negative PPG that would fail `range(min = 0.0)` validation.
+            let potential_ppg = if f.potential > 1.0 {
+                Some((f.potential - 1.0) * 1000.0)
+            } else {
+                None
+            };
             let color_ebc = f.color;
 
             // Normalise amount to kg.
@@ -143,7 +162,7 @@ pub fn parse_brewfather(data: &str) -> Result<CreateRequest, String> {
                 amount: amt_kg,
                 unit: "kg".to_string(),
                 color_ebc: Some(color_ebc),
-                potential_ppg: Some(ppg),
+                potential_ppg,
                 r#type: Some(bf_fermentable_type(&f.r#type)),
                 addition: None,
             }
@@ -445,5 +464,24 @@ mod tests {
         let err =
             parse_brewfather(r#"{"batchSize": 20, "fermentables": [], "yeasts": []}"#).unwrap_err();
         assert!(err.contains("name"));
+    }
+
+    #[test]
+    fn tolerates_null_potential() {
+        // Brewfather exports `"potential": null` for malts where it derives the
+        // value from colour. A bare `f64` field rejects an explicit null, so
+        // this used to fail the whole recipe with "invalid type: null".
+        let json = r#"{
+            "name": "Null Potential Ale",
+            "batchSize": 20,
+            "fermentables": [{"name": "Lager Malt", "amount": 4.0, "potential": null, "color": 2.0}],
+            "yeasts": [{"name": "US-05", "amount": 11.5, "attenuation": 77}]
+        }"#;
+        let req = parse_brewfather(json).expect("null potential should parse");
+        let ferms = req.fermentables.as_ref().expect("fermentables");
+        assert_eq!(ferms.len(), 1);
+        // Unknown potential is omitted rather than turned into a negative PPG.
+        assert_eq!(ferms[0].potential_ppg, None);
+        assert_eq!(ferms[0].color_ebc, Some(2.0));
     }
 }
