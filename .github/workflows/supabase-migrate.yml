@@ -1,0 +1,78 @@
+name: supabase-migrate
+
+# Manually-triggered migration runner for a managed Postgres (e.g. Supabase).
+#
+# Why this exists: cloud dev sandboxes often can't reach Postgres directly
+# (IPv6-only direct host, blocked DB ports, host allowlists). A GitHub-hosted
+# runner has open egress, so it can connect to the Supabase session pooler and
+# run the app's own embedded sqlx migrations. Because we invoke the binary,
+# sqlx populates `_sqlx_migrations` itself with correct checksums.
+#
+# Setup: add a repository secret SUPABASE_DATABASE_URL pointing at the Supabase
+# *session pooler* (port 5432, user `postgres.<project_ref>`), e.g.
+#   postgresql://postgres.<ref>:<password>@aws-1-<region>.pooler.supabase.com:5432/postgres?sslmode=require
+# Use a dev/throwaway project — never production credentials.
+
+on:
+  workflow_dispatch:
+    inputs:
+      include_dev_user:
+        description: "Also seed the dev login (dev@batchwise.test / DevBrewer123!). Throwaway DBs only."
+        type: boolean
+        default: true
+
+# Never let two migration runs race against the same database.
+concurrency:
+  group: supabase-migrate
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: ${{ secrets.SUPABASE_DATABASE_URL }}
+      # Required by Config::load() but unused for a migrate+seed run that exits.
+      JWT_SECRET: ci-migration-run-placeholder-not-used
+      APP_ENV: development
+      CARGO_TERM_COLOR: always
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Verify DATABASE_URL secret is set
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "::error::Repository secret SUPABASE_DATABASE_URL is not set. Add the Supabase session-pooler connection string (see this workflow's header comment)."
+            exit 1
+          fi
+
+      - name: Install psql client
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends postgresql-client
+
+      - name: Run migrations + reference seed
+        # `--seed` runs the 26 embedded migrations then applies the 6 reference
+        # seed files (styles, yeasts, equipment, fermentables, water, allergens)
+        # and exits — it does not start the HTTP server.
+        run: cargo run --locked -- --seed
+
+      - name: Seed dev user (optional)
+        if: ${{ inputs.include_dev_user }}
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/seed/dev/001_dev_user.sql
+
+      - name: Verify schema & seed
+        run: |
+          echo "== migrations applied =="
+          psql "$DATABASE_URL" -c "select count(*) as migrations_applied from _sqlx_migrations where success;"
+          echo "== public tables =="
+          psql "$DATABASE_URL" -c "select count(*) as public_tables from information_schema.tables where table_schema='public';"
+          echo "== reference seed row counts =="
+          psql "$DATABASE_URL" -c "select
+            (select count(*) from styles)               as styles,
+            (select count(*) from yeasts)               as yeasts,
+            (select count(*) from equipment_profiles)   as equipment_profiles,
+            (select count(*) from library_fermentables) as fermentables,
+            (select count(*) from water_profiles)       as water_profiles,
+            (select count(*) from ingredients)          as allergen_lots;"
+          echo "== tenants / users =="
+          psql "$DATABASE_URL" -c "select (select count(*) from tenants) as tenants, (select count(*) from users) as users;"
