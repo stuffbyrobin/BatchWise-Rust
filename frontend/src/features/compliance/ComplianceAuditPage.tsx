@@ -41,16 +41,21 @@ function truncateUUID(id: string | null | undefined): string {
   return id.slice(0, 8) + '…'
 }
 
+// Shared theme-token classes so the page follows the app's CSS-variable theme
+// (and adapts to dark mode) instead of hardcoded Tailwind colours.
+const fieldClass =
+  'border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-fg)] rounded px-2 py-1.5 text-sm'
+
 function EventRow({ event }: { event: AuditEvent }) {
   const [expanded, setExpanded] = useState(false)
 
   return (
     <>
       <tr
-        className="hover:bg-amber-50 cursor-pointer border-b border-stone-100"
+        className="hover:bg-[var(--color-bg)] cursor-pointer border-b border-[var(--color-border)]"
         onClick={() => setExpanded((e) => !e)}
       >
-        <td className="px-4 py-2 text-xs text-stone-500 whitespace-nowrap">
+        <td className="px-4 py-2 text-xs text-[var(--color-muted)] whitespace-nowrap">
           {event.created_at ? new Date(event.created_at).toLocaleString() : '—'}
         </td>
         <td className="px-4 py-2">
@@ -58,16 +63,16 @@ function EventRow({ event }: { event: AuditEvent }) {
             {event.event_type}
           </span>
         </td>
-        <td className="px-4 py-2 text-sm text-stone-700">{event.entity_type}</td>
-        <td className="px-4 py-2 text-xs text-stone-500 font-mono">{truncateUUID(event.entity_id)}</td>
-        <td className="px-4 py-2 text-xs text-stone-400">
+        <td className="px-4 py-2 text-sm text-[var(--color-fg)]">{event.entity_type}</td>
+        <td className="px-4 py-2 text-xs text-[var(--color-muted)] font-mono">{truncateUUID(event.entity_id)}</td>
+        <td className="px-4 py-2 text-xs text-[var(--color-muted)]">
           {expanded ? '▲ hide' : '▼ show'}
         </td>
       </tr>
       {expanded && (
-        <tr className="bg-stone-50">
+        <tr className="bg-[var(--color-bg)]">
           <td colSpan={5} className="px-6 py-3">
-            <pre className="text-xs text-stone-700 whitespace-pre-wrap break-all max-h-64 overflow-y-auto">
+            <pre className="text-xs text-[var(--color-fg)] whitespace-pre-wrap break-all max-h-64 overflow-y-auto">
               {JSON.stringify(event.event_data, null, 2)}
             </pre>
           </td>
@@ -94,15 +99,15 @@ export default function ComplianceAuditPage() {
   }
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
-      <h1 className="text-2xl font-bold text-stone-800 mb-6">Compliance Audit Log</h1>
+    <div className="max-w-6xl">
+      <h1 className="text-xl font-bold text-[var(--color-fg)] mb-6">Compliance Audit Log</h1>
 
       {/* Filter bar */}
-      <div className="bg-white border border-stone-200 rounded-lg p-4 mb-6 flex flex-wrap gap-3 items-end">
+      <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg p-4 mb-6 flex flex-wrap gap-3 items-end">
         <div>
-          <label className="block text-xs text-stone-500 mb-1">Event Type</label>
+          <label className="block text-xs text-[var(--color-muted)] mb-1">Event Type</label>
           <select
-            className="border border-stone-300 rounded px-2 py-1.5 text-sm"
+            className={fieldClass}
             value={filters.event_type ?? ''}
             onChange={(e) => setFilters((f) => ({ ...f, event_type: e.target.value || undefined, page: 1 }))}
           >
@@ -114,9 +119,9 @@ export default function ComplianceAuditPage() {
         </div>
 
         <div>
-          <label className="block text-xs text-stone-500 mb-1">Entity Type</label>
+          <label className="block text-xs text-[var(--color-muted)] mb-1">Entity Type</label>
           <select
-            className="border border-stone-300 rounded px-2 py-1.5 text-sm"
+            className={fieldClass}
             value={filters.entity_type ?? ''}
             onChange={(e) => setFilters((f) => ({ ...f, entity_type: e.target.value || undefined, page: 1 }))}
           >
@@ -128,34 +133,34 @@ export default function ComplianceAuditPage() {
         </div>
 
         <div>
-          <label className="block text-xs text-stone-500 mb-1">From</label>
+          <label className="block text-xs text-[var(--color-muted)] mb-1">From</label>
           <input
             type="datetime-local"
-            className="border border-stone-300 rounded px-2 py-1.5 text-sm"
+            className={fieldClass}
             value={fromInput}
             onChange={(e) => setFromInput(e.target.value)}
           />
         </div>
 
         <div>
-          <label className="block text-xs text-stone-500 mb-1">To</label>
+          <label className="block text-xs text-[var(--color-muted)] mb-1">To</label>
           <input
             type="datetime-local"
-            className="border border-stone-300 rounded px-2 py-1.5 text-sm"
+            className={fieldClass}
             value={toInput}
             onChange={(e) => setToInput(e.target.value)}
           />
         </div>
 
         <button
-          className="px-4 py-1.5 bg-amber-600 text-white rounded text-sm hover:bg-amber-700"
+          className="px-4 py-1.5 bg-[var(--color-accent)] text-white rounded text-sm hover:opacity-90"
           onClick={applyFilters}
         >
           Apply
         </button>
 
         <button
-          className="px-4 py-1.5 border border-stone-300 text-stone-600 rounded text-sm hover:bg-stone-50"
+          className="px-4 py-1.5 border border-[var(--color-border)] text-[var(--color-fg)] rounded text-sm hover:bg-[var(--color-border)]"
           onClick={() => {
             setFilters({ page: 1, page_size: 50 })
             setFromInput('')
@@ -167,26 +172,26 @@ export default function ComplianceAuditPage() {
       </div>
 
       {/* Table */}
-      {isLoading && <p className="text-stone-500">Loading…</p>}
-      {error && <p className="text-red-600">Failed to load audit log.</p>}
+      {isLoading && <p className="text-[var(--color-muted)]">Loading…</p>}
+      {error && <p className="text-[var(--color-danger)]">Failed to load audit log.</p>}
 
       {data && (
         <>
-          <div className="bg-white border border-stone-200 rounded-lg overflow-hidden">
+          <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg overflow-hidden">
             <table className="w-full text-sm">
-              <thead className="bg-stone-50 border-b border-stone-200">
+              <thead className="bg-[var(--color-bg)] border-b border-[var(--color-border)]">
                 <tr>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase">Time</th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase">Event</th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase">Entity</th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase">ID</th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase">Data</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-[var(--color-muted)] uppercase">Time</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-[var(--color-muted)] uppercase">Event</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-[var(--color-muted)] uppercase">Entity</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-[var(--color-muted)] uppercase">ID</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-[var(--color-muted)] uppercase">Data</th>
                 </tr>
               </thead>
               <tbody>
                 {data.items?.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="px-4 py-8 text-center text-stone-400">
+                    <td colSpan={5} className="px-4 py-8 text-center text-[var(--color-muted)]">
                       No audit events found.
                     </td>
                   </tr>
@@ -202,23 +207,23 @@ export default function ComplianceAuditPage() {
           {(data.total_pages ?? 0) > 1 && (
             <div className="flex items-center gap-2 mt-4">
               <button
-                className="px-3 py-1 border border-stone-300 rounded text-sm disabled:opacity-40"
+                className="px-3 py-1 border border-[var(--color-border)] text-[var(--color-fg)] rounded text-sm disabled:opacity-40"
                 disabled={(filters.page ?? 1) <= 1}
                 onClick={() => setFilters((f) => ({ ...f, page: (f.page ?? 1) - 1 }))}
               >
                 Previous
               </button>
-              <span className="text-sm text-stone-600">
+              <span className="text-sm text-[var(--color-fg)]">
                 Page {data.page} of {data.total_pages}
               </span>
               <button
-                className="px-3 py-1 border border-stone-300 rounded text-sm disabled:opacity-40"
+                className="px-3 py-1 border border-[var(--color-border)] text-[var(--color-fg)] rounded text-sm disabled:opacity-40"
                 disabled={(filters.page ?? 1) >= (data.total_pages ?? 1)}
                 onClick={() => setFilters((f) => ({ ...f, page: (f.page ?? 1) + 1 }))}
               >
                 Next
               </button>
-              <span className="text-sm text-stone-400 ml-2">{data.total} total events</span>
+              <span className="text-sm text-[var(--color-muted)] ml-2">{data.total} total events</span>
             </div>
           )}
         </>

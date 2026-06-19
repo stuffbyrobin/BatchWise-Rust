@@ -18,6 +18,7 @@ import { useInventoryList } from '../inventory/hooks/useInventory'
 import { useTenant } from '../account/hooks/useTenant'
 import type { components } from '../../api/generated'
 import { calcHopIBU, type IBUMethod } from '../../utils/ibu'
+import { formatEbc } from '../../utils/ebc'
 import { APIError } from '../../api/error'
 
 type InventoryLot = components['schemas']['Ingredient']
@@ -492,7 +493,7 @@ function LotPicker({
         <option key={lot.id} value={lot.id}>
           {lot.lot_number} ({lot.amount} {lot.unit})
           {invType === 'hop' && lot.alpha_acid_pct != null ? ` · AA: ${lot.alpha_acid_pct}%` : ''}
-          {invType === 'fermentable' && lot.color_ebc != null ? ` · ${lot.color_ebc} EBC` : ''}
+          {invType === 'fermentable' && lot.color_ebc != null ? ` · ${formatEbc(lot.color_ebc)} EBC` : ''}
           {invType === 'yeast' && lot.attenuation_pct != null ? ` · ${lot.attenuation_pct}% att` : ''}
         </option>
       ))}

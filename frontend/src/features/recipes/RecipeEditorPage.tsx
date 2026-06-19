@@ -8,6 +8,7 @@ import { EBCSwatch } from '../../components/ui/EBCSwatch'
 import { useTenant } from '../account/hooks/useTenant'
 import { useAuth } from '../../auth/useAuth'
 import { calcHopIBU, type IBUMethod } from '../../utils/ibu'
+import { formatEbc } from '../../utils/ebc'
 import { useRecipeAllergens } from './hooks/useRecipeAllergens'
 import { AllergenBadges } from '../../components/AllergenBadges'
 import { RecipeWaterChemistry } from './RecipeWaterChemistry'
@@ -919,7 +920,7 @@ export default function RecipeEditorPage() {
                   <label className="block text-sm font-medium text-[var(--color-muted)] mb-1">Color (EBC)</label>
                   <div className="border border-[var(--color-border)] rounded px-3 py-2 bg-[var(--color-bg)] text-[var(--color-fg)] flex items-center gap-2 tabular-nums">
                     <EBCSwatch ebc={liveCalcs.calcColorEbc} />
-                    {liveCalcs.calcColorEbc.toFixed(0)}
+                    {formatEbc(liveCalcs.calcColorEbc)}
                   </div>
                 </div>
               </div>
@@ -949,7 +950,7 @@ export default function RecipeEditorPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-[var(--color-muted)] mb-1">Color (EBC)</label>
-                  <div className="border border-[var(--color-border)] rounded px-3 py-2 bg-[var(--color-bg)] text-[var(--color-fg)] flex items-center gap-2">{calcColorEbc != null && <EBCSwatch ebc={calcColorEbc} />}{calcColorEbc?.toFixed(0) ?? '-'}</div>
+                  <div className="border border-[var(--color-border)] rounded px-3 py-2 bg-[var(--color-bg)] text-[var(--color-fg)] flex items-center gap-2">{calcColorEbc != null && <EBCSwatch ebc={calcColorEbc} />}{formatEbc(calcColorEbc)}</div>
                 </div>
               </div>
             </div>
