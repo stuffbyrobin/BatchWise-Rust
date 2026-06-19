@@ -40,6 +40,7 @@ struct ListQuery {
     entity_id: Option<String>,
     from: Option<String>,
     to: Option<String>,
+    sort: Option<String>,
 }
 
 fn non_empty(s: Option<String>) -> Option<String> {
@@ -73,6 +74,7 @@ async fn list(
         event_type: non_empty(q.event_type),
         from,
         to,
+        sort: q.sort.unwrap_or_default(),
         page: q.page.unwrap_or(1),
         page_size: q.page_size.unwrap_or(50),
     };

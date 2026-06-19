@@ -51,6 +51,7 @@ pub fn routes(state: AppState) -> Router {
 struct RunQuery {
     batch_id: Option<Uuid>,
     format: Option<String>,
+    sort: Option<String>,
     page: Option<i64>,
     page_size: Option<i64>,
 }
@@ -60,6 +61,7 @@ struct MovementQuery {
     packaging_run_id: Option<Uuid>,
     order_id: Option<Uuid>,
     movement_type: Option<String>,
+    sort: Option<String>,
     page: Option<i64>,
     page_size: Option<i64>,
 }
@@ -89,6 +91,7 @@ async fn list_runs(
     let filter = ListPackagingRunsFilter {
         batch_id: q.batch_id,
         format: q.format,
+        sort: q.sort.unwrap_or_default(),
         page: q.page.unwrap_or(1),
         page_size: q.page_size.unwrap_or(20),
     };
@@ -142,6 +145,7 @@ async fn list_movements(
         packaging_run_id: q.packaging_run_id,
         order_id: q.order_id,
         movement_type: q.movement_type,
+        sort: q.sort.unwrap_or_default(),
         page: q.page.unwrap_or(1),
         page_size: q.page_size.unwrap_or(20),
     };

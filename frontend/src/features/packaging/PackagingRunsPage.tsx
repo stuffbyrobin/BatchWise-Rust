@@ -1,5 +1,6 @@
 import React from 'react'
 import { APIError } from '../../api/error'
+import { SortableHeader } from '../../components/ui/SortableHeader'
 import {
   usePackagingRuns, useCreatePackagingRun, usePatchPackagingRun, useDeletePackagingRun,
   useDistributionMovements, useCreateDistributionMovement, useDeleteDistributionMovement,
@@ -218,7 +219,8 @@ function RunRow({ run }: { run: PackagingRun }) {
 }
 
 export default function PackagingRunsPage() {
-  const { data, isLoading, error } = usePackagingRuns()
+  const [sort, setSort] = React.useState('')
+  const { data, isLoading, error } = usePackagingRuns({ sort: sort || undefined })
   const createRun = useCreatePackagingRun()
   const [showForm, setShowForm] = React.useState(false)
   const [form, setForm] = React.useState({
@@ -329,15 +331,15 @@ export default function PackagingRunsPage() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left text-[var(--color-muted)] border-b">
-                <th className="py-2 pr-3">Lot Number</th>
-                <th className="pr-3">Format</th>
-                <th className="pr-3">Unit Vol</th>
-                <th className="pr-3">Qty</th>
-                <th className="pr-3">Stock</th>
-                <th className="pr-3">Packaged</th>
-                <th className="pr-3">Best Before</th>
-                <th className="pr-3">Notes</th>
+              <tr className="text-left text-xs uppercase text-[var(--color-muted)] border-b">
+                <SortableHeader column="lot_number" label="Lot Number" sort={sort} onSort={setSort} className="py-2 pr-3" />
+                <SortableHeader column="format" label="Format" sort={sort} onSort={setSort} className="pr-3" />
+                <SortableHeader column="unit_volume_ml" label="Unit Vol" sort={sort} onSort={setSort} className="pr-3" />
+                <SortableHeader column="quantity" label="Qty" sort={sort} onSort={setSort} className="pr-3" />
+                <th className="pr-3 font-medium">Stock</th>
+                <SortableHeader column="packaged_at" label="Packaged" sort={sort} onSort={setSort} className="pr-3" />
+                <SortableHeader column="best_before_date" label="Best Before" sort={sort} onSort={setSort} className="pr-3" />
+                <th className="pr-3 font-medium">Notes</th>
                 <th></th>
               </tr>
             </thead>

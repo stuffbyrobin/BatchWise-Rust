@@ -89,6 +89,7 @@ pub struct ListFilter {
     pub event_type: Option<String>,
     pub from: Option<DateTime<Utc>>,
     pub to: Option<DateTime<Utc>>,
+    pub sort: String,
     pub page: i64,
     pub page_size: i64,
 }

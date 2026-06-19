@@ -5,6 +5,7 @@ import {
   useAddLine, useDeleteLine, useReceivePO,
 } from './hooks/useProcurement'
 import { useSuppliers } from './hooks/useProcurement'
+import { SortableHeader } from '../../components/ui/SortableHeader'
 import type { components } from '../../api/generated'
 
 type PurchaseOrder = components['schemas']['PurchaseOrder']
@@ -345,7 +346,8 @@ function PORow({ po }: { po: PurchaseOrder }) {
 export default function PurchaseOrdersPage() {
   const { data: suppliersData } = useSuppliers({ page_size: 200 })
   const [statusFilter, setStatusFilter] = React.useState('')
-  const { data, isLoading, error } = usePurchaseOrders({ status: statusFilter || undefined })
+  const [sort, setSort] = React.useState('')
+  const { data, isLoading, error } = usePurchaseOrders({ status: statusFilter || undefined, sort: sort || undefined })
   const createPO = useCreatePO()
   const [showForm, setShowForm] = React.useState(false)
   const [form, setForm] = React.useState({ supplier_id: '', expected_delivery: '', notes: '' })
@@ -439,14 +441,14 @@ export default function PurchaseOrdersPage() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left text-[var(--color-muted)] border-b border-[var(--color-border)]">
-                <th className="py-2 pr-3">PO Number</th>
-                <th className="pr-3">Supplier</th>
-                <th className="pr-3">Status</th>
-                <th className="pr-3">Order Date</th>
-                <th className="pr-3">Expected</th>
-                <th className="pr-3">Lines</th>
-                <th>Actions</th>
+              <tr className="text-left text-xs uppercase text-[var(--color-muted)] border-b border-[var(--color-border)]">
+                <SortableHeader column="po_number" label="PO Number" sort={sort} onSort={setSort} className="py-2 pr-3" />
+                <SortableHeader column="supplier_name" label="Supplier" sort={sort} onSort={setSort} className="pr-3" />
+                <SortableHeader column="status" label="Status" sort={sort} onSort={setSort} className="pr-3" />
+                <SortableHeader column="order_date" label="Order Date" sort={sort} onSort={setSort} className="pr-3" />
+                <SortableHeader column="expected_delivery" label="Expected" sort={sort} onSort={setSort} className="pr-3" />
+                <th className="pr-3 font-medium">Lines</th>
+                <th className="font-medium">Actions</th>
               </tr>
             </thead>
             <tbody>

@@ -71,6 +71,19 @@ pub async fn select_by_id(
 }
 
 /// Lists audit events matching the filter, newest first.
+/// Safe `ORDER BY` for the audit log; default `-created_at` (newest first).
+fn build_sort(sort: &str) -> String {
+    let spec = if sort.is_empty() { "-created_at" } else { sort };
+    let desc = spec.starts_with('-');
+    let col = match spec.trim_start_matches('-') {
+        "created_at" => "created_at",
+        "event_type" => "event_type",
+        "entity_type" => "entity_type",
+        _ => "created_at",
+    };
+    format!("{col} {}", if desc { "DESC" } else { "ASC" })
+}
+
 pub async fn select_list(
     pool: &PgPool,
     tenant_id: Uuid,
@@ -102,7 +115,7 @@ pub async fn select_list(
 
     let mut qb = QueryBuilder::<Postgres>::new(format!("SELECT {COLS} FROM compliance_audit_log"));
     push_where(&mut qb);
-    qb.push(" ORDER BY created_at DESC");
+    qb.push(format!(" ORDER BY {}", build_sort(&f.sort)));
     qb.push(" LIMIT ").push_bind(page_size);
     qb.push(" OFFSET ").push_bind((page - 1) * page_size);
     let items = qb.build_query_as::<AuditEvent>().fetch_all(pool).await?;

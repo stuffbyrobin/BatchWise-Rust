@@ -11,6 +11,7 @@ export interface AuditParams {
   event_type?: string
   from?: string
   to?: string
+  sort?: string
   page?: number
   page_size?: number
 }

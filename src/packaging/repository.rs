@@ -180,6 +180,45 @@ pub async fn stock_remaining(
 }
 
 /// Lists packaging runs with filters.
+/// Safe `ORDER BY` for packaging runs (alias `pr`); default `-packaged_at`.
+/// `pr.created_at DESC` is kept as a stable tiebreaker.
+fn build_run_sort(sort: &str) -> String {
+    let spec = if sort.is_empty() { "-packaged_at" } else { sort };
+    let desc = spec.starts_with('-');
+    let col = match spec.trim_start_matches('-') {
+        "lot_number" => "pr.lot_number",
+        "format" => "pr.format",
+        "unit_volume_ml" => "pr.unit_volume_ml",
+        "quantity" => "pr.quantity",
+        "packaged_at" => "pr.packaged_at",
+        "best_before_date" => "pr.best_before_date",
+        _ => "pr.packaged_at",
+    };
+    format!(
+        "{col} {}, pr.created_at DESC",
+        if desc { "DESC" } else { "ASC" }
+    )
+}
+
+/// Safe `ORDER BY` for distribution movements (alias `dm`); default `-moved_at`.
+fn build_movement_sort(sort: &str) -> String {
+    let spec = if sort.is_empty() { "-moved_at" } else { sort };
+    let desc = spec.starts_with('-');
+    let col = match spec.trim_start_matches('-') {
+        "movement_type" => "dm.movement_type",
+        "quantity" => "dm.quantity",
+        "from_location" => "dm.from_location",
+        "to_location" => "dm.to_location",
+        "moved_at" => "dm.moved_at",
+        "reference" => "dm.reference",
+        _ => "dm.moved_at",
+    };
+    format!(
+        "{col} {}, dm.created_at DESC",
+        if desc { "DESC" } else { "ASC" }
+    )
+}
+
 pub async fn select_runs(
     pool: &PgPool,
     tenant_id: Uuid,
@@ -201,7 +240,7 @@ pub async fn select_runs(
 
     let mut qb = QueryBuilder::<Postgres>::new(format!("SELECT {RUN_COLS} {RUN_FROM}"));
     push_where(&mut qb);
-    qb.push(" GROUP BY pr.id ORDER BY pr.packaged_at DESC, pr.created_at DESC");
+    qb.push(format!(" GROUP BY pr.id ORDER BY {}", build_run_sort(&filter.sort)));
     qb.push(" LIMIT ").push_bind(page_size);
     qb.push(" OFFSET ").push_bind((page - 1) * page_size);
     let items = qb.build_query_as::<PackagingRun>().fetch_all(pool).await?;
@@ -302,7 +341,7 @@ pub async fn select_movements(
     let mut qb =
         QueryBuilder::<Postgres>::new(format!("SELECT {MOV_COLS} FROM distribution_movements dm"));
     push_where(&mut qb);
-    qb.push(" ORDER BY dm.moved_at DESC, dm.created_at DESC");
+    qb.push(format!(" ORDER BY {}", build_movement_sort(&filter.sort)));
     qb.push(" LIMIT ").push_bind(page_size);
     qb.push(" OFFSET ").push_bind((page - 1) * page_size);
     let items = qb

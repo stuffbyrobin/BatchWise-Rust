@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useAuditEvents } from './hooks/useAudit'
 import type { AuditParams } from './hooks/useAudit'
 import type { components } from '../../api/generated'
+import { SortableHeader } from '../../components/ui/SortableHeader'
 
 type AuditEvent = components['schemas']['AuditEvent']
 
@@ -84,6 +85,7 @@ function EventRow({ event }: { event: AuditEvent }) {
 
 export default function ComplianceAuditPage() {
   const [filters, setFilters] = useState<AuditParams>({ page: 1, page_size: 50 })
+  const handleSort = (next: string) => setFilters((f) => ({ ...f, sort: next, page: 1 }))
   const [fromInput, setFromInput] = useState('')
   const [toInput, setToInput] = useState('')
 
@@ -181,9 +183,9 @@ export default function ComplianceAuditPage() {
             <table className="w-full text-sm">
               <thead className="bg-[var(--color-bg)] border-b border-[var(--color-border)]">
                 <tr>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-[var(--color-muted)] uppercase">Time</th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-[var(--color-muted)] uppercase">Event</th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-[var(--color-muted)] uppercase">Entity</th>
+                  <SortableHeader column="created_at" label="Time" sort={filters.sort} onSort={handleSort} className="px-4 py-2" />
+                  <SortableHeader column="event_type" label="Event" sort={filters.sort} onSort={handleSort} className="px-4 py-2" />
+                  <SortableHeader column="entity_type" label="Entity" sort={filters.sort} onSort={handleSort} className="px-4 py-2" />
                   <th className="px-4 py-2 text-left text-xs font-medium text-[var(--color-muted)] uppercase">ID</th>
                   <th className="px-4 py-2 text-left text-xs font-medium text-[var(--color-muted)] uppercase">Data</th>
                 </tr>
