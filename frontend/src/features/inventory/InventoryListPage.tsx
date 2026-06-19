@@ -35,15 +35,17 @@ export function InventoryListPage() {
   const [typeFilter, setTypeFilter] = React.useState<string>('all')
   const [nameFilter, setNameFilter] = React.useState<string>('')
   const [expiringWithinDays, setExpiringWithinDays] = React.useState<number | ''>('')
+  const [showOutOfStock, setShowOutOfStock] = React.useState<boolean>(false)
   const [page, setPage] = React.useState<number>(1)
 
   const params = React.useMemo(() => ({
     type: typeFilter === 'all' ? undefined : typeFilter,
     name: nameFilter || undefined,
     expiring_within_days: expiringWithinDays === '' ? undefined : Number(expiringWithinDays),
+    out_of_stock: showOutOfStock || undefined,
     page,
     page_size: 20,
-  }), [typeFilter, nameFilter, expiringWithinDays, page])
+  }), [typeFilter, nameFilter, expiringWithinDays, showOutOfStock, page])
 
   const { data, isLoading, isError, error, refetch } = useInventoryList(params)
 
@@ -127,6 +129,17 @@ export function InventoryListPage() {
             min="0"
             className="p-2 rounded border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-fg)]"
           />
+        </div>
+        <div className="flex flex-col gap-1 justify-end">
+          <label className="text-xs text-[var(--color-muted)] uppercase tracking-wide">Stock</label>
+          <label className="flex items-center gap-2 p-2 text-sm text-[var(--color-fg)] cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={showOutOfStock}
+              onChange={(e) => { setShowOutOfStock(e.target.checked); setPage(1) }}
+            />
+            Show out of stock
+          </label>
         </div>
       </div>
 

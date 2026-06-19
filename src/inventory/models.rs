@@ -119,7 +119,11 @@ pub struct CreateRequest {
     pub r#type: String,
     #[validate(length(min = 1, max = 255))]
     pub name: String,
-    #[validate(range(exclusive_min = 0.0))]
+    // `min = 0.0` (not exclusive): a lot may be created at zero stock, e.g. when
+    // importing an ingredient catalogue (Brewfather "Export All") where most
+    // items are on-record but not currently held. The partial FIFO index
+    // (`WHERE amount > 0`) keeps zero-stock lots out of stock selection.
+    #[validate(range(min = 0.0))]
     pub amount: f64,
     #[validate(custom(function = "validate_unit"))]
     pub unit: String,
