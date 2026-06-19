@@ -1,6 +1,7 @@
 import React from 'react'
 import type { UseMutationResult, UseQueryResult } from '@tanstack/react-query'
 import { APIError } from '../../api/error'
+import { SortableHeader } from '../../components/ui/SortableHeader'
 
 export interface FieldDef {
   key: string
@@ -8,11 +9,14 @@ export interface FieldDef {
   type: 'text' | 'number' | 'textarea' | 'select'
   options?: string[]
   required?: boolean
+  /** When true, the column header is clickable to sort server-side by `key`.
+   *  Only set this for keys the endpoint's sort allow-list accepts. */
+  sortable?: boolean
 }
 
 interface Props<T extends Record<string, unknown>> {
   title: string
-  useList: () => UseQueryResult<{ items: T[]; total: number }>
+  useList: (params: { sort?: string }) => UseQueryResult<{ items: T[]; total: number }>
   useCreate: () => UseMutationResult<T, Error, Partial<T>>
   useUpdate: (id: string) => UseMutationResult<T, Error, Partial<T>>
   useDelete: () => UseMutationResult<void, Error, string>
@@ -35,7 +39,8 @@ export function LibraryCRUD<T extends Record<string, unknown>>({
   idField = 'id',
   extraCols = [],
 }: Props<T>) {
-  const { data, isLoading, isError, error, refetch } = useList()
+  const [sort, setSort] = React.useState('')
+  const { data, isLoading, isError, error, refetch } = useList({ sort: sort || undefined })
   const createMut = useCreate()
   const [editingId, setEditingId] = React.useState<string | null>(null)
   const deleteMut = useDelete()
@@ -197,13 +202,24 @@ export function LibraryCRUD<T extends Record<string, unknown>>({
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b" style={{ borderColor: 'var(--color-border)' }}>
-                {fields.slice(0, 4).map((f) => (
-                  <th key={f.key} className="text-left py-2 px-3 text-[var(--color-muted)] font-medium">
-                    {f.label}
-                  </th>
-                ))}
+                {fields.slice(0, 4).map((f) =>
+                  f.sortable ? (
+                    <SortableHeader
+                      key={f.key}
+                      column={f.key}
+                      label={f.label}
+                      sort={sort}
+                      onSort={setSort}
+                      className="py-2 px-3"
+                    />
+                  ) : (
+                    <th key={f.key} className="text-left py-2 px-3 text-xs font-medium text-[var(--color-muted)] uppercase">
+                      {f.label}
+                    </th>
+                  ),
+                )}
                 {extraCols.map((c) => (
-                  <th key={c.key} className="text-left py-2 px-3 text-[var(--color-muted)] font-medium">
+                  <th key={c.key} className="text-left py-2 px-3 text-xs font-medium text-[var(--color-muted)] uppercase">
                     {c.label}
                   </th>
                 ))}

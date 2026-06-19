@@ -60,14 +60,25 @@ fn parse_sort(sort: &str, allowed: &[(&str, &str)], default_col: &str) -> Result
 const STYLE_ALLOWED_SORT: &[(&str, &str)] = &[
     ("name", "name"),
     ("category", "category"),
+    ("og_min", "og_min"),
+    ("og_max", "og_max"),
     ("created_at", "created_at"),
 ];
 
-const EQUIP_ALLOWED_SORT: &[(&str, &str)] = &[("name", "name"), ("created_at", "created_at")];
+const EQUIP_ALLOWED_SORT: &[(&str, &str)] = &[
+    ("name", "name"),
+    ("batch_size_liters", "batch_size_liters"),
+    ("created_at", "created_at"),
+];
 
 const MASH_ALLOWED_SORT: &[(&str, &str)] = &[("name", "name"), ("created_at", "created_at")];
 
-const YEAST_ALLOWED_SORT: &[(&str, &str)] = &[("name", "name"), ("created_at", "created_at")];
+const YEAST_ALLOWED_SORT: &[(&str, &str)] = &[
+    ("name", "name"),
+    ("type", "type"),
+    ("product_code", "product_code"),
+    ("created_at", "created_at"),
+];
 
 const FERMENTABLE_ALLOWED_SORT: &[(&str, &str)] = &[
     ("name", "name"),

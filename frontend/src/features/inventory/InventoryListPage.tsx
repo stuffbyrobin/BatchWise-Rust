@@ -1,6 +1,7 @@
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useInventoryList } from './hooks/useInventory'
+import { SortableHeader } from '../../components/ui/SortableHeader'
 import { APIError } from '../../api/error'
 
 const INGREDIENT_TYPES = ['all', 'fermentable', 'hop', 'yeast', 'adjunct', 'chemical', 'other'] as const
@@ -36,6 +37,7 @@ export function InventoryListPage() {
   const [nameFilter, setNameFilter] = React.useState<string>('')
   const [expiringWithinDays, setExpiringWithinDays] = React.useState<number | ''>('')
   const [showOutOfStock, setShowOutOfStock] = React.useState<boolean>(false)
+  const [sort, setSort] = React.useState<string>('')
   const [page, setPage] = React.useState<number>(1)
 
   const params = React.useMemo(() => ({
@@ -43,9 +45,12 @@ export function InventoryListPage() {
     name: nameFilter || undefined,
     expiring_within_days: expiringWithinDays === '' ? undefined : Number(expiringWithinDays),
     out_of_stock: showOutOfStock || undefined,
+    sort: sort || undefined,
     page,
     page_size: 20,
-  }), [typeFilter, nameFilter, expiringWithinDays, showOutOfStock, page])
+  }), [typeFilter, nameFilter, expiringWithinDays, showOutOfStock, sort, page])
+
+  const handleSort = (next: string) => { setSort(next); setPage(1) }
 
   const { data, isLoading, isError, error, refetch } = useInventoryList(params)
 
@@ -147,12 +152,12 @@ export function InventoryListPage() {
         <table className="w-full">
           <thead>
             <tr className="text-left text-xs text-[var(--color-muted)] uppercase tracking-wide">
-              <th className="p-3" style={{ borderColor: 'var(--color-border)' }}>Name</th>
-              <th className="p-3" style={{ borderColor: 'var(--color-border)' }}>Type</th>
-              <th className="p-3" style={{ borderColor: 'var(--color-border)' }}>Amount</th>
-              <th className="p-3" style={{ borderColor: 'var(--color-border)' }}>Lot Number</th>
-              <th className="p-3" style={{ borderColor: 'var(--color-border)' }}>Best Before</th>
-              <th className="p-3" style={{ borderColor: 'var(--color-border)' }}>Supplier</th>
+              <SortableHeader column="name" label="Name" sort={sort} onSort={handleSort} className="p-3" />
+              <SortableHeader column="type" label="Type" sort={sort} onSort={handleSort} className="p-3" />
+              <SortableHeader column="amount" label="Amount" sort={sort} onSort={handleSort} className="p-3" />
+              <SortableHeader column="lot_number" label="Lot Number" sort={sort} onSort={handleSort} className="p-3" />
+              <SortableHeader column="best_before_date" label="Best Before" sort={sort} onSort={handleSort} className="p-3" />
+              <SortableHeader column="supplier" label="Supplier" sort={sort} onSort={handleSort} className="p-3" />
             </tr>
           </thead>
           <tbody>

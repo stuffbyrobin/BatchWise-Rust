@@ -10,16 +10,17 @@ export function YeastsPage() {
       useUpdate={useUpdateYeast}
       useDelete={useDeleteYeast}
       fields={[
-        { key: 'name', label: 'Name', type: 'text', required: true },
+        { key: 'name', label: 'Name', type: 'text', required: true, sortable: true },
         {
           key: 'type',
           label: 'Type',
           type: 'select',
           required: true,
           options: ['ale', 'lager', 'wheat', 'wine', 'champagne', 'other'],
+          sortable: true,
         },
         { key: 'lab', label: 'Lab', type: 'text' },
-        { key: 'product_code', label: 'Product code', type: 'text' },
+        { key: 'product_code', label: 'Product code', type: 'text', sortable: true },
         { key: 'attenuation_min', label: 'Attenuation min %', type: 'number' },
         { key: 'attenuation_max', label: 'Attenuation max %', type: 'number' },
         { key: 'temp_min_c', label: 'Temp min °C', type: 'number' },

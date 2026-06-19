@@ -470,6 +470,7 @@ fn build_sort(sort: &str) -> String {
         "brew_date" => "brew_date",
         "batch_number" => "batch_number",
         "name" => "name",
+        "status" => "status",
         _ => "created_at",
     };
     format!("{col} {}", if desc { "DESC" } else { "ASC" })

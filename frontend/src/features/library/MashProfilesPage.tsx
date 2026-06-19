@@ -18,7 +18,7 @@ export function MashProfilesPage() {
       useUpdate={useUpdateMashProfile}
       useDelete={useDeleteMashProfile}
       fields={[
-        { key: 'name', label: 'Name', type: 'text', required: true },
+        { key: 'name', label: 'Name', type: 'text', required: true, sortable: true },
         { key: 'notes', label: 'Notes', type: 'textarea' },
       ]}
       extraCols={[

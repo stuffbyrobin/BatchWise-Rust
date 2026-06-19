@@ -1,6 +1,7 @@
 import React from 'react'
 import type { components } from '../../api/generated'
 import { APIError } from '../../api/error'
+import { SortableHeader } from '../../components/ui/SortableHeader'
 import {
   useFermentables,
   useCreateFermentable,
@@ -50,10 +51,12 @@ function num(v: string): number | undefined {
 export function LibraryFermentablesPage() {
   const [search, setSearch] = React.useState('')
   const [typeFilter, setTypeFilter] = React.useState('')
+  const [sort, setSort] = React.useState('')
   const params = {
     page_size: 100,
     ...(search ? { name: search } : {}),
     ...(typeFilter ? { type: typeFilter } : {}),
+    ...(sort ? { sort } : {}),
   }
   const { data, isLoading, isError, error, refetch } = useFermentables(params)
   const createMut = useCreateFermentable()
@@ -351,10 +354,29 @@ export function LibraryFermentablesPage() {
           <table className="w-full text-sm whitespace-nowrap">
             <thead>
               <tr className="border-b" style={{ borderColor: 'var(--color-border)' }}>
-                {['Name', 'Supplier', 'Type', 'EBC', 'Extract L°/kg', 'Moisture %', 'TN%', 'SNR', 'Flavour'].map(
-                  (h) => (
-                    <th key={h} className="text-left py-2 px-3 text-[var(--color-muted)] font-medium">
-                      {h}
+                {[
+                  { label: 'Name', sortKey: 'name' },
+                  { label: 'Supplier', sortKey: 'supplier' },
+                  { label: 'Type', sortKey: 'type' },
+                  { label: 'EBC' },
+                  { label: 'Extract L°/kg' },
+                  { label: 'Moisture %' },
+                  { label: 'TN%' },
+                  { label: 'SNR' },
+                  { label: 'Flavour' },
+                ].map((h) =>
+                  h.sortKey ? (
+                    <SortableHeader
+                      key={h.label}
+                      column={h.sortKey}
+                      label={h.label}
+                      sort={sort}
+                      onSort={setSort}
+                      className="py-2 px-3"
+                    />
+                  ) : (
+                    <th key={h.label} className="text-left py-2 px-3 text-xs font-medium text-[var(--color-muted)] uppercase">
+                      {h.label}
                     </th>
                   ),
                 )}

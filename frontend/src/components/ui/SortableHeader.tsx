@@ -34,6 +34,8 @@ export function SortableHeader({
   /** Called with the next sort spec when the header is clicked. */
   onSort: (next: string) => void
   align?: 'left' | 'right'
+  /** Padding/layout classes for the `<th>`; defaults to `px-4 py-3` to match
+   *  most tables. Pass e.g. `p-3` to match a table with different spacing. */
   className?: string
 }) {
   const parsed = parseSort(sort)
@@ -42,7 +44,7 @@ export function SortableHeader({
 
   return (
     <th
-      className={`px-4 py-3 text-${align} text-xs font-medium text-[var(--color-muted)] uppercase ${className}`}
+      className={`${className || 'px-4 py-3'} text-${align} text-xs font-medium text-[var(--color-muted)] uppercase`}
       aria-sort={active ? (parsed!.dir === 'asc' ? 'ascending' : 'descending') : 'none'}
     >
       <button
