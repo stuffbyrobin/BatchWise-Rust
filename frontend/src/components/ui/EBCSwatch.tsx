@@ -1,8 +1,10 @@
+import { formatEbc } from '../../utils/ebc'
+
 export function EBCSwatch({ ebc }: { ebc: number }) {
   const step = Math.min(10, Math.max(1, Math.round((ebc / 80) * 9) + 1))
   return (
     <span
-      title={'EBC: ' + ebc}
+      title={'EBC: ' + formatEbc(ebc)}
       style={{
         background: 'var(--srm-' + step + ')',
         display: 'inline-block',

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useRecipesList } from './hooks/useRecipes'
 import { APIError } from '../../api/error'
+import { formatEbc } from '../../utils/ebc'
 
 type RecipeType = 'all_grain' | 'extract' | 'partial_mash' | 'cider' | 'mead' | 'other'
 
@@ -145,7 +146,7 @@ export default function RecipesListPage() {
                               background: ebcToSrmClass(recipe.calc_color_ebc),
                             }}
                           />
-                          <span>{recipe.calc_color_ebc}</span>
+                          <span>{formatEbc(recipe.calc_color_ebc)}</span>
                         </div>
                       ) : (
                         ''
