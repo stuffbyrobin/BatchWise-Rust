@@ -15,8 +15,8 @@ export function EquipmentProfilesPage() {
       useUpdate={useUpdateEquipmentProfile}
       useDelete={useDeleteEquipmentProfile}
       fields={[
-        { key: 'name', label: 'Name', type: 'text', required: true },
-        { key: 'batch_size_liters', label: 'Batch Size (L)', type: 'number' },
+        { key: 'name', label: 'Name', type: 'text', required: true, sortable: true },
+        { key: 'batch_size_liters', label: 'Batch Size (L)', type: 'number', sortable: true },
         { key: 'batch_volume_target_liters', label: 'Batch Volume Target (L)', type: 'number' },
         { key: 'element_power_watts', label: 'Element Power (W)', type: 'number' },
         { key: 'boil_time_minutes', label: 'Boil Time (min)', type: 'number' },

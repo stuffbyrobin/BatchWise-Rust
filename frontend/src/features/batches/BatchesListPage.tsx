@@ -2,12 +2,14 @@ import React from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useBatchesList, BATCH_STATUSES, STATUS_LABELS, STATUS_COLORS } from './hooks/useBatches'
 import { APIError } from '../../api/error'
+import { SortableHeader } from '../../components/ui/SortableHeader'
 
 export function BatchesListPage() {
   const navigate = useNavigate()
   const [status, setStatus] = React.useState('')
   const [brewDateFrom, setBrewDateFrom] = React.useState('')
   const [brewDateTo, setBrewDateTo] = React.useState('')
+  const [sort, setSort] = React.useState('-brew_date')
   const [page, setPage] = React.useState(1)
 
   const { data, isLoading, isError, error, refetch } = useBatchesList({
@@ -16,8 +18,10 @@ export function BatchesListPage() {
     brew_date_to: brewDateTo || undefined,
     page,
     page_size: 20,
-    sort: '-brew_date',
+    sort,
   })
+
+  const handleSort = (next: string) => { setSort(next); setPage(1) }
 
   return (
     <div>
@@ -93,10 +97,10 @@ export function BatchesListPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-[var(--color-border)] bg-[var(--color-surface)]">
-                  <th className="px-4 py-2 text-left text-xs text-[var(--color-muted)] uppercase tracking-wide">Batch #</th>
-                  <th className="px-4 py-2 text-left text-xs text-[var(--color-muted)] uppercase tracking-wide">Name</th>
-                  <th className="px-4 py-2 text-left text-xs text-[var(--color-muted)] uppercase tracking-wide">Status</th>
-                  <th className="px-4 py-2 text-left text-xs text-[var(--color-muted)] uppercase tracking-wide">Brew Date</th>
+                  <SortableHeader column="batch_number" label="Batch #" sort={sort} onSort={handleSort} className="px-4 py-2" />
+                  <SortableHeader column="name" label="Name" sort={sort} onSort={handleSort} className="px-4 py-2" />
+                  <SortableHeader column="status" label="Status" sort={sort} onSort={handleSort} className="px-4 py-2" />
+                  <SortableHeader column="brew_date" label="Brew Date" sort={sort} onSort={handleSort} className="px-4 py-2" />
                   <th className="px-4 py-2 text-left text-xs text-[var(--color-muted)] uppercase tracking-wide">OG / FG</th>
                 </tr>
               </thead>

@@ -1,6 +1,7 @@
 import React from 'react'
 import { APIError } from '../../api/error'
 import { useSuppliers, useCreateSupplier, usePatchSupplier, useDeleteSupplier } from './hooks/useProcurement'
+import { SortableHeader } from '../../components/ui/SortableHeader'
 import type { components } from '../../api/generated'
 
 type Supplier = components['schemas']['Supplier']
@@ -116,7 +117,8 @@ function SupplierRow({ supplier }: { supplier: Supplier }) {
 }
 
 export default function SuppliersPage() {
-  const { data, isLoading, error } = useSuppliers()
+  const [sort, setSort] = React.useState('')
+  const { data, isLoading, error } = useSuppliers({ sort: sort || undefined })
   const createSupplier = useCreateSupplier()
   const [showForm, setShowForm] = React.useState(false)
   const [form, setForm] = React.useState({ name: '', contact_name: '', email: '', phone: '', website: '', notes: '' })
@@ -208,12 +210,12 @@ export default function SuppliersPage() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left text-[var(--color-muted)] border-b border-[var(--color-border)]">
-                <th className="py-2 pr-3">Name</th>
-                <th className="pr-3">Contact</th>
-                <th className="pr-3">Email</th>
-                <th className="pr-3">Phone</th>
-                <th className="pr-3">Notes</th>
+              <tr className="text-left text-xs uppercase text-[var(--color-muted)] border-b border-[var(--color-border)]">
+                <SortableHeader column="name" label="Name" sort={sort} onSort={setSort} className="py-2 pr-3" />
+                <th className="pr-3 font-medium">Contact</th>
+                <th className="pr-3 font-medium">Email</th>
+                <th className="pr-3 font-medium">Phone</th>
+                <th className="pr-3 font-medium">Notes</th>
                 <th></th>
               </tr>
             </thead>

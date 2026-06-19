@@ -10,10 +10,10 @@ export function StylesPage() {
       useUpdate={useUpdateStyle}
       useDelete={useDeleteStyle}
       fields={[
-        { key: 'name', label: 'Name', type: 'text', required: true },
-        { key: 'category', label: 'Category', type: 'text' },
-        { key: 'og_min', label: 'OG min', type: 'number' },
-        { key: 'og_max', label: 'OG max', type: 'number' },
+        { key: 'name', label: 'Name', type: 'text', required: true, sortable: true },
+        { key: 'category', label: 'Category', type: 'text', sortable: true },
+        { key: 'og_min', label: 'OG min', type: 'number', sortable: true },
+        { key: 'og_max', label: 'OG max', type: 'number', sortable: true },
         { key: 'fg_min', label: 'FG min', type: 'number' },
         { key: 'fg_max', label: 'FG max', type: 'number' },
         { key: 'ibu_min', label: 'IBU min', type: 'number' },

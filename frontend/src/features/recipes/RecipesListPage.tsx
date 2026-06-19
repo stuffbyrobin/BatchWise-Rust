@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useRecipesList } from './hooks/useRecipes'
 import { APIError } from '../../api/error'
 import { formatEbc } from '../../utils/ebc'
+import { SortableHeader } from '../../components/ui/SortableHeader'
 
 type RecipeType = 'all_grain' | 'extract' | 'partial_mash' | 'cider' | 'mead' | 'other'
 
@@ -25,15 +26,22 @@ function ebcToSrmClass(ebc: number | null | undefined): string {
 export default function RecipesListPage() {
   const [nameFilter, setNameFilter] = useState('')
   const [typeFilter, setTypeFilter] = useState<RecipeType | ''>('')
+  const [sort, setSort] = useState('')
   const [page, setPage] = useState(1)
   const pageSize = 20
 
   const { data, isLoading, isError, error } = useRecipesList({
     name: nameFilter || undefined,
     type: typeFilter || undefined,
+    sort: sort || undefined,
     page,
     page_size: pageSize,
   })
+
+  const handleSort = (next: string) => {
+    setSort(next)
+    setPage(1)
+  }
 
   const recipes = data?.items ?? []
   const totalPages = data?.total_pages ?? 1
@@ -109,14 +117,14 @@ export default function RecipesListPage() {
             <table className="w-full">
               <thead className="bg-[var(--color-bg)] border-b border-[var(--color-border)]">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-[var(--color-muted)] uppercase">Name</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-[var(--color-muted)] uppercase">Type</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-[var(--color-muted)] uppercase">Batch Size (L)</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-[var(--color-muted)] uppercase">OG</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-[var(--color-muted)] uppercase">FG</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-[var(--color-muted)] uppercase">ABV %</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-[var(--color-muted)] uppercase">IBU</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-[var(--color-muted)] uppercase">Color</th>
+                  <SortableHeader column="name" label="Name" sort={sort} onSort={handleSort} />
+                  <SortableHeader column="type" label="Type" sort={sort} onSort={handleSort} />
+                  <SortableHeader column="batch_size_liters" label="Batch Size (L)" sort={sort} onSort={handleSort} />
+                  <SortableHeader column="calc_og" label="OG" sort={sort} onSort={handleSort} />
+                  <SortableHeader column="calc_fg" label="FG" sort={sort} onSort={handleSort} />
+                  <SortableHeader column="calc_abv_pct" label="ABV %" sort={sort} onSort={handleSort} />
+                  <SortableHeader column="calc_ibu" label="IBU" sort={sort} onSort={handleSort} />
+                  <SortableHeader column="calc_color_ebc" label="Color" sort={sort} onSort={handleSort} />
                   <th className="px-4 py-3"></th>
                 </tr>
               </thead>

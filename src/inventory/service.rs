@@ -479,6 +479,9 @@ fn build_ing_sort(sort: &str) -> Result<String, ApiError> {
             "created_at" => "created_at",
             "name" => "name",
             "amount" => "amount",
+            "type" => "type",
+            "lot_number" => "lot_number",
+            "supplier" => "supplier",
             _ => {
                 return Err(ApiError::validation(
                     "sort",
