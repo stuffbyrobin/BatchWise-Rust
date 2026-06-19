@@ -123,6 +123,7 @@ pub struct CreateMovementRequest {
 pub struct ListPackagingRunsFilter {
     pub batch_id: Option<Uuid>,
     pub format: Option<String>,
+    pub sort: String,
     pub page: i64,
     pub page_size: i64,
 }
@@ -132,6 +133,7 @@ pub struct ListMovementsFilter {
     pub packaging_run_id: Option<Uuid>,
     pub order_id: Option<Uuid>,
     pub movement_type: Option<String>,
+    pub sort: String,
     pub page: i64,
     pub page_size: i64,
 }

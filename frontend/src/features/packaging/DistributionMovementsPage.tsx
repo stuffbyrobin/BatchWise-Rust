@@ -1,5 +1,6 @@
 import React from 'react'
 import { APIError } from '../../api/error'
+import { SortableHeader } from '../../components/ui/SortableHeader'
 import { useDistributionMovements, useCreateDistributionMovement, useDeleteDistributionMovement } from './hooks/usePackaging'
 import type { components } from '../../api/generated'
 
@@ -14,7 +15,8 @@ function fmtDate(s: string | null | undefined): string {
 
 export default function DistributionMovementsPage() {
   const [filterType, setFilterType] = React.useState('')
-  const { data, isLoading, error } = useDistributionMovements({ movement_type: filterType || undefined })
+  const [sort, setSort] = React.useState('')
+  const { data, isLoading, error } = useDistributionMovements({ movement_type: filterType || undefined, sort: sort || undefined })
   const createMov = useCreateDistributionMovement()
   const deleteMov = useDeleteDistributionMovement()
   const [showForm, setShowForm] = React.useState(false)
@@ -138,13 +140,13 @@ export default function DistributionMovementsPage() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left text-[var(--color-muted)] border-b">
-                <th className="py-2 pr-3">Type</th>
-                <th className="pr-3">Qty</th>
-                <th className="pr-3">From</th>
-                <th className="pr-3">To</th>
-                <th className="pr-3">Date</th>
-                <th className="pr-3">Reference</th>
+              <tr className="text-left text-xs uppercase text-[var(--color-muted)] border-b">
+                <SortableHeader column="movement_type" label="Type" sort={sort} onSort={setSort} className="py-2 pr-3" />
+                <SortableHeader column="quantity" label="Qty" sort={sort} onSort={setSort} className="pr-3" />
+                <SortableHeader column="from_location" label="From" sort={sort} onSort={setSort} className="pr-3" />
+                <SortableHeader column="to_location" label="To" sort={sort} onSort={setSort} className="pr-3" />
+                <SortableHeader column="moved_at" label="Date" sort={sort} onSort={setSort} className="pr-3" />
+                <SortableHeader column="reference" label="Reference" sort={sort} onSort={setSort} className="pr-3" />
                 <th></th>
               </tr>
             </thead>
