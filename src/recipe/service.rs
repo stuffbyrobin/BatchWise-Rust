@@ -486,7 +486,19 @@ fn build_sort(sort: &str) -> Result<String, ApiError> {
         "created_at" => "created_at",
         "updated_at" => "updated_at",
         "name" => "name",
+        "type" => "type",
+        "batch_size_liters" => "batch_size_liters",
+        "calc_og" => "calc_og",
+        "calc_fg" => "calc_fg",
+        "calc_abv_pct" => "calc_abv_pct",
+        "calc_ibu" => "calc_ibu",
+        "calc_color_ebc" => "calc_color_ebc",
         _ => "created_at",
     };
-    Ok(format!("{mapped} {}", if desc { "DESC" } else { "ASC" }))
+    // NULLS LAST so recipes missing a computed value (e.g. no calc_ibu yet) sort
+    // to the end regardless of direction, rather than dominating one end.
+    Ok(format!(
+        "{mapped} {} NULLS LAST",
+        if desc { "DESC" } else { "ASC" }
+    ))
 }
