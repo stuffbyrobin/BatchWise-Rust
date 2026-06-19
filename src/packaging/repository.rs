@@ -183,7 +183,11 @@ pub async fn stock_remaining(
 /// Safe `ORDER BY` for packaging runs (alias `pr`); default `-packaged_at`.
 /// `pr.created_at DESC` is kept as a stable tiebreaker.
 fn build_run_sort(sort: &str) -> String {
-    let spec = if sort.is_empty() { "-packaged_at" } else { sort };
+    let spec = if sort.is_empty() {
+        "-packaged_at"
+    } else {
+        sort
+    };
     let desc = spec.starts_with('-');
     let col = match spec.trim_start_matches('-') {
         "lot_number" => "pr.lot_number",
@@ -240,7 +244,10 @@ pub async fn select_runs(
 
     let mut qb = QueryBuilder::<Postgres>::new(format!("SELECT {RUN_COLS} {RUN_FROM}"));
     push_where(&mut qb);
-    qb.push(format!(" GROUP BY pr.id ORDER BY {}", build_run_sort(&filter.sort)));
+    qb.push(format!(
+        " GROUP BY pr.id ORDER BY {}",
+        build_run_sort(&filter.sort)
+    ));
     qb.push(" LIMIT ").push_bind(page_size);
     qb.push(" OFFSET ").push_bind((page - 1) * page_size);
     let items = qb.build_query_as::<PackagingRun>().fetch_all(pool).await?;
