@@ -200,7 +200,7 @@ pub async fn sum_ingredient_cost_for_batch(
     batch_id: Uuid,
 ) -> Result<i64, sqlx::Error> {
     sqlx::query_scalar::<_, i64>(
-        "SELECT COALESCE(SUM(cost_pence),0) FROM batch_ingredients WHERE batch_id=$1",
+        "SELECT COALESCE(SUM(cost_pence),0)::bigint FROM batch_ingredients WHERE batch_id=$1",
     )
     .bind(batch_id)
     .fetch_one(pool)
@@ -411,7 +411,9 @@ pub async fn sum_recent_duty_pence(
     since: DateTime<Utc>,
 ) -> Result<i64, sqlx::Error> {
     sqlx::query_scalar::<_, i64>(
-        "SELECT COALESCE(SUM(estimated_duty_pence), 0) FROM batch_costs \
+        // SUM() over a BIGINT column yields NUMERIC in Postgres; cast back to
+        // BIGINT so it decodes into i64 (pence are whole numbers).
+        "SELECT COALESCE(SUM(estimated_duty_pence), 0)::bigint FROM batch_costs \
          WHERE tenant_id = $1 AND computed_at >= $2",
     )
     .bind(tenant_id)
@@ -456,7 +458,7 @@ pub async fn sum_revenue_for_batch(
     batch_id: Uuid,
 ) -> Result<i64, sqlx::Error> {
     sqlx::query_scalar::<_, i64>(
-        "SELECT COALESCE(SUM(oi.quantity * oi.unit_price_pence), 0) \
+        "SELECT COALESCE(SUM(oi.quantity * oi.unit_price_pence), 0)::bigint \
          FROM order_items oi \
          JOIN orders o ON o.id = oi.order_id \
          WHERE oi.batch_id = $1 \
