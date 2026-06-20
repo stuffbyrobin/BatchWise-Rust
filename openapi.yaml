@@ -3178,7 +3178,7 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "404": { $ref: "#/components/responses/NotFound" }
         "422": { $ref: "#/components/responses/UnprocessableEntity" }
-  /api/v1/calendar/events:
+  /api/v1/calendar-events:
     get:
       operationId: listCalendarEvents
       summary: List calendar events
@@ -3206,7 +3206,7 @@ paths:
         "201": { description: Created, content: { application/json: { schema: { $ref: "#/components/schemas/CalendarEvent" } } } }
         "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthorized" }
-  /api/v1/calendar/events/{id}:
+  /api/v1/calendar-events/{id}:
     get:
       operationId: getCalendarEvent
       summary: Get a calendar event

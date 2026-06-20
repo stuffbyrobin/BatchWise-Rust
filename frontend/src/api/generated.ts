@@ -549,7 +549,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/calendar/events": {
+    "/api/v1/calendar-events": {
         parameters: {
             query?: never;
             header?: never;
@@ -567,7 +567,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/calendar/events/{id}": {
+    "/api/v1/calendar-events/{id}": {
         parameters: {
             query?: never;
             header?: never;
