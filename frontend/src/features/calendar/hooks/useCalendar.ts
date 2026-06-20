@@ -30,7 +30,7 @@ export function useCalendarEvents(params: CalendarListParams = {}) {
     queryKey: ['calendar-events', params],
     queryFn: () =>
       apiClient.get<PaginatedCalendarEvents>(
-        `/api/v1/calendar/events${toQueryString(params as Record<string, unknown>)}`,
+        `/api/v1/calendar-events${toQueryString(params as Record<string, unknown>)}`,
       ),
   })
 }
@@ -38,7 +38,7 @@ export function useCalendarEvents(params: CalendarListParams = {}) {
 export function useCalendarEvent(id: string) {
   return useQuery<CalendarEvent>({
     queryKey: ['calendar-events', id],
-    queryFn: () => apiClient.get<CalendarEvent>(`/api/v1/calendar/events/${id}`),
+    queryFn: () => apiClient.get<CalendarEvent>(`/api/v1/calendar-events/${id}`),
     enabled: !!id,
   })
 }
@@ -46,7 +46,7 @@ export function useCalendarEvent(id: string) {
 export function useCreateCalendarEvent() {
   const qc = useQueryClient()
   return useMutation<CalendarEvent, Error, CreateCalendarEventRequest>({
-    mutationFn: (body) => apiClient.post<CalendarEvent>('/api/v1/calendar/events', body),
+    mutationFn: (body) => apiClient.post<CalendarEvent>('/api/v1/calendar-events', body),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['calendar-events'] }),
   })
 }
@@ -54,7 +54,7 @@ export function useCreateCalendarEvent() {
 export function useUpdateCalendarEvent(id: string) {
   const qc = useQueryClient()
   return useMutation<CalendarEvent, Error, UpdateCalendarEventRequest>({
-    mutationFn: (body) => apiClient.patch<CalendarEvent>(`/api/v1/calendar/events/${id}`, body),
+    mutationFn: (body) => apiClient.patch<CalendarEvent>(`/api/v1/calendar-events/${id}`, body),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['calendar-events'] }),
   })
 }
@@ -62,7 +62,7 @@ export function useUpdateCalendarEvent(id: string) {
 export function useDeleteCalendarEvent(id: string) {
   const qc = useQueryClient()
   return useMutation<void, Error, void>({
-    mutationFn: () => apiClient.delete<void>(`/api/v1/calendar/events/${id}`),
+    mutationFn: () => apiClient.delete<void>(`/api/v1/calendar-events/${id}`),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['calendar-events'] }),
   })
 }
@@ -71,7 +71,7 @@ export function useCompleteCalendarEvent(id: string) {
   const qc = useQueryClient()
   return useMutation<CalendarEvent, Error, void>({
     mutationFn: () =>
-      apiClient.patch<CalendarEvent>(`/api/v1/calendar/events/${id}`, { status: 'completed' }),
+      apiClient.patch<CalendarEvent>(`/api/v1/calendar-events/${id}`, { status: 'completed' }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['calendar-events'] }),
   })
 }
