@@ -29,6 +29,8 @@ import { LibraryFermentablesPage } from '../features/library/LibraryFermentables
 // Batches
 import { BatchesListPage } from '../features/batches/BatchesListPage'
 import { BatchCreatePage } from '../features/batches/BatchCreatePage'
+import FermentersPage from '../features/fermenters/FermentersPage'
+import FermenterSchedulePage from '../features/fermenters/FermenterSchedulePage'
 import { BatchDetailPage } from '../features/batches/BatchDetailPage'
 import { BatchImportPage } from '../features/batches/BatchImportPage'
 
@@ -127,6 +129,10 @@ const router = createBrowserRouter([
       { path: 'batches/import', element: <BatchImportPage /> },
       { path: 'batches/:id', element: <BatchDetailPage /> },
       { path: 'batches/:batchId/fermentation', element: <FermentationPage /> },
+
+      // Fermenters & schedule (Gantt)
+      { path: 'fermenters', element: <FermentersPage /> },
+      { path: 'fermenters/schedule', element: <FermenterSchedulePage /> },
 
       // Calendar & yeast kinetics
       { path: 'calendar', element: <CalendarPage /> },

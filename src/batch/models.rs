@@ -66,6 +66,7 @@ pub struct Batch {
     pub id: Uuid,
     pub tenant_id: Uuid,
     pub recipe_id: Option<Uuid>,
+    pub fermenter_id: Option<Uuid>,
     pub batch_number: String,
     pub name: String,
     pub status: String,
@@ -101,6 +102,7 @@ pub struct BatchIngredient {
 #[serde(deny_unknown_fields)]
 pub struct CreateRequest {
     pub recipe_id: Uuid,
+    pub fermenter_id: Option<Uuid>,
     #[validate(length(min = 1, max = 50))]
     pub batch_number: String,
     #[validate(length(min = 1, max = 255))]
@@ -118,6 +120,7 @@ pub struct CreateRequest {
 pub struct UpdateRequest {
     #[validate(length(max = 255))]
     pub name: Option<String>,
+    pub fermenter_id: Option<Uuid>,
     pub brew_date: Option<String>,
     pub package_date: Option<String>,
     pub target_og: Option<f64>,

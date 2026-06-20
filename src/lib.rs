@@ -17,6 +17,7 @@ pub mod dashboard;
 pub mod duty;
 pub mod equipment;
 pub mod fermentation;
+pub mod fermenter;
 pub mod inventory;
 pub mod labeldesign;
 pub mod labels;

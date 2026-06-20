@@ -2923,6 +2923,8 @@ export interface components {
             tenant_id?: string;
             /** Format: uuid */
             recipe_id?: string | null;
+            /** Format: uuid */
+            fermenter_id?: string | null;
             batch_number?: string;
             name?: string;
             /** @enum {string} */
@@ -2968,6 +2970,8 @@ export interface components {
         CreateBatchRequest: {
             /** Format: uuid */
             recipe_id: string;
+            /** Format: uuid */
+            fermenter_id?: string | null;
             batch_number: string;
             name: string;
             /** Format: date */
@@ -2978,6 +2982,8 @@ export interface components {
         };
         UpdateBatchRequest: {
             name?: string;
+            /** Format: uuid */
+            fermenter_id?: string | null;
             /** Format: date */
             brew_date?: string | null;
             /** Format: date */

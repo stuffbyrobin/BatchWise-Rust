@@ -831,6 +831,7 @@ components:
         id: { type: string, format: uuid }
         tenant_id: { type: string, format: uuid }
         recipe_id: { type: ['string', 'null'], format: uuid }
+        fermenter_id: { type: ["string", "null"], format: uuid }
         batch_number: { type: string }
         name: { type: string }
         status: { type: string, enum: [planned, brewing, fermenting, conditioning, packaging, completed, cancelled, spoiled] }
@@ -871,6 +872,7 @@ components:
       required: [recipe_id, batch_number, name]
       properties:
         recipe_id: { type: string, format: uuid }
+        fermenter_id: { type: ["string", "null"], format: uuid }
         batch_number: { type: string, minLength: 1, maxLength: 50 }
         name: { type: string, minLength: 1, maxLength: 255 }
         brew_date: { type: string, format: date }
@@ -880,6 +882,7 @@ components:
       type: object
       properties:
         name: { type: string, maxLength: 255 }
+        fermenter_id: { type: ["string", "null"], format: uuid }
         brew_date: { type: ['string', 'null'], format: date }
         package_date: { type: ['string', 'null'], format: date }
         target_og: { type: ['number', 'null'] }

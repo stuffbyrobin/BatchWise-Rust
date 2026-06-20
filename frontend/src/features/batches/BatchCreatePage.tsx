@@ -2,6 +2,7 @@ import React from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useCreateBatch } from './hooks/useBatches'
 import { useRecipesList } from '../recipes/hooks/useRecipes'
+import { useFermenters } from '../fermenters/hooks/useFermenters'
 import { useTenant } from '../account/hooks/useTenant'
 import { APIError } from '../../api/error'
 
@@ -9,9 +10,11 @@ export function BatchCreatePage() {
   const navigate = useNavigate()
   const { mutate: createBatch, isPending, isError, error } = useCreateBatch()
   const { data: recipesData } = useRecipesList({ page_size: 100 })
+  const { data: fermData } = useFermenters({ sort: 'name', page_size: 100 })
   const { data: tenant } = useTenant()
 
   const [recipeId, setRecipeId] = React.useState('')
+  const [fermenterId, setFermenterId] = React.useState('')
   const [batchNumber, setBatchNumber] = React.useState('')
 
   React.useEffect(() => {
@@ -36,6 +39,7 @@ export function BatchCreatePage() {
     createBatch(
       {
         recipe_id: recipeId,
+        fermenter_id: fermenterId || undefined,
         batch_number: batchNumber,
         name,
         brew_date: brewDate || undefined,
@@ -115,15 +119,33 @@ export function BatchCreatePage() {
           </div>
         </div>
 
-        <div className="flex flex-col gap-1">
-          <label htmlFor="batch-brew-date" className="text-xs text-[var(--color-muted)] uppercase tracking-wide">Brew Date</label>
-          <input
-            id="batch-brew-date"
-            type="date"
-            value={brewDate}
-            onChange={(e) => setBrewDate(e.target.value)}
-            className="p-2 rounded border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-fg)]"
-          />
+        <div className="grid grid-cols-2 gap-4">
+          <div className="flex flex-col gap-1">
+            <label htmlFor="batch-brew-date" className="text-xs text-[var(--color-muted)] uppercase tracking-wide">Brew Date</label>
+            <input
+              id="batch-brew-date"
+              type="date"
+              value={brewDate}
+              onChange={(e) => setBrewDate(e.target.value)}
+              className="p-2 rounded border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-fg)]"
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label htmlFor="batch-fermenter" className="text-xs text-[var(--color-muted)] uppercase tracking-wide">Fermenter</label>
+            <select
+              id="batch-fermenter"
+              value={fermenterId}
+              onChange={(e) => setFermenterId(e.target.value)}
+              className="p-2 rounded border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-fg)]"
+            >
+              <option value="">Unassigned</option>
+              {fermData?.items.map((f) => (
+                <option key={f.id} value={f.id}>
+                  {f.name}{f.capacity_liters != null ? ` (${f.capacity_liters} L)` : ''}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
         <div className="flex flex-col gap-1">
