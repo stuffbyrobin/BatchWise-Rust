@@ -6,6 +6,8 @@ const BASE_NAV = [
   { to: '/inventory', label: 'Inventory', end: false },
   { to: '/recipes', label: 'Recipes', end: false },
   { to: '/batches', label: 'Batches', end: false },
+  { to: '/fermenters', label: 'Fermenters', end: true },
+  { to: '/fermenters/schedule', label: 'Schedule', end: false },
   { to: '/calendar', label: 'Calendar', end: false },
   { to: '/yeast-kinetics', label: 'Yeast Kinetics', end: false },
 ]

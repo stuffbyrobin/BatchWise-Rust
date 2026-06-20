@@ -125,6 +125,7 @@ pub async fn create(
 
     let new_batch = NewBatch {
         recipe_id: Some(req.recipe_id),
+        fermenter_id: req.fermenter_id,
         batch_number: req.batch_number.clone(),
         name: req.name.clone(),
         status: initial_status,
@@ -276,6 +277,7 @@ pub async fn update(
 
     let m = BatchMutable {
         name: req.name.unwrap_or(existing.name),
+        fermenter_id: req.fermenter_id.or(existing.fermenter_id),
         brew_date,
         package_date,
         target_og: req.target_og.or(existing.target_og),

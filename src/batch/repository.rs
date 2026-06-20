@@ -11,7 +11,7 @@ use uuid::Uuid;
 
 use super::models::{Batch, BatchIngredient, BatchRecipeSnapshot, ListFilter, Page};
 
-const BAT_COLS: &str = "id, tenant_id, recipe_id, batch_number, name, status, \
+const BAT_COLS: &str = "id, tenant_id, recipe_id, fermenter_id, batch_number, name, status, \
     to_char(brew_date, 'YYYY-MM-DD') AS brew_date, to_char(package_date, 'YYYY-MM-DD') AS package_date, \
     target_og::float8 AS target_og, actual_og::float8 AS actual_og, target_fg::float8 AS target_fg, \
     actual_fg::float8 AS actual_fg, actual_volume_liters::float8 AS actual_volume_liters, notes, \
@@ -20,6 +20,7 @@ const BAT_COLS: &str = "id, tenant_id, recipe_id, batch_number, name, status, \
 /// Values for inserting a new batch.
 pub struct NewBatch {
     pub recipe_id: Option<Uuid>,
+    pub fermenter_id: Option<Uuid>,
     pub batch_number: String,
     pub name: String,
     pub status: String,
@@ -34,6 +35,7 @@ pub struct NewBatch {
 /// Mutable fields updated by PATCH/PUT.
 pub struct BatchMutable {
     pub name: String,
+    pub fermenter_id: Option<Uuid>,
     pub brew_date: Option<NaiveDate>,
     pub package_date: Option<NaiveDate>,
     pub target_og: Option<f64>,
@@ -63,13 +65,14 @@ pub async fn insert<'e, E: PgExecutor<'e>>(
     b: &NewBatch,
 ) -> Result<Batch, sqlx::Error> {
     let sql = format!(
-        "INSERT INTO batches (tenant_id, recipe_id, batch_number, name, status, brew_date, notes, \
-         duty_status, target_og, target_fg, batch_recipe_snapshot) \
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11::jsonb) RETURNING {BAT_COLS}"
+        "INSERT INTO batches (tenant_id, recipe_id, fermenter_id, batch_number, name, status, \
+         brew_date, notes, duty_status, target_og, target_fg, batch_recipe_snapshot) \
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12::jsonb) RETURNING {BAT_COLS}"
     );
     sqlx::query_as::<_, Batch>(&sql)
         .bind(tenant_id)
         .bind(b.recipe_id)
+        .bind(b.fermenter_id)
         .bind(&b.batch_number)
         .bind(&b.name)
         .bind(&b.status)
@@ -176,13 +179,14 @@ pub async fn update_mutable<'e, E: PgExecutor<'e>>(
     m: &BatchMutable,
 ) -> Result<(), sqlx::Error> {
     sqlx::query(
-        "UPDATE batches SET name=$3, brew_date=$4, package_date=$5, target_og=$6, actual_og=$7, \
-         target_fg=$8, actual_fg=$9, actual_volume_liters=$10, notes=$11, updated_at=now() \
-         WHERE tenant_id=$1 AND id=$2",
+        "UPDATE batches SET name=$3, fermenter_id=$4, brew_date=$5, package_date=$6, target_og=$7, \
+         actual_og=$8, target_fg=$9, actual_fg=$10, actual_volume_liters=$11, notes=$12, \
+         updated_at=now() WHERE tenant_id=$1 AND id=$2",
     )
     .bind(tenant_id)
     .bind(id)
     .bind(&m.name)
+    .bind(m.fermenter_id)
     .bind(m.brew_date)
     .bind(m.package_date)
     .bind(m.target_og)
