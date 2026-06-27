@@ -57,6 +57,23 @@ pnpm build
   `src/tenant/presets.rs`). The tenant API can't self-upgrade tier; to give a
   test user full access run `cargo run --example grant_all_features -- <email>`.
 
+## Database migrations
+
+- **Filename padding is inconsistent — match the highest existing file, don't
+  assume.** `sqlx::migrate!` derives the integer *version* from the leading
+  digits of the filename, ignoring zero-padding. Migrations `0001`–`0010` use
+  4-digit padding, but **from 11 onward they switch to 6 digits**
+  (`000011_…` … `000028_…`). So `0011_foo` and `000011_bar` both parse to
+  version **11** and collide — sqlx then fails with `duplicate key … version=11`
+  / `VersionMismatch(11)` against any DB that already has the real 11 applied.
+  `ls migrations | tail` is misleading here: `000011…` sorts *before* `0001…`.
+  Find the true latest version with
+  `ls migrations/*.up.sql | sed -E 's#.*/0*([0-9]+)_.*#\1#' | sort -n | tail -1`
+  (or check the live `_sqlx_migrations` table), then add the **next 6-digit
+  number** with both `.up.sql` and `.down.sql`.
+- Migrations are applied on startup (`database::migrate`) and embedded via
+  `sqlx::migrate!("./migrations")`; they must be idempotent-safe to re-run.
+
 ## Git
 
 Commit/push only when asked; branch off `main` first. Open PRs with `gh` and
