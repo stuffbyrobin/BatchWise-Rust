@@ -8,7 +8,7 @@
 //! * fermentable amounts are normalised to kg (a `g` unit is divided by 1000),
 //! * hop and yeast amounts are normalised to g (a `kg` unit is multiplied by 1000),
 //! * `potential` (SG, e.g. 1.037) becomes PPG via `(potential - 1) * 1000`,
-//! * fermentable `color` is already EBC and kept as-is.
+//! * fermentable `color` is SRM and is converted to EBC via `* 1.97`.
 
 use crate::recipe::models::{CreateRequest, FermentableInput, HopInput, MashStepInput, YeastInput};
 use serde::Deserialize;
@@ -61,7 +61,7 @@ struct BfFermentable {
     #[serde(default)]
     unit: String,
     #[serde(default, deserialize_with = "f64_null_default")]
-    color: f64, // EBC
+    color: f64, // SRM
     #[serde(default, deserialize_with = "f64_null_default")]
     potential: f64, // SG e.g. 1.037
     #[serde(default)]
@@ -139,7 +139,8 @@ pub fn parse_brewfather(data: &str) -> Result<CreateRequest, String> {
         .into_iter()
         .enumerate()
         .map(|(i, f)| {
-            // Brewfather uses EBC; convert potential SG → PPG. A missing or
+            // Brewfather colour is SRM (converted to EBC below); convert
+            // potential SG → PPG. A missing or
             // null potential (<= 1.0 SG) is left unknown rather than converted
             // into a negative PPG that would fail `range(min = 0.0)` validation.
             let potential_ppg = if f.potential > 1.0 {
@@ -147,7 +148,7 @@ pub fn parse_brewfather(data: &str) -> Result<CreateRequest, String> {
             } else {
                 None
             };
-            let color_ebc = f.color;
+            let color_ebc = f.color * 1.97; // Brewfather color is SRM; convert SRM -> EBC
 
             // Normalise amount to kg.
             let amt_kg = if f.unit.to_lowercase() == "g" {
@@ -431,7 +432,7 @@ mod tests {
         assert_eq!(ferms[0].step_order, 1);
         assert_eq!(ferms[0].unit, "kg");
         assert_eq!(ferms[0].amount, 4.0);
-        assert_eq!(ferms[0].color_ebc, Some(5.9));
+        assert_eq!(ferms[0].color_ebc, Some(5.9 * 1.97));
 
         let hops = req.hops.as_ref().expect("hops");
         assert!(!hops.is_empty());
@@ -482,6 +483,6 @@ mod tests {
         assert_eq!(ferms.len(), 1);
         // Unknown potential is omitted rather than turned into a negative PPG.
         assert_eq!(ferms[0].potential_ppg, None);
-        assert_eq!(ferms[0].color_ebc, Some(2.0));
+        assert_eq!(ferms[0].color_ebc, Some(2.0 * 1.97));
     }
 }
