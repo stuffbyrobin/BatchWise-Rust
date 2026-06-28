@@ -16,6 +16,7 @@ pub const MAGNESIUM_RA_FACTOR: f64 = 0.5879;
 pub const MW_CALCIUM_CARBONATE: f64 = 100.09;
 pub const MW_CALCIUM_SULFATE: f64 = 172.17; // CaSO4·2H2O (gypsum, dihydrate — the weighed form)
 pub const MW_CALCIUM_CHLORIDE: f64 = 147.01; // CaCl2·2H2O (dihydrate — the weighed form)
+pub const MW_CALCIUM_CHLORIDE_ANHYDROUS: f64 = 110.98; // CaCl2 (anhydrous / dissolved basis)
 pub const MW_MAGNESIUM_SULFATE: f64 = 246.47; // MgSO4·7H2O (Epsom salt, heptahydrate)
 pub const MW_MAGNESIUM_CHLORIDE: f64 = 95.21;
 pub const MW_SODIUM_BICARBONATE: f64 = 84.01;
@@ -94,6 +95,21 @@ pub enum MineralType {
     SlakedLime,
 }
 
+/// The physical form a salt is supplied in, which changes how a given weight
+/// maps to dissolved ions. Currently only consulted for [`MineralType::CalciumCl`].
+///
+/// * `Anhydrous` — the bare salt (e.g. CaCl2, MW 110.98).
+/// * `Dihydrate` — the hydrated crystal brewers usually weigh (CaCl2·2H2O, 147.01).
+/// * `Liquid` — an aqueous solution; `strength_pct` (%w/w) gives the anhydrous
+///   salt fraction of the supplied weight.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum MineralForm {
+    Anhydrous,
+    #[default]
+    Dihydrate,
+    Liquid,
+}
+
 /// Identifies an acid used for acidification.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AcidType {
@@ -132,8 +148,14 @@ pub enum ColourUnit {
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct MineralAddition {
     pub mineral_type: MineralType,
-    /// Grams.
+    /// Grams. For a `Liquid` form this is the weight of solution; the anhydrous
+    /// salt content is `amount * strength_pct / 100`.
     pub amount: f64,
+    /// Supplied form (anhydrous/dihydrate/liquid). Only consulted for CaCl2;
+    /// defaults to `Dihydrate` for all other salts and legacy data.
+    pub form: MineralForm,
+    /// Solution strength (%w/w), used only when `form` is `Liquid`.
+    pub strength_pct: f64,
 }
 
 /// Describes an acid addition.
@@ -255,9 +277,15 @@ fn apply_mineral(p: &mut WaterProfile, m: MineralAddition, vol: f64) -> Result<(
             p.sulfate += g * MW_SULFATE / MW_CALCIUM_SULFATE * ppm;
         }
         MineralType::CalciumCl => {
-            // CaCl2·2H2O
-            p.calcium += g * MW_CALCIUM / MW_CALCIUM_CHLORIDE * ppm;
-            p.chloride += g * 2.0 * MW_CHLORIDE / MW_CALCIUM_CHLORIDE * ppm;
+            // Normalise the supplied weight to anhydrous CaCl2 (the dissolved
+            // basis), then derive ions from the anhydrous molar mass.
+            let anhydrous_g = match m.form {
+                MineralForm::Anhydrous => g,
+                MineralForm::Dihydrate => g * MW_CALCIUM_CHLORIDE_ANHYDROUS / MW_CALCIUM_CHLORIDE,
+                MineralForm::Liquid => g * m.strength_pct / 100.0,
+            };
+            p.calcium += anhydrous_g * MW_CALCIUM / MW_CALCIUM_CHLORIDE_ANHYDROUS * ppm;
+            p.chloride += anhydrous_g * 2.0 * MW_CHLORIDE / MW_CALCIUM_CHLORIDE_ANHYDROUS * ppm;
         }
         MineralType::Chalk => {
             // CaCO3
@@ -577,6 +605,8 @@ mod tests {
             &[MineralAddition {
                 mineral_type: MineralType::Gypsum,
                 amount: 5.0,
+                form: MineralForm::Dihydrate,
+                strength_pct: 0.0,
             }],
             None,
         )
@@ -602,6 +632,8 @@ mod tests {
             &[MineralAddition {
                 mineral_type: MineralType::CalciumCl,
                 amount: 5.0,
+                form: MineralForm::Dihydrate,
+                strength_pct: 0.0,
             }],
             None,
         )
@@ -619,6 +651,48 @@ mod tests {
     }
 
     #[test]
+    fn mineral_addition_calcium_chloride_forms() {
+        let ca = |form: MineralForm, amount: f64, strength: f64| {
+            calculate_water_treatment(
+                WaterProfile::default(),
+                20.0,
+                &[MineralAddition {
+                    mineral_type: MineralType::CalciumCl,
+                    amount,
+                    form,
+                    strength_pct: strength,
+                }],
+                None,
+            )
+            .unwrap()
+            .final_profile
+            .calcium
+        };
+        // Anhydrous CaCl2 is more concentrated than the dihydrate crystal for the
+        // same weight (no waters of hydration).
+        let anhydrous = ca(MineralForm::Anhydrous, 5.0, 0.0);
+        let dihydrate = ca(MineralForm::Dihydrate, 5.0, 0.0);
+        assert_relative_eq!(
+            anhydrous,
+            5.0 * 40.08 / 110.98 / 20.0 * 1000.0,
+            epsilon = 0.01
+        );
+        assert_relative_eq!(
+            dihydrate,
+            5.0 * 40.08 / 147.01 / 20.0 * 1000.0,
+            epsilon = 0.01
+        );
+        assert!(anhydrous > dihydrate);
+        // A 33% w/w liquid: 15 g solution × 33% = 4.95 g anhydrous CaCl2.
+        let liquid = ca(MineralForm::Liquid, 15.0, 33.0);
+        assert_relative_eq!(
+            liquid,
+            4.95 * 40.08 / 110.98 / 20.0 * 1000.0,
+            epsilon = 0.01
+        );
+    }
+
+    #[test]
     fn mineral_addition_chalk() {
         let res = calculate_water_treatment(
             WaterProfile::default(),
@@ -626,6 +700,8 @@ mod tests {
             &[MineralAddition {
                 mineral_type: MineralType::Chalk,
                 amount: 2.0,
+                form: MineralForm::Dihydrate,
+                strength_pct: 0.0,
             }],
             None,
         )
@@ -893,6 +969,8 @@ mod tests {
                 &[MineralAddition {
                     mineral_type: mineral,
                     amount: 5.0,
+                    form: MineralForm::Dihydrate,
+                    strength_pct: 0.0,
                 }],
                 None,
             )

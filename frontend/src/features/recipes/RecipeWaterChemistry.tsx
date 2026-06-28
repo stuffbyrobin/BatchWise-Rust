@@ -30,6 +30,24 @@ interface MineralRow {
   id: number
   type: string
   amount: string
+  /** CaCl₂ only: 'anhydrous' | 'dihydrate' | 'liquid'. */
+  form?: string
+  /** CaCl₂ liquid only: solution strength %w/w. */
+  strength?: string
+}
+
+type MineralPayload = { type: string; amount: number; form?: string; strength_pct?: number }
+
+// Project a row to the API/WASM shape. The form/strength fields are only
+// meaningful for CaCl₂; other salts send just type + amount.
+function mineralPayload(m: MineralRow): MineralPayload {
+  const out: MineralPayload = { type: m.type, amount: Number(m.amount) }
+  if (m.type === 'CaCl2') {
+    const form = m.form || 'dihydrate'
+    out.form = form
+    if (form === 'liquid') out.strength_pct = Number(m.strength) || 0
+  }
+  return out
 }
 
 type SourceMode = 'profile' | 'inline'
@@ -87,6 +105,8 @@ export function RecipeWaterChemistry({
           id: idx + 1,
           type: ma.type ?? MINERALS[0].type,
           amount: ma.amount != null ? String(ma.amount) : '',
+          form: ma.form ?? undefined,
+          strength: ma.strength_pct != null ? String(ma.strength_pct) : undefined,
         })) ?? []
       )
       setNextId((adj.mineral_additions?.length ?? 0) + 2)
@@ -99,7 +119,7 @@ export function RecipeWaterChemistry({
     setNextId((n) => n + 1)
   }
 
-  const updateMineral = (id: number, key: 'type' | 'amount', value: string) => {
+  const updateMineral = (id: number, key: 'type' | 'amount' | 'form' | 'strength', value: string) => {
     setMinerals((prev) => prev.map((m) => (m.id === id ? { ...m, [key]: value } : m)))
   }
 
@@ -160,7 +180,7 @@ export function RecipeWaterChemistry({
       volume_liters: Number(volumeLiters) || 0,
       minerals: minerals
         .filter((m) => m.amount !== '' && Number(m.amount) > 0)
-        .map((m) => ({ type: m.type, amount: Number(m.amount) })),
+        .map(mineralPayload),
       grains,
     })
     // physics.computeWaterTreatment is a stable module singleton; gate on `ready`.
@@ -177,7 +197,7 @@ export function RecipeWaterChemistry({
       source_profile_id: profileId,
       mineral_additions: minerals
         .filter((m) => m.amount !== '' && Number(m.amount) > 0)
-        .map((m) => ({ type: m.type, amount: Number(m.amount) })),
+        .map(mineralPayload),
       recipe_id: recipeId,
     }
 
@@ -337,6 +357,35 @@ export function RecipeWaterChemistry({
                 />
                 <span className="text-xs text-[var(--color-muted)]">g</span>
               </div>
+              {m.type === 'CaCl2' && (
+                <>
+                  <select
+                    value={m.form || 'dihydrate'}
+                    onChange={(e) => updateMineral(m.id, 'form', e.target.value)}
+                    title="CaCl₂ form"
+                    className="p-2 rounded border text-sm bg-[var(--color-bg)] border-[var(--color-border)]"
+                  >
+                    <option value="anhydrous">Anhydrous</option>
+                    <option value="dihydrate">Dihydrate</option>
+                    <option value="liquid">Liquid</option>
+                  </select>
+                  {(m.form || 'dihydrate') === 'liquid' && (
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="1"
+                        placeholder="%w/w"
+                        value={m.strength ?? ''}
+                        onChange={(e) => updateMineral(m.id, 'strength', e.target.value)}
+                        className="w-16 p-2 rounded border text-sm bg-[var(--color-bg)] border-[var(--color-border)]"
+                      />
+                      <span className="text-xs text-[var(--color-muted)]">%w/w</span>
+                    </div>
+                  )}
+                </>
+              )}
               <button
                 onClick={() => removeMineral(m.id)}
                 className="text-[var(--color-danger)] text-xs px-2 py-1 hover:opacity-70"

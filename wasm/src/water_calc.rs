@@ -34,6 +34,10 @@ struct MineralInput {
     r#type: String,
     #[serde(default)]
     amount: f64,
+    #[serde(default)]
+    form: Option<String>,
+    #[serde(default)]
+    strength_pct: Option<f64>,
 }
 
 #[derive(Deserialize)]
@@ -167,6 +171,12 @@ pub fn compute_water_treatment(input_json: &str) -> Result<WaterTreatment, JsErr
             map_mineral_type(&m.r#type).map(|mineral_type| pw::MineralAddition {
                 mineral_type,
                 amount: m.amount,
+                form: match m.form.as_deref() {
+                    Some("anhydrous") => pw::MineralForm::Anhydrous,
+                    Some("liquid") => pw::MineralForm::Liquid,
+                    _ => pw::MineralForm::Dihydrate,
+                },
+                strength_pct: m.strength_pct.unwrap_or(0.0),
             })
         })
         .collect();

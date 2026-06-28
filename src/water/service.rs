@@ -261,9 +261,17 @@ fn map_minerals(additions: &[MineralAddition]) -> Result<Vec<pw::MineralAddition
                     )))
                 }
             };
+            let form = match m.form.as_deref() {
+                Some("anhydrous") => pw::MineralForm::Anhydrous,
+                Some("liquid") => pw::MineralForm::Liquid,
+                // "dihydrate", None, or unrecognised → dihydrate (legacy default).
+                _ => pw::MineralForm::Dihydrate,
+            };
             Ok(pw::MineralAddition {
                 mineral_type,
                 amount: m.amount,
+                form,
+                strength_pct: m.strength_pct.unwrap_or(0.0),
             })
         })
         .collect()
