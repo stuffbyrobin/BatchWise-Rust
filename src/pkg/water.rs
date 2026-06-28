@@ -14,9 +14,9 @@ pub const CALCIUM_RA_FACTOR: f64 = 0.7143;
 pub const MAGNESIUM_RA_FACTOR: f64 = 0.5879;
 
 pub const MW_CALCIUM_CARBONATE: f64 = 100.09;
-pub const MW_CALCIUM_SULFATE: f64 = 136.14;
-pub const MW_CALCIUM_CHLORIDE: f64 = 110.98;
-pub const MW_MAGNESIUM_SULFATE: f64 = 120.37;
+pub const MW_CALCIUM_SULFATE: f64 = 172.17; // CaSO4·2H2O (gypsum, dihydrate — the weighed form)
+pub const MW_CALCIUM_CHLORIDE: f64 = 147.01; // CaCl2·2H2O (dihydrate — the weighed form)
+pub const MW_MAGNESIUM_SULFATE: f64 = 246.47; // MgSO4·7H2O (Epsom salt, heptahydrate)
 pub const MW_MAGNESIUM_CHLORIDE: f64 = 95.21;
 pub const MW_SODIUM_BICARBONATE: f64 = 84.01;
 pub const MW_SODIUM_CHLORIDE: f64 = 58.44;
@@ -245,52 +245,55 @@ pub fn calculate_water_treatment(
 
 fn apply_mineral(p: &mut WaterProfile, m: MineralAddition, vol: f64) -> Result<(), WaterError> {
     let g = m.amount;
+    // grams of salt dissolved in `vol` litres → ppm (mg/L): mass × 1000 / vol.
+    // (Without the ×1000 the result is g/L, i.e. 1000× too small.)
+    let ppm = 1000.0 / vol;
     match m.mineral_type {
         MineralType::Gypsum => {
-            // CaSO4
-            p.calcium += g * MW_CALCIUM / MW_CALCIUM_SULFATE / vol;
-            p.sulfate += g * MW_SULFATE / MW_CALCIUM_SULFATE / vol;
+            // CaSO4·2H2O
+            p.calcium += g * MW_CALCIUM / MW_CALCIUM_SULFATE * ppm;
+            p.sulfate += g * MW_SULFATE / MW_CALCIUM_SULFATE * ppm;
         }
         MineralType::CalciumCl => {
-            // CaCl2
-            p.calcium += g * MW_CALCIUM / MW_CALCIUM_CHLORIDE / vol;
-            p.chloride += g * 2.0 * MW_CHLORIDE / MW_CALCIUM_CHLORIDE / vol;
+            // CaCl2·2H2O
+            p.calcium += g * MW_CALCIUM / MW_CALCIUM_CHLORIDE * ppm;
+            p.chloride += g * 2.0 * MW_CHLORIDE / MW_CALCIUM_CHLORIDE * ppm;
         }
         MineralType::Chalk => {
             // CaCO3
-            p.calcium += g * MW_CALCIUM / MW_CALCIUM_CARBONATE / vol;
-            p.bicarbonate += g * 2.0 * MW_BICARBONATE / MW_CALCIUM_CARBONATE / vol;
+            p.calcium += g * MW_CALCIUM / MW_CALCIUM_CARBONATE * ppm;
+            p.bicarbonate += g * 2.0 * MW_BICARBONATE / MW_CALCIUM_CARBONATE * ppm;
         }
         MineralType::Epsom => {
-            // MgSO4
-            p.magnesium += g * MW_MAGNESIUM / MW_MAGNESIUM_SULFATE / vol;
-            p.sulfate += g * MW_SULFATE / MW_MAGNESIUM_SULFATE / vol;
+            // MgSO4·7H2O
+            p.magnesium += g * MW_MAGNESIUM / MW_MAGNESIUM_SULFATE * ppm;
+            p.sulfate += g * MW_SULFATE / MW_MAGNESIUM_SULFATE * ppm;
         }
         MineralType::MagnesiumCl => {
             // MgCl2
-            p.magnesium += g * MW_MAGNESIUM / MW_MAGNESIUM_CHLORIDE / vol;
-            p.chloride += g * 2.0 * MW_CHLORIDE / MW_MAGNESIUM_CHLORIDE / vol;
+            p.magnesium += g * MW_MAGNESIUM / MW_MAGNESIUM_CHLORIDE * ppm;
+            p.chloride += g * 2.0 * MW_CHLORIDE / MW_MAGNESIUM_CHLORIDE * ppm;
         }
         MineralType::BakingSoda => {
             // NaHCO3
-            p.sodium += g * MW_SODIUM / MW_SODIUM_BICARBONATE / vol;
-            p.bicarbonate += g * MW_BICARBONATE / MW_SODIUM_BICARBONATE / vol;
+            p.sodium += g * MW_SODIUM / MW_SODIUM_BICARBONATE * ppm;
+            p.bicarbonate += g * MW_BICARBONATE / MW_SODIUM_BICARBONATE * ppm;
         }
         MineralType::TableSalt => {
             // NaCl
-            p.sodium += g * MW_SODIUM / MW_SODIUM_CHLORIDE / vol;
-            p.chloride += g * MW_CHLORIDE / MW_SODIUM_CHLORIDE / vol;
+            p.sodium += g * MW_SODIUM / MW_SODIUM_CHLORIDE * ppm;
+            p.chloride += g * MW_CHLORIDE / MW_SODIUM_CHLORIDE * ppm;
         }
         MineralType::SodiumSulfate => {
             // Na2SO4
-            p.sodium += g * 2.0 * MW_SODIUM / MW_SODIUM_SULFATE / vol;
-            p.sulfate += g * MW_SULFATE / MW_SODIUM_SULFATE / vol;
+            p.sodium += g * 2.0 * MW_SODIUM / MW_SODIUM_SULFATE * ppm;
+            p.sulfate += g * MW_SULFATE / MW_SODIUM_SULFATE * ppm;
         }
         MineralType::SlakedLime => {
             // Ca(OH)2
-            p.calcium += g * MW_CALCIUM / MW_CALCIUM_HYDROXIDE / vol;
+            p.calcium += g * MW_CALCIUM / MW_CALCIUM_HYDROXIDE * ppm;
             // 2 OH- per mol Ca(OH)2 → 2 mol HCO3- equivalent
-            p.bicarbonate += g * 2.0 * MW_BICARBONATE / MW_CALCIUM_HYDROXIDE / vol;
+            p.bicarbonate += g * 2.0 * MW_BICARBONATE / MW_CALCIUM_HYDROXIDE * ppm;
         }
     }
     Ok(())
@@ -578,15 +581,15 @@ mod tests {
             None,
         )
         .unwrap();
-        // 5g CaSO4 in 20L: Ca += 5 × 40.08/136.14/20; SO4 += 5 × 96.06/136.14/20
+        // 5g CaSO4·2H2O in 20L → ppm = mass × 1000 / 20
         assert_relative_eq!(
             res.final_profile.calcium,
-            5.0 * 40.08 / 136.14 / 20.0,
+            5.0 * 40.08 / 172.17 / 20.0 * 1000.0,
             epsilon = 0.01
         );
         assert_relative_eq!(
             res.final_profile.sulfate,
-            5.0 * 96.06 / 136.14 / 20.0,
+            5.0 * 96.06 / 172.17 / 20.0 * 1000.0,
             epsilon = 0.01
         );
     }
@@ -605,12 +608,12 @@ mod tests {
         .unwrap();
         assert_relative_eq!(
             res.final_profile.calcium,
-            5.0 * 40.08 / 110.98 / 20.0,
+            5.0 * 40.08 / 147.01 / 20.0 * 1000.0,
             epsilon = 0.01
         );
         assert_relative_eq!(
             res.final_profile.chloride,
-            5.0 * 2.0 * 35.45 / 110.98 / 20.0,
+            5.0 * 2.0 * 35.45 / 147.01 / 20.0 * 1000.0,
             epsilon = 0.01
         );
     }
@@ -629,12 +632,12 @@ mod tests {
         .unwrap();
         assert_relative_eq!(
             res.final_profile.calcium,
-            2.0 * 40.08 / 100.09 / 10.0,
+            2.0 * 40.08 / 100.09 / 10.0 * 1000.0,
             epsilon = 0.01
         );
         assert_relative_eq!(
             res.final_profile.bicarbonate,
-            2.0 * 2.0 * 61.02 / 100.09 / 10.0,
+            2.0 * 2.0 * 61.02 / 100.09 / 10.0 * 1000.0,
             epsilon = 0.01
         );
     }
