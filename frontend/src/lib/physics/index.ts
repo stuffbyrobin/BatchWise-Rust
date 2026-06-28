@@ -53,7 +53,7 @@ export interface WaterTreatmentInput {
     bicarbonate_ppm: number
   }
   volume_liters: number
-  minerals: { type: string; amount: number }[]
+  minerals: { type: string; amount: number; form?: string; strength_pct?: number }[]
   grains: { grain_type: string; weight_kg: number; colour_lovibond: number }[]
 }
 

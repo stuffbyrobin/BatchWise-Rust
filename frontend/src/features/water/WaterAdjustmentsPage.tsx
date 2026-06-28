@@ -11,7 +11,7 @@ import type { components } from '../../api/generated'
 
 type WaterAdjustment = components['schemas']['WaterAdjustment']
 type WaterResult = components['schemas']['WaterResult']
-type MineralAddition = { type: string; amount: number }
+type MineralAddition = { type: string; amount: number; form?: string; strength_pct?: number }
 
 const MINERALS = [
   { type: 'CaSO4', label: 'Gypsum (CaSO₄)' },
@@ -28,6 +28,21 @@ interface MineralRow {
   id: number
   type: string
   amount: string
+  /** CaCl₂ only: 'anhydrous' | 'dihydrate' | 'liquid'. */
+  form?: string
+  /** CaCl₂ liquid only: solution strength %w/w. */
+  strength?: string
+}
+
+// CaCl₂ carries form/strength; other salts send just type + amount.
+function mineralPayload(m: MineralRow): MineralAddition {
+  const out: MineralAddition = { type: m.type, amount: Number(m.amount) }
+  if (m.type === 'CaCl2') {
+    const form = m.form || 'dihydrate'
+    out.form = form
+    if (form === 'liquid') out.strength_pct = Number(m.strength) || 0
+  }
+  return out
 }
 
 const blankForm = () => ({
@@ -54,6 +69,8 @@ function adjToMinerals(adj: WaterAdjustment, startId: number): { rows: MineralRo
     id: startId + i,
     type: m.type,
     amount: String(m.amount),
+    form: m.form ?? undefined,
+    strength: m.strength_pct != null ? String(m.strength_pct) : undefined,
   }))
   return { rows, nextId: startId + additions.length }
 }
@@ -95,7 +112,7 @@ export function WaterAdjustmentsPage() {
     setMinerals((prev) => [...prev, { id: nextId, type: MINERALS[0].type, amount: '' }])
     setNextId((n) => n + 1)
   }
-  const updateMineral = (id: number, key: 'type' | 'amount', value: string) =>
+  const updateMineral = (id: number, key: 'type' | 'amount' | 'form' | 'strength', value: string) =>
     setMinerals((prev) => prev.map((m) => (m.id === id ? { ...m, [key]: value } : m)))
   const removeMineral = (id: number) =>
     setMinerals((prev) => prev.filter((m) => m.id !== id))
@@ -125,7 +142,7 @@ export function WaterAdjustmentsPage() {
     notes: form.notes || undefined,
     mineral_additions: minerals
       .filter((m) => m.amount !== '' && Number(m.amount) > 0)
-      .map((m) => ({ type: m.type, amount: Number(m.amount) })),
+      .map(mineralPayload),
   })
 
   const handleSave = async () => {
@@ -267,6 +284,35 @@ export function WaterAdjustmentsPage() {
                     className="w-20 p-2 rounded border text-sm bg-[var(--color-bg)] border-[var(--color-border)]"
                   />
                   <span className="text-xs text-[var(--color-muted)]">g</span>
+                  {m.type === 'CaCl2' && (
+                    <>
+                      <select
+                        value={m.form || 'dihydrate'}
+                        onChange={(e) => updateMineral(m.id, 'form', e.target.value)}
+                        title="CaCl₂ form"
+                        className="p-2 rounded border text-sm bg-[var(--color-bg)] border-[var(--color-border)]"
+                      >
+                        <option value="anhydrous">Anhydrous</option>
+                        <option value="dihydrate">Dihydrate</option>
+                        <option value="liquid">Liquid</option>
+                      </select>
+                      {(m.form || 'dihydrate') === 'liquid' && (
+                        <>
+                          <input
+                            type="number"
+                            min="0"
+                            max="100"
+                            step="1"
+                            placeholder="%w/w"
+                            value={m.strength ?? ''}
+                            onChange={(e) => updateMineral(m.id, 'strength', e.target.value)}
+                            className="w-16 p-2 rounded border text-sm bg-[var(--color-bg)] border-[var(--color-border)]"
+                          />
+                          <span className="text-xs text-[var(--color-muted)]">%w/w</span>
+                        </>
+                      )}
+                    </>
+                  )}
                   <button
                     onClick={() => removeMineral(m.id)}
                     className="text-[var(--color-danger)] text-xs px-1"
@@ -405,7 +451,12 @@ function AdjustmentRow({
                   <tbody>
                     {minerals.map((m, i) => (
                       <tr key={i}>
-                        <td className="py-0.5 text-[var(--color-fg)]">{m.type}</td>
+                        <td className="py-0.5 text-[var(--color-fg)]">
+                          {m.type}
+                          {m.type === 'CaCl2' && m.form && m.form !== 'dihydrate'
+                            ? ` (${m.form})`
+                            : ''}
+                        </td>
                         <td className="py-0.5 text-right tabular-nums text-[var(--color-fg)]">
                           {m.amount} g
                         </td>

@@ -158,33 +158,54 @@ export function computeRecipeCalcs(input_json) {
 }
 
 /**
- * EBC → SRM.
- * @param {number} ebc
+ * Apparent attenuation % from original and final gravity.
+ * @param {number} og
+ * @param {number} fg
  * @returns {number}
  */
-export function ebcToSrm(ebc) {
-    const ret = wasm.ebcToSrm(ebc);
+export function calculateAttenuation(og, fg) {
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        wasm.calculateAttenuation(retptr, og, fg);
+        var r0 = getDataViewMemory0().getFloat64(retptr + 8 * 0, true);
+        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+        var r3 = getDataViewMemory0().getInt32(retptr + 4 * 3, true);
+        if (r3) {
+            throw takeObject(r2);
+        }
+        return r0;
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+}
+
+/**
+ * Energy (kcal) per 100 ml from ABV %.
+ * @param {number} abv_pct
+ * @returns {number}
+ */
+export function energyKcalPer100ml(abv_pct) {
+    const ret = wasm.energyKcalPer100ml(abv_pct);
     return ret;
 }
 
 /**
- * Energy (kJ) per 100 ml from ABV %.
- * @param {number} abv_pct
+ * Specific gravity → degrees Plato.
+ * @param {number} sg
  * @returns {number}
  */
-export function energyKjPer100ml(abv_pct) {
-    const ret = wasm.energyKjPer100ml(abv_pct);
+export function sgToPlato(sg) {
+    const ret = wasm.sgToPlato(sg);
     return ret;
 }
 
 /**
- * UK alcohol units for a serving (ABV % and volume in ml).
- * @param {number} abv_pct
- * @param {number} volume_ml
+ * Degrees Plato → specific gravity.
+ * @param {number} plato
  * @returns {number}
  */
-export function alcoholUnits(abv_pct, volume_ml) {
-    const ret = wasm.alcoholUnits(abv_pct, volume_ml);
+export function platoToSg(plato) {
+    const ret = wasm.platoToSg(plato);
     return ret;
 }
 
@@ -200,45 +221,33 @@ export function calculateBeerDutyGbPence(volume_liters, abv_pct) {
 }
 
 /**
- * Degrees Plato → specific gravity.
- * @param {number} plato
+ * Small Producer Relief rate (0.0–1.0) for an annual production in hl/year.
+ * @param {number} annual_production_hl_pa
  * @returns {number}
  */
-export function platoToSg(plato) {
-    const ret = wasm.platoToSg(plato);
+export function sprReliefRate(annual_production_hl_pa) {
+    const ret = wasm.sprReliefRate(annual_production_hl_pa);
     return ret;
 }
 
 /**
- * Energy (kcal) per 100 ml from ABV %.
+ * Energy (kJ) per 100 ml from ABV %.
  * @param {number} abv_pct
  * @returns {number}
  */
-export function energyKcalPer100ml(abv_pct) {
-    const ret = wasm.energyKcalPer100ml(abv_pct);
+export function energyKjPer100ml(abv_pct) {
+    const ret = wasm.energyKjPer100ml(abv_pct);
     return ret;
 }
 
 /**
- * Estimated calories per 12 oz from original and final gravity.
- * @param {number} og
- * @param {number} fg
+ * EBC → SRM.
+ * @param {number} ebc
  * @returns {number}
  */
-export function calculateCalories(og, fg) {
-    try {
-        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
-        wasm.calculateCalories(retptr, og, fg);
-        var r0 = getDataViewMemory0().getFloat64(retptr + 8 * 0, true);
-        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
-        var r3 = getDataViewMemory0().getInt32(retptr + 4 * 3, true);
-        if (r3) {
-            throw takeObject(r2);
-        }
-        return r0;
-    } finally {
-        wasm.__wbindgen_add_to_stack_pointer(16);
-    }
+export function ebcToSrm(ebc) {
+    const ret = wasm.ebcToSrm(ebc);
+    return ret;
 }
 
 /**
@@ -274,38 +283,6 @@ export function calculateAbv(og, fg) {
 }
 
 /**
- * Apparent attenuation % from original and final gravity.
- * @param {number} og
- * @param {number} fg
- * @returns {number}
- */
-export function calculateAttenuation(og, fg) {
-    try {
-        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
-        wasm.calculateAttenuation(retptr, og, fg);
-        var r0 = getDataViewMemory0().getFloat64(retptr + 8 * 0, true);
-        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
-        var r3 = getDataViewMemory0().getInt32(retptr + 4 * 3, true);
-        if (r3) {
-            throw takeObject(r2);
-        }
-        return r0;
-    } finally {
-        wasm.__wbindgen_add_to_stack_pointer(16);
-    }
-}
-
-/**
- * Small Producer Relief rate (0.0–1.0) for an annual production in hl/year.
- * @param {number} annual_production_hl_pa
- * @returns {number}
- */
-export function sprReliefRate(annual_production_hl_pa) {
-    const ret = wasm.sprReliefRate(annual_production_hl_pa);
-    return ret;
-}
-
-/**
  * SRM → EBC.
  * @param {number} srm
  * @returns {number}
@@ -316,13 +293,36 @@ export function srmToEbc(srm) {
 }
 
 /**
- * Specific gravity → degrees Plato.
- * @param {number} sg
+ * UK alcohol units for a serving (ABV % and volume in ml).
+ * @param {number} abv_pct
+ * @param {number} volume_ml
  * @returns {number}
  */
-export function sgToPlato(sg) {
-    const ret = wasm.sgToPlato(sg);
+export function alcoholUnits(abv_pct, volume_ml) {
+    const ret = wasm.alcoholUnits(abv_pct, volume_ml);
     return ret;
+}
+
+/**
+ * Estimated calories per 12 oz from original and final gravity.
+ * @param {number} og
+ * @param {number} fg
+ * @returns {number}
+ */
+export function calculateCalories(og, fg) {
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        wasm.calculateCalories(retptr, og, fg);
+        var r0 = getDataViewMemory0().getFloat64(retptr + 8 * 0, true);
+        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+        var r3 = getDataViewMemory0().getInt32(retptr + 4 * 3, true);
+        if (r3) {
+            throw takeObject(r2);
+        }
+        return r0;
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+    }
 }
 
 const RecipeCalcsFinalization = (typeof FinalizationRegistry === 'undefined')

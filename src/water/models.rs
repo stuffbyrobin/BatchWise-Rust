@@ -111,8 +111,15 @@ pub struct MineralAddition {
     /// One of: "CaSO4", "CaCl2", "MgSO4", "MgCl2", "NaHCO3", "NaCl", "CaCO3",
     /// "Na2SO4", "CaOH2".
     pub r#type: String,
-    /// Grams.
+    /// Grams. For a liquid form this is the weight of solution.
     pub amount: f64,
+    /// Salt form: "anhydrous", "dihydrate", or "liquid". Defaults to
+    /// "dihydrate" when omitted. Currently only affects CaCl2.
+    #[serde(default)]
+    pub form: Option<String>,
+    /// Solution strength (%w/w), used only when `form` is "liquid".
+    #[serde(default)]
+    pub strength_pct: Option<f64>,
 }
 
 /// One acid addition in a water adjustment.

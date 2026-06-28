@@ -3572,6 +3572,8 @@ export interface components {
             mineral_additions?: {
                 type?: string;
                 amount?: number;
+                form?: string;
+                strength_pct?: number;
             }[];
             acid_additions?: {
                 type?: string;

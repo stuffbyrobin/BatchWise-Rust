@@ -9,33 +9,37 @@ export function computeWaterTreatment(input_json: string): WaterTreatment;
  */
 export function computeRecipeCalcs(input_json: string): RecipeCalcs;
 /**
- * EBC → SRM.
+ * Apparent attenuation % from original and final gravity.
  */
-export function ebcToSrm(ebc: number): number;
-/**
- * Energy (kJ) per 100 ml from ABV %.
- */
-export function energyKjPer100ml(abv_pct: number): number;
-/**
- * UK alcohol units for a serving (ABV % and volume in ml).
- */
-export function alcoholUnits(abv_pct: number, volume_ml: number): number;
-/**
- * UK beer duty in **pence** for a volume (litres) at a given ABV %.
- */
-export function calculateBeerDutyGbPence(volume_liters: number, abv_pct: number): number;
-/**
- * Degrees Plato → specific gravity.
- */
-export function platoToSg(plato: number): number;
+export function calculateAttenuation(og: number, fg: number): number;
 /**
  * Energy (kcal) per 100 ml from ABV %.
  */
 export function energyKcalPer100ml(abv_pct: number): number;
 /**
- * Estimated calories per 12 oz from original and final gravity.
+ * Specific gravity → degrees Plato.
  */
-export function calculateCalories(og: number, fg: number): number;
+export function sgToPlato(sg: number): number;
+/**
+ * Degrees Plato → specific gravity.
+ */
+export function platoToSg(plato: number): number;
+/**
+ * UK beer duty in **pence** for a volume (litres) at a given ABV %.
+ */
+export function calculateBeerDutyGbPence(volume_liters: number, abv_pct: number): number;
+/**
+ * Small Producer Relief rate (0.0–1.0) for an annual production in hl/year.
+ */
+export function sprReliefRate(annual_production_hl_pa: number): number;
+/**
+ * Energy (kJ) per 100 ml from ABV %.
+ */
+export function energyKjPer100ml(abv_pct: number): number;
+/**
+ * EBC → SRM.
+ */
+export function ebcToSrm(ebc: number): number;
 /**
  * Degrees Lovibond → EBC.
  */
@@ -45,21 +49,17 @@ export function lovibondToEbc(lovibond: number): number;
  */
 export function calculateAbv(og: number, fg: number): number;
 /**
- * Apparent attenuation % from original and final gravity.
- */
-export function calculateAttenuation(og: number, fg: number): number;
-/**
- * Small Producer Relief rate (0.0–1.0) for an annual production in hl/year.
- */
-export function sprReliefRate(annual_production_hl_pa: number): number;
-/**
  * SRM → EBC.
  */
 export function srmToEbc(srm: number): number;
 /**
- * Specific gravity → degrees Plato.
+ * UK alcohol units for a serving (ABV % and volume in ml).
  */
-export function sgToPlato(sg: number): number;
+export function alcoholUnits(abv_pct: number, volume_ml: number): number;
+/**
+ * Estimated calories per 12 oz from original and final gravity.
+ */
+export function calculateCalories(og: number, fg: number): number;
 /**
  * The computed recipe values, surfaced to JS with camelCase getters.
  */
@@ -119,12 +119,12 @@ export interface InitOutput {
   readonly watertreatment_sulfate_ppm: (a: number) => number;
   readonly watertreatment_sulfate_to_chloride: (a: number) => number;
   readonly alcoholUnits: (a: number, b: number) => number;
-  readonly sprReliefRate: (a: number) => number;
   readonly srmToEbc: (a: number) => number;
   readonly energyKcalPer100ml: (a: number) => number;
   readonly sgToPlato: (a: number) => number;
   readonly lovibondToEbc: (a: number) => number;
   readonly energyKjPer100ml: (a: number) => number;
+  readonly sprReliefRate: (a: number) => number;
   readonly ebcToSrm: (a: number) => number;
   readonly __wbindgen_add_to_stack_pointer: (a: number) => number;
   readonly __wbindgen_export_0: (a: number, b: number) => number;
