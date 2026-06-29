@@ -254,7 +254,8 @@ fn map_minerals(additions: &[MineralAddition]) -> Result<Vec<pw::MineralAddition
                 "NaHCO3" => pw::MineralType::BakingSoda,
                 "NaCl" => pw::MineralType::TableSalt,
                 "Na2SO4" => pw::MineralType::SodiumSulfate,
-                "CaOH2" => pw::MineralType::SlakedLime,
+                // The frontend sends "Ca(OH)2"; accept the bare form too.
+                "CaOH2" | "Ca(OH)2" => pw::MineralType::SlakedLime,
                 other => {
                     return Err(ApiError::internal(format!(
                         "calculate water treatment: unknown mineral type: {other:?}"
@@ -466,4 +467,23 @@ pub async fn delete_water_adjustment(
         return Err(ApiError::not_found("water_adjustment"));
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn map_minerals_accepts_both_slaked_lime_spellings() {
+        for ty in ["CaOH2", "Ca(OH)2"] {
+            let out = map_minerals(&[MineralAddition {
+                r#type: ty.to_string(),
+                amount: 5.0,
+                form: None,
+                strength_pct: None,
+            }])
+            .unwrap_or_else(|e| panic!("{ty} should map: {e:?}"));
+            assert_eq!(out[0].mineral_type, pw::MineralType::SlakedLime);
+        }
+    }
 }
