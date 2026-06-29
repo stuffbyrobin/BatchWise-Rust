@@ -12,6 +12,7 @@ import { formatEbc } from '../../utils/ebc'
 import { useRecipeAllergens } from './hooks/useRecipeAllergens'
 import { AllergenBadges } from '../../components/AllergenBadges'
 import { RecipeWaterChemistry } from './RecipeWaterChemistry'
+import { useMaltOptions } from './useMaltOptions'
 
 type RecipeType = 'all_grain' | 'extract' | 'partial_mash' | 'cider' | 'mead' | 'other'
 
@@ -263,10 +264,53 @@ export default function RecipeEditorPage() {
     setFermentables(newArray)
   }
 
+  // Numeric fermentable fields get coerced from their text inputs; string
+  // fields (name/type/addition) must stay strings (else they become NaN).
+  const NUMERIC_FERM_FIELDS = new Set<keyof Fermentable>([
+    'step_order',
+    'amount',
+    'color_ebc',
+    'potential_ppg',
+  ])
   const updateFermentable = (index: number, field: keyof Fermentable, value: string | number) => {
-    const newArray = [...fermentables]
-    newArray[index] = { ...newArray[index], [field]: typeof value === 'string' ? (value === '' ? 0 : Number(value)) : value }
-    setFermentables(newArray)
+    const v =
+      typeof value === 'string' && NUMERIC_FERM_FIELDS.has(field)
+        ? value === ''
+          ? 0
+          : Number(value)
+        : value
+    setFermentables((prev) => prev.map((f, i) => (i === index ? { ...f, [field]: v } : f)))
+  }
+
+  // Apply several fields at once (used when a malt is picked from the dropdown).
+  const updateFermentableFields = (index: number, patch: Partial<Fermentable>) => {
+    setFermentables((prev) => prev.map((f, i) => (i === index ? { ...f, ...patch } : f)))
+  }
+
+  // Malt dropdown: in-stock + generic library options, and which rows are in
+  // free-text "Custom / Other" mode (keyed by stable step_order).
+  const malts = useMaltOptions()
+  const [customMaltRows, setCustomMaltRows] = useState<Set<number>>(new Set())
+
+  const pickMalt = (index: number, stepOrder: number, value: string) => {
+    if (value === '__custom__') {
+      setCustomMaltRows((prev) => new Set(prev).add(stepOrder))
+      return
+    }
+    if (value === '__none__') return
+    const opt = malts.byKey.get(value)
+    if (!opt) return
+    setCustomMaltRows((prev) => {
+      const next = new Set(prev)
+      next.delete(stepOrder)
+      return next
+    })
+    updateFermentableFields(index, {
+      name: opt.name,
+      type: opt.type,
+      color_ebc: opt.color_ebc,
+      potential_ppg: opt.potential_ppg,
+    })
   }
 
   const addHop = () => {
@@ -376,13 +420,41 @@ export default function RecipeEditorPage() {
         />
       </td>
       <td className="px-3 py-2">
-        <input
-          type="text"
-          value={f.name}
-          onChange={(e) => updateFermentable(index, 'name', e.target.value)}
-          placeholder="Name"
-          className={`${inputCls} w-40`}
-        />
+        {(() => {
+          const matched = malts.byName.get(f.name)
+          const isCustom = customMaltRows.has(f.step_order) || (f.name !== '' && !matched)
+          const selectValue = isCustom ? '__custom__' : matched ? matched.key : '__none__'
+          return (
+            <div className="flex flex-col gap-1">
+              <select
+                value={selectValue}
+                onChange={(e) => pickMalt(index, f.step_order, e.target.value)}
+                className={`${inputCls} w-44`}
+              >
+                <option value="__none__">Select malt…</option>
+                <option value="__custom__">Custom / Other…</option>
+                {malts.groups.map((g) => (
+                  <optgroup key={g.label} label={g.label}>
+                    {g.options.map((o) => (
+                      <option key={o.key} value={o.key}>
+                        {o.label}
+                      </option>
+                    ))}
+                  </optgroup>
+                ))}
+              </select>
+              {isCustom && (
+                <input
+                  type="text"
+                  value={f.name}
+                  onChange={(e) => updateFermentable(index, 'name', e.target.value)}
+                  placeholder="Malt name"
+                  className={`${inputCls} w-44`}
+                />
+              )}
+            </div>
+          )
+        })()}
       </td>
       <td className="px-3 py-2">
         <input
