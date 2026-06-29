@@ -13,6 +13,8 @@ import { useRecipeAllergens } from './hooks/useRecipeAllergens'
 import { AllergenBadges } from '../../components/AllergenBadges'
 import { RecipeWaterChemistry } from './RecipeWaterChemistry'
 import { useMaltOptions } from './useMaltOptions'
+import { useHopOptions } from './useHopOptions'
+import { useYeastOptions } from './useYeastOptions'
 
 type RecipeType = 'all_grain' | 'extract' | 'partial_mash' | 'cider' | 'mead' | 'other'
 
@@ -324,10 +326,43 @@ export default function RecipeEditorPage() {
     setHops(newArray)
   }
 
+  const NUMERIC_HOP_FIELDS = new Set<keyof Hop>([
+    'step_order',
+    'amount',
+    'alpha_acid_pct',
+    'boil_time_minutes',
+  ])
   const updateHop = (index: number, field: keyof Hop, value: string | number) => {
-    const newArray = [...hops]
-    newArray[index] = { ...newArray[index], [field]: typeof value === 'string' ? (value === '' ? 0 : Number(value)) : value }
-    setHops(newArray)
+    const v =
+      typeof value === 'string' && NUMERIC_HOP_FIELDS.has(field)
+        ? value === ''
+          ? 0
+          : Number(value)
+        : value
+    setHops((prev) => prev.map((h, i) => (i === index ? { ...h, [field]: v } : h)))
+  }
+  const updateHopFields = (index: number, patch: Partial<Hop>) => {
+    setHops((prev) => prev.map((h, i) => (i === index ? { ...h, ...patch } : h)))
+  }
+  const hopOptions = useHopOptions()
+  const [customHopRows, setCustomHopRows] = useState<Set<number>>(new Set())
+  const pickHop = (index: number, stepOrder: number, value: string) => {
+    if (value === '__custom__') {
+      setCustomHopRows((prev) => new Set(prev).add(stepOrder))
+      return
+    }
+    if (value === '__none__') return
+    const opt = hopOptions.byKey.get(value)
+    if (!opt) return
+    setCustomHopRows((prev) => {
+      const next = new Set(prev)
+      next.delete(stepOrder)
+      return next
+    })
+    updateHopFields(
+      index,
+      opt.alpha_acid_pct != null ? { name: opt.name, alpha_acid_pct: opt.alpha_acid_pct } : { name: opt.name }
+    )
   }
 
   const addYeast = () => {
@@ -340,10 +375,40 @@ export default function RecipeEditorPage() {
     setYeasts(newArray)
   }
 
+  const NUMERIC_YEAST_FIELDS = new Set<keyof Yeast>(['amount', 'attenuation_pct'])
   const updateYeast = (index: number, field: keyof Yeast, value: string | number) => {
-    const newArray = [...yeasts]
-    newArray[index] = { ...newArray[index], [field]: typeof value === 'string' ? (value === '' ? 0 : Number(value)) : value }
-    setYeasts(newArray)
+    const v =
+      typeof value === 'string' && NUMERIC_YEAST_FIELDS.has(field)
+        ? value === ''
+          ? 0
+          : Number(value)
+        : value
+    setYeasts((prev) => prev.map((y, i) => (i === index ? { ...y, [field]: v } : y)))
+  }
+  const updateYeastFields = (index: number, patch: Partial<Yeast>) => {
+    setYeasts((prev) => prev.map((y, i) => (i === index ? { ...y, ...patch } : y)))
+  }
+  const yeastOptions = useYeastOptions()
+  const [customYeastRows, setCustomYeastRows] = useState<Set<number>>(new Set())
+  const pickYeast = (index: number, value: string) => {
+    if (value === '__custom__') {
+      setCustomYeastRows((prev) => new Set(prev).add(index))
+      return
+    }
+    if (value === '__none__') return
+    const opt = yeastOptions.byKey.get(value)
+    if (!opt) return
+    setCustomYeastRows((prev) => {
+      const next = new Set(prev)
+      next.delete(index)
+      return next
+    })
+    updateYeastFields(
+      index,
+      opt.attenuation_pct != null
+        ? { name: opt.name, attenuation_pct: opt.attenuation_pct }
+        : { name: opt.name }
+    )
   }
 
   const addMashStep = () => {
@@ -532,13 +597,41 @@ export default function RecipeEditorPage() {
         />
       </td>
       <td className="px-3 py-2">
-        <input
-          type="text"
-          value={h.name}
-          onChange={(e) => updateHop(index, 'name', e.target.value)}
-          placeholder="Name"
-          className={`${inputCls} w-40`}
-        />
+        {(() => {
+          const matched = hopOptions.byName.get(h.name)
+          const isCustom = customHopRows.has(h.step_order) || (h.name !== '' && !matched)
+          const selectValue = isCustom ? '__custom__' : matched ? matched.key : '__none__'
+          return (
+            <div className="flex flex-col gap-1">
+              <select
+                value={selectValue}
+                onChange={(e) => pickHop(index, h.step_order, e.target.value)}
+                className={`${inputCls} w-44`}
+              >
+                <option value="__none__">Select hop…</option>
+                <option value="__custom__">Custom / Other…</option>
+                {hopOptions.groups.map((g) => (
+                  <optgroup key={g.label} label={g.label}>
+                    {g.options.map((o) => (
+                      <option key={o.key} value={o.key}>
+                        {o.label}
+                      </option>
+                    ))}
+                  </optgroup>
+                ))}
+              </select>
+              {isCustom && (
+                <input
+                  type="text"
+                  value={h.name}
+                  onChange={(e) => updateHop(index, 'name', e.target.value)}
+                  placeholder="Hop name"
+                  className={`${inputCls} w-44`}
+                />
+              )}
+            </div>
+          )
+        })()}
       </td>
       <td className="px-3 py-2">
         <input
@@ -631,13 +724,41 @@ export default function RecipeEditorPage() {
   const renderYeastRow = (y: Yeast, index: number) => (
     <tr key={index} className="border-t border-[var(--color-border)]">
       <td className="px-3 py-2">
-        <input
-          type="text"
-          value={y.name}
-          onChange={(e) => updateYeast(index, 'name', e.target.value)}
-          placeholder="Name"
-          className={`${inputCls} w-40`}
-        />
+        {(() => {
+          const matched = yeastOptions.byName.get(y.name)
+          const isCustom = customYeastRows.has(index) || (y.name !== '' && !matched)
+          const selectValue = isCustom ? '__custom__' : matched ? matched.key : '__none__'
+          return (
+            <div className="flex flex-col gap-1">
+              <select
+                value={selectValue}
+                onChange={(e) => pickYeast(index, e.target.value)}
+                className={`${inputCls} w-44`}
+              >
+                <option value="__none__">Select yeast…</option>
+                <option value="__custom__">Custom / Other…</option>
+                {yeastOptions.groups.map((g) => (
+                  <optgroup key={g.label} label={g.label}>
+                    {g.options.map((o) => (
+                      <option key={o.key} value={o.key}>
+                        {o.label}
+                      </option>
+                    ))}
+                  </optgroup>
+                ))}
+              </select>
+              {isCustom && (
+                <input
+                  type="text"
+                  value={y.name}
+                  onChange={(e) => updateYeast(index, 'name', e.target.value)}
+                  placeholder="Yeast name"
+                  className={`${inputCls} w-44`}
+                />
+              )}
+            </div>
+          )
+        })()}
       </td>
       <td className="px-3 py-2">
         <input
@@ -746,7 +867,16 @@ export default function RecipeEditorPage() {
   }
 
   return (
-    <div className="p-4">
+    <div
+      className="p-4"
+      // Select a number field's contents on focus so typing replaces the
+      // default 0 instead of appending to it (e.g. "04"). onFocus bubbles, so
+      // this one handler covers every numeric input in the editor.
+      onFocus={(e) => {
+        const t = e.target as HTMLElement
+        if (t instanceof HTMLInputElement && t.type === 'number') t.select()
+      }}
+    >
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-2xl font-bold">{isEditMode ? 'Edit Recipe' : 'New Recipe'}</h1>
       </div>
