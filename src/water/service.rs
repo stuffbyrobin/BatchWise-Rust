@@ -265,8 +265,17 @@ fn map_minerals(additions: &[MineralAddition]) -> Result<Vec<pw::MineralAddition
             let form = match m.form.as_deref() {
                 Some("anhydrous") => pw::MineralForm::Anhydrous,
                 Some("liquid") => pw::MineralForm::Liquid,
-                // "dihydrate", None, or unrecognised → dihydrate (legacy default).
-                _ => pw::MineralForm::Dihydrate,
+                // "hydrate" (and the legacy "dihydrate") → the standard hydrate.
+                Some("hydrate") | Some("dihydrate") => pw::MineralForm::Hydrate,
+                // Form omitted (legacy data): fall back to each salt's historical
+                // default — anhydrous for Na2SO4, the hydrate for everything else.
+                _ => {
+                    if mineral_type == pw::MineralType::SodiumSulfate {
+                        pw::MineralForm::Anhydrous
+                    } else {
+                        pw::MineralForm::Hydrate
+                    }
+                }
             };
             Ok(pw::MineralAddition {
                 mineral_type,
