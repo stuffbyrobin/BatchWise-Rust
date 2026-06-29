@@ -174,7 +174,12 @@ pub fn compute_water_treatment(input_json: &str) -> Result<WaterTreatment, JsErr
                 form: match m.form.as_deref() {
                     Some("anhydrous") => pw::MineralForm::Anhydrous,
                     Some("liquid") => pw::MineralForm::Liquid,
-                    _ => pw::MineralForm::Dihydrate,
+                    Some("hydrate") | Some("dihydrate") => pw::MineralForm::Hydrate,
+                    // Legacy/omitted: anhydrous for Na2SO4, hydrate otherwise.
+                    _ if mineral_type == pw::MineralType::SodiumSulfate => {
+                        pw::MineralForm::Anhydrous
+                    }
+                    _ => pw::MineralForm::Hydrate,
                 },
                 strength_pct: m.strength_pct.unwrap_or(0.0),
             })

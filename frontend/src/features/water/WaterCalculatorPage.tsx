@@ -2,6 +2,8 @@ import React from 'react'
 import { APIError } from '../../api/error'
 import { useWaterProfiles, useCalculateWater } from './hooks/useWater'
 import type { components } from '../../api/generated'
+import { mineralPayload } from './mineralForms'
+import { MineralFormControls } from './MineralFormControls'
 
 type WaterResult = components['schemas']['WaterResult']
 
@@ -33,19 +35,6 @@ interface MineralRow {
   form?: string
   /** CaCl₂ liquid only: solution strength %w/w. */
   strength?: string
-}
-
-type MineralPayload = { type: string; amount: number; form?: string; strength_pct?: number }
-
-// CaCl₂ carries form/strength; other salts send just type + amount.
-function mineralPayload(m: MineralRow): MineralPayload {
-  const out: MineralPayload = { type: m.type, amount: Number(m.amount) }
-  if (m.type === 'CaCl2') {
-    const form = m.form || 'dihydrate'
-    out.form = form
-    if (form === 'liquid') out.strength_pct = Number(m.strength) || 0
-  }
-  return out
 }
 
 type SourceMode = 'profile' | 'inline'
@@ -261,35 +250,13 @@ export function WaterCalculatorPage() {
                 />
                 <span className="text-xs text-[var(--color-muted)]">g</span>
               </div>
-              {m.type === 'CaCl2' && (
-                <>
-                  <select
-                    value={m.form || 'dihydrate'}
-                    onChange={(e) => updateMineral(m.id, 'form', e.target.value)}
-                    title="CaCl₂ form"
-                    className="p-2 rounded border text-sm bg-[var(--color-bg)] border-[var(--color-border)]"
-                  >
-                    <option value="anhydrous">Anhydrous</option>
-                    <option value="dihydrate">Dihydrate</option>
-                    <option value="liquid">Liquid</option>
-                  </select>
-                  {(m.form || 'dihydrate') === 'liquid' && (
-                    <div className="flex items-center gap-1">
-                      <input
-                        type="number"
-                        min="0"
-                        max="100"
-                        step="1"
-                        placeholder="%w/w"
-                        value={m.strength ?? ''}
-                        onChange={(e) => updateMineral(m.id, 'strength', e.target.value)}
-                        className="w-16 p-2 rounded border text-sm bg-[var(--color-bg)] border-[var(--color-border)]"
-                      />
-                      <span className="text-xs text-[var(--color-muted)]">%w/w</span>
-                    </div>
-                  )}
-                </>
-              )}
+              <MineralFormControls
+                type={m.type}
+                form={m.form}
+                strength={m.strength}
+                onForm={(v) => updateMineral(m.id, 'form', v)}
+                onStrength={(v) => updateMineral(m.id, 'strength', v)}
+              />
               <button
                 onClick={() => removeMineral(m.id)}
                 className="text-[var(--color-danger)] text-xs px-2 py-1 hover:opacity-70"

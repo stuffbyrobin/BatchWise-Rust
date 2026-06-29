@@ -14,14 +14,20 @@ pub const CALCIUM_RA_FACTOR: f64 = 0.7143;
 pub const MAGNESIUM_RA_FACTOR: f64 = 0.5879;
 
 pub const MW_CALCIUM_CARBONATE: f64 = 100.09;
-pub const MW_CALCIUM_SULFATE: f64 = 172.17; // CaSO4·2H2O (gypsum, dihydrate — the weighed form)
-pub const MW_CALCIUM_CHLORIDE: f64 = 147.01; // CaCl2·2H2O (dihydrate — the weighed form)
+// For salts that come in more than one form, `MW_<salt>` holds the form used by
+// default and `MW_<salt>_<form>` the alternative. `form_molar_mass` picks one.
+pub const MW_CALCIUM_SULFATE: f64 = 172.17; // CaSO4·2H2O (gypsum, dihydrate — default)
+pub const MW_CALCIUM_SULFATE_ANHYDROUS: f64 = 136.14; // CaSO4 (anhydrous)
+pub const MW_CALCIUM_CHLORIDE: f64 = 147.01; // CaCl2·2H2O (dihydrate — default)
 pub const MW_CALCIUM_CHLORIDE_ANHYDROUS: f64 = 110.98; // CaCl2 (anhydrous / dissolved basis)
-pub const MW_MAGNESIUM_SULFATE: f64 = 246.47; // MgSO4·7H2O (Epsom salt, heptahydrate)
-pub const MW_MAGNESIUM_CHLORIDE: f64 = 203.30; // MgCl2·6H2O (hexahydrate — the weighed form)
+pub const MW_MAGNESIUM_SULFATE: f64 = 246.47; // MgSO4·7H2O (Epsom, heptahydrate — default)
+pub const MW_MAGNESIUM_SULFATE_ANHYDROUS: f64 = 120.37; // MgSO4 (anhydrous)
+pub const MW_MAGNESIUM_CHLORIDE: f64 = 203.30; // MgCl2·6H2O (hexahydrate — default)
+pub const MW_MAGNESIUM_CHLORIDE_ANHYDROUS: f64 = 95.21; // MgCl2 (anhydrous)
 pub const MW_SODIUM_BICARBONATE: f64 = 84.01;
 pub const MW_SODIUM_CHLORIDE: f64 = 58.44;
-pub const MW_SODIUM_SULFATE: f64 = 142.04;
+pub const MW_SODIUM_SULFATE: f64 = 142.04; // Na2SO4 (anhydrous — default)
+pub const MW_SODIUM_SULFATE_DECAHYDRATE: f64 = 322.20; // Na2SO4·10H2O (Glauber's salt)
 pub const MW_CALCIUM_HYDROXIDE: f64 = 74.09;
 pub const MW_CALCIUM: f64 = 40.08;
 pub const MW_MAGNESIUM: f64 = 24.31;
@@ -96,18 +102,47 @@ pub enum MineralType {
 }
 
 /// The physical form a salt is supplied in, which changes how a given weight
-/// maps to dissolved ions. Currently only consulted for [`MineralType::CalciumCl`].
+/// maps to dissolved ions. The specific molar mass per `(salt, form)` is
+/// resolved by [`form_molar_mass`].
 ///
-/// * `Anhydrous` — the bare salt (e.g. CaCl2, MW 110.98).
-/// * `Dihydrate` — the hydrated crystal brewers usually weigh (CaCl2·2H2O, 147.01).
+/// * `Anhydrous` — the bare salt.
+/// * `Hydrate` — the standard hydrated crystal brewers weigh (e.g. CaCl2·2H2O,
+///   MgSO4·7H2O, MgCl2·6H2O, Na2SO4·10H2O).
 /// * `Liquid` — an aqueous solution; `strength_pct` (%w/w) gives the anhydrous
-///   salt fraction of the supplied weight.
+///   salt fraction of the supplied weight. Only meaningful for CaCl2.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum MineralForm {
     Anhydrous,
     #[default]
-    Dihydrate,
+    Hydrate,
     Liquid,
+}
+
+/// Molar mass (g/mol) of `mineral_type` in the supplied `form`. Salts without a
+/// hydrate distinction return their single molar mass regardless of `form`.
+/// `Liquid` resolves to the anhydrous mass (the dissolved-salt basis).
+pub fn form_molar_mass(mineral_type: MineralType, form: MineralForm) -> f64 {
+    use MineralForm::{Anhydrous, Liquid};
+    use MineralType::*;
+    let anhydrous = matches!(form, Anhydrous | Liquid);
+    match mineral_type {
+        Gypsum if anhydrous => MW_CALCIUM_SULFATE_ANHYDROUS,
+        Gypsum => MW_CALCIUM_SULFATE,
+        CalciumCl if anhydrous => MW_CALCIUM_CHLORIDE_ANHYDROUS,
+        CalciumCl => MW_CALCIUM_CHLORIDE,
+        Epsom if anhydrous => MW_MAGNESIUM_SULFATE_ANHYDROUS,
+        Epsom => MW_MAGNESIUM_SULFATE,
+        MagnesiumCl if anhydrous => MW_MAGNESIUM_CHLORIDE_ANHYDROUS,
+        MagnesiumCl => MW_MAGNESIUM_CHLORIDE,
+        // Na2SO4 default is anhydrous; the hydrate is Glauber's decahydrate.
+        SodiumSulfate if anhydrous => MW_SODIUM_SULFATE,
+        SodiumSulfate => MW_SODIUM_SULFATE_DECAHYDRATE,
+        // No hydrate distinction.
+        Chalk => MW_CALCIUM_CARBONATE,
+        BakingSoda => MW_SODIUM_BICARBONATE,
+        TableSalt => MW_SODIUM_CHLORIDE,
+        SlakedLime => MW_CALCIUM_HYDROXIDE,
+    }
 }
 
 /// Identifies an acid used for acidification.
@@ -266,62 +301,55 @@ pub fn calculate_water_treatment(
 }
 
 fn apply_mineral(p: &mut WaterProfile, m: MineralAddition, vol: f64) -> Result<(), WaterError> {
-    let g = m.amount;
     // grams of salt dissolved in `vol` litres → ppm (mg/L): mass × 1000 / vol.
     // (Without the ×1000 the result is g/L, i.e. 1000× too small.)
     let ppm = 1000.0 / vol;
+    // Molar mass of the chosen form. A liquid is dosed by solution weight, so
+    // scale to the anhydrous salt it contains — `form_molar_mass` returns the
+    // anhydrous mass for `Liquid`, so the two stay consistent.
+    let mw = form_molar_mass(m.mineral_type, m.form);
+    let g = if m.form == MineralForm::Liquid {
+        m.amount * m.strength_pct / 100.0
+    } else {
+        m.amount
+    };
     match m.mineral_type {
         MineralType::Gypsum => {
-            // CaSO4·2H2O
-            p.calcium += g * MW_CALCIUM / MW_CALCIUM_SULFATE * ppm;
-            p.sulfate += g * MW_SULFATE / MW_CALCIUM_SULFATE * ppm;
+            p.calcium += g * MW_CALCIUM / mw * ppm;
+            p.sulfate += g * MW_SULFATE / mw * ppm;
         }
         MineralType::CalciumCl => {
-            // Normalise the supplied weight to anhydrous CaCl2 (the dissolved
-            // basis), then derive ions from the anhydrous molar mass.
-            let anhydrous_g = match m.form {
-                MineralForm::Anhydrous => g,
-                MineralForm::Dihydrate => g * MW_CALCIUM_CHLORIDE_ANHYDROUS / MW_CALCIUM_CHLORIDE,
-                MineralForm::Liquid => g * m.strength_pct / 100.0,
-            };
-            p.calcium += anhydrous_g * MW_CALCIUM / MW_CALCIUM_CHLORIDE_ANHYDROUS * ppm;
-            p.chloride += anhydrous_g * 2.0 * MW_CHLORIDE / MW_CALCIUM_CHLORIDE_ANHYDROUS * ppm;
+            p.calcium += g * MW_CALCIUM / mw * ppm;
+            p.chloride += g * 2.0 * MW_CHLORIDE / mw * ppm;
         }
         MineralType::Chalk => {
-            // CaCO3
-            p.calcium += g * MW_CALCIUM / MW_CALCIUM_CARBONATE * ppm;
-            p.bicarbonate += g * 2.0 * MW_BICARBONATE / MW_CALCIUM_CARBONATE * ppm;
+            p.calcium += g * MW_CALCIUM / mw * ppm;
+            p.bicarbonate += g * 2.0 * MW_BICARBONATE / mw * ppm;
         }
         MineralType::Epsom => {
-            // MgSO4·7H2O
-            p.magnesium += g * MW_MAGNESIUM / MW_MAGNESIUM_SULFATE * ppm;
-            p.sulfate += g * MW_SULFATE / MW_MAGNESIUM_SULFATE * ppm;
+            p.magnesium += g * MW_MAGNESIUM / mw * ppm;
+            p.sulfate += g * MW_SULFATE / mw * ppm;
         }
         MineralType::MagnesiumCl => {
-            // MgCl2·6H2O
-            p.magnesium += g * MW_MAGNESIUM / MW_MAGNESIUM_CHLORIDE * ppm;
-            p.chloride += g * 2.0 * MW_CHLORIDE / MW_MAGNESIUM_CHLORIDE * ppm;
+            p.magnesium += g * MW_MAGNESIUM / mw * ppm;
+            p.chloride += g * 2.0 * MW_CHLORIDE / mw * ppm;
         }
         MineralType::BakingSoda => {
-            // NaHCO3
-            p.sodium += g * MW_SODIUM / MW_SODIUM_BICARBONATE * ppm;
-            p.bicarbonate += g * MW_BICARBONATE / MW_SODIUM_BICARBONATE * ppm;
+            p.sodium += g * MW_SODIUM / mw * ppm;
+            p.bicarbonate += g * MW_BICARBONATE / mw * ppm;
         }
         MineralType::TableSalt => {
-            // NaCl
-            p.sodium += g * MW_SODIUM / MW_SODIUM_CHLORIDE * ppm;
-            p.chloride += g * MW_CHLORIDE / MW_SODIUM_CHLORIDE * ppm;
+            p.sodium += g * MW_SODIUM / mw * ppm;
+            p.chloride += g * MW_CHLORIDE / mw * ppm;
         }
         MineralType::SodiumSulfate => {
-            // Na2SO4
-            p.sodium += g * 2.0 * MW_SODIUM / MW_SODIUM_SULFATE * ppm;
-            p.sulfate += g * MW_SULFATE / MW_SODIUM_SULFATE * ppm;
+            p.sodium += g * 2.0 * MW_SODIUM / mw * ppm;
+            p.sulfate += g * MW_SULFATE / mw * ppm;
         }
         MineralType::SlakedLime => {
-            // Ca(OH)2
-            p.calcium += g * MW_CALCIUM / MW_CALCIUM_HYDROXIDE * ppm;
+            p.calcium += g * MW_CALCIUM / mw * ppm;
             // 2 OH- per mol Ca(OH)2 → 2 mol HCO3- equivalent
-            p.bicarbonate += g * 2.0 * MW_BICARBONATE / MW_CALCIUM_HYDROXIDE * ppm;
+            p.bicarbonate += g * 2.0 * MW_BICARBONATE / mw * ppm;
         }
     }
     Ok(())
@@ -605,7 +633,7 @@ mod tests {
             &[MineralAddition {
                 mineral_type: MineralType::Gypsum,
                 amount: 5.0,
-                form: MineralForm::Dihydrate,
+                form: MineralForm::Hydrate,
                 strength_pct: 0.0,
             }],
             None,
@@ -632,7 +660,7 @@ mod tests {
             &[MineralAddition {
                 mineral_type: MineralType::CalciumCl,
                 amount: 5.0,
-                form: MineralForm::Dihydrate,
+                form: MineralForm::Hydrate,
                 strength_pct: 0.0,
             }],
             None,
@@ -671,7 +699,7 @@ mod tests {
         // Anhydrous CaCl2 is more concentrated than the dihydrate crystal for the
         // same weight (no waters of hydration).
         let anhydrous = ca(MineralForm::Anhydrous, 5.0, 0.0);
-        let dihydrate = ca(MineralForm::Dihydrate, 5.0, 0.0);
+        let dihydrate = ca(MineralForm::Hydrate, 5.0, 0.0);
         assert_relative_eq!(
             anhydrous,
             5.0 * 40.08 / 110.98 / 20.0 * 1000.0,
@@ -700,7 +728,7 @@ mod tests {
             &[MineralAddition {
                 mineral_type: MineralType::Chalk,
                 amount: 2.0,
-                form: MineralForm::Dihydrate,
+                form: MineralForm::Hydrate,
                 strength_pct: 0.0,
             }],
             None,
@@ -727,7 +755,7 @@ mod tests {
             &[MineralAddition {
                 mineral_type: MineralType::MagnesiumCl,
                 amount: 10.0,
-                form: MineralForm::Dihydrate,
+                form: MineralForm::Hydrate,
                 strength_pct: 0.0,
             }],
             None,
@@ -735,6 +763,68 @@ mod tests {
         .unwrap();
         assert_relative_eq!(res.final_profile.magnesium, 59.8, epsilon = 0.2);
         assert_relative_eq!(res.final_profile.chloride, 174.4, epsilon = 0.2);
+    }
+
+    #[test]
+    fn salt_forms_select_correct_molar_mass() {
+        // Gypsum: anhydrous (136.14) is more concentrated than dihydrate (172.17).
+        let ca = |form| {
+            calculate_water_treatment(
+                WaterProfile::default(),
+                20.0,
+                &[MineralAddition {
+                    mineral_type: MineralType::Gypsum,
+                    amount: 5.0,
+                    form,
+                    strength_pct: 0.0,
+                }],
+                None,
+            )
+            .unwrap()
+            .final_profile
+            .calcium
+        };
+        assert_relative_eq!(
+            ca(MineralForm::Anhydrous),
+            5.0 * 40.08 / 136.14 / 20.0 * 1000.0,
+            epsilon = 0.01
+        );
+        assert_relative_eq!(
+            ca(MineralForm::Hydrate),
+            5.0 * 40.08 / 172.17 / 20.0 * 1000.0,
+            epsilon = 0.01
+        );
+        assert!(ca(MineralForm::Anhydrous) > ca(MineralForm::Hydrate));
+
+        // Na2SO4: anhydrous (142.04) is the default; the hydrate is Glauber's
+        // decahydrate (322.20), giving less Na per gram.
+        let na = |form| {
+            calculate_water_treatment(
+                WaterProfile::default(),
+                20.0,
+                &[MineralAddition {
+                    mineral_type: MineralType::SodiumSulfate,
+                    amount: 5.0,
+                    form,
+                    strength_pct: 0.0,
+                }],
+                None,
+            )
+            .unwrap()
+            .final_profile
+            .sodium
+        };
+        assert_relative_eq!(
+            na(MineralForm::Anhydrous),
+            5.0 * 2.0 * 22.99 / 142.04 / 20.0 * 1000.0,
+            epsilon = 0.01
+        );
+        assert_relative_eq!(
+            na(MineralForm::Hydrate),
+            5.0 * 2.0 * 22.99 / 322.20 / 20.0 * 1000.0,
+            epsilon = 0.01
+        );
+        assert!(na(MineralForm::Anhydrous) > na(MineralForm::Hydrate));
     }
 
     #[test]
@@ -988,7 +1078,7 @@ mod tests {
                 &[MineralAddition {
                     mineral_type: mineral,
                     amount: 5.0,
-                    form: MineralForm::Dihydrate,
+                    form: MineralForm::Hydrate,
                     strength_pct: 0.0,
                 }],
                 None,

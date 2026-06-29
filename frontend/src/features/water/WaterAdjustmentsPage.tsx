@@ -8,6 +8,8 @@ import {
   useDeleteWaterAdjustment,
 } from './hooks/useWater'
 import type { components } from '../../api/generated'
+import { mineralPayload, normalizeForm, SALT_FORMS } from './mineralForms'
+import { MineralFormControls } from './MineralFormControls'
 
 type WaterAdjustment = components['schemas']['WaterAdjustment']
 type WaterResult = components['schemas']['WaterResult']
@@ -34,16 +36,6 @@ interface MineralRow {
   strength?: string
 }
 
-// CaCl₂ carries form/strength; other salts send just type + amount.
-function mineralPayload(m: MineralRow): MineralAddition {
-  const out: MineralAddition = { type: m.type, amount: Number(m.amount) }
-  if (m.type === 'CaCl2') {
-    const form = m.form || 'dihydrate'
-    out.form = form
-    if (form === 'liquid') out.strength_pct = Number(m.strength) || 0
-  }
-  return out
-}
 
 const blankForm = () => ({
   name: '',
@@ -284,35 +276,13 @@ export function WaterAdjustmentsPage() {
                     className="w-20 p-2 rounded border text-sm bg-[var(--color-bg)] border-[var(--color-border)]"
                   />
                   <span className="text-xs text-[var(--color-muted)]">g</span>
-                  {m.type === 'CaCl2' && (
-                    <>
-                      <select
-                        value={m.form || 'dihydrate'}
-                        onChange={(e) => updateMineral(m.id, 'form', e.target.value)}
-                        title="CaCl₂ form"
-                        className="p-2 rounded border text-sm bg-[var(--color-bg)] border-[var(--color-border)]"
-                      >
-                        <option value="anhydrous">Anhydrous</option>
-                        <option value="dihydrate">Dihydrate</option>
-                        <option value="liquid">Liquid</option>
-                      </select>
-                      {(m.form || 'dihydrate') === 'liquid' && (
-                        <>
-                          <input
-                            type="number"
-                            min="0"
-                            max="100"
-                            step="1"
-                            placeholder="%w/w"
-                            value={m.strength ?? ''}
-                            onChange={(e) => updateMineral(m.id, 'strength', e.target.value)}
-                            className="w-16 p-2 rounded border text-sm bg-[var(--color-bg)] border-[var(--color-border)]"
-                          />
-                          <span className="text-xs text-[var(--color-muted)]">%w/w</span>
-                        </>
-                      )}
-                    </>
-                  )}
+                  <MineralFormControls
+                    type={m.type}
+                    form={m.form}
+                    strength={m.strength}
+                    onForm={(v) => updateMineral(m.id, 'form', v)}
+                    onStrength={(v) => updateMineral(m.id, 'strength', v)}
+                  />
                   <button
                     onClick={() => removeMineral(m.id)}
                     className="text-[var(--color-danger)] text-xs px-1"
@@ -453,8 +423,9 @@ function AdjustmentRow({
                       <tr key={i}>
                         <td className="py-0.5 text-[var(--color-fg)]">
                           {m.type}
-                          {m.type === 'CaCl2' && m.form && m.form !== 'dihydrate'
-                            ? ` (${m.form})`
+                          {SALT_FORMS[m.type] &&
+                          normalizeForm(m.form, m.type) !== SALT_FORMS[m.type].default
+                            ? ` (${normalizeForm(m.form, m.type)})`
                             : ''}
                         </td>
                         <td className="py-0.5 text-right tabular-nums text-[var(--color-fg)]">
