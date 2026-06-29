@@ -18,7 +18,7 @@ pub const MW_CALCIUM_SULFATE: f64 = 172.17; // CaSO4·2H2O (gypsum, dihydrate �
 pub const MW_CALCIUM_CHLORIDE: f64 = 147.01; // CaCl2·2H2O (dihydrate — the weighed form)
 pub const MW_CALCIUM_CHLORIDE_ANHYDROUS: f64 = 110.98; // CaCl2 (anhydrous / dissolved basis)
 pub const MW_MAGNESIUM_SULFATE: f64 = 246.47; // MgSO4·7H2O (Epsom salt, heptahydrate)
-pub const MW_MAGNESIUM_CHLORIDE: f64 = 95.21;
+pub const MW_MAGNESIUM_CHLORIDE: f64 = 203.30; // MgCl2·6H2O (hexahydrate — the weighed form)
 pub const MW_SODIUM_BICARBONATE: f64 = 84.01;
 pub const MW_SODIUM_CHLORIDE: f64 = 58.44;
 pub const MW_SODIUM_SULFATE: f64 = 142.04;
@@ -298,7 +298,7 @@ fn apply_mineral(p: &mut WaterProfile, m: MineralAddition, vol: f64) -> Result<(
             p.sulfate += g * MW_SULFATE / MW_MAGNESIUM_SULFATE * ppm;
         }
         MineralType::MagnesiumCl => {
-            // MgCl2
+            // MgCl2·6H2O
             p.magnesium += g * MW_MAGNESIUM / MW_MAGNESIUM_CHLORIDE * ppm;
             p.chloride += g * 2.0 * MW_CHLORIDE / MW_MAGNESIUM_CHLORIDE * ppm;
         }
@@ -716,6 +716,25 @@ mod tests {
             2.0 * 2.0 * 61.02 / 100.09 / 10.0 * 1000.0,
             epsilon = 0.01
         );
+    }
+
+    #[test]
+    fn mineral_addition_magnesium_chloride_hexahydrate() {
+        // 10 g MgCl2·6H2O in 20 L → Mg ≈ 59.8, Cl ≈ 174.4 ppm.
+        let res = calculate_water_treatment(
+            WaterProfile::default(),
+            20.0,
+            &[MineralAddition {
+                mineral_type: MineralType::MagnesiumCl,
+                amount: 10.0,
+                form: MineralForm::Dihydrate,
+                strength_pct: 0.0,
+            }],
+            None,
+        )
+        .unwrap();
+        assert_relative_eq!(res.final_profile.magnesium, 59.8, epsilon = 0.2);
+        assert_relative_eq!(res.final_profile.chloride, 174.4, epsilon = 0.2);
     }
 
     #[test]
