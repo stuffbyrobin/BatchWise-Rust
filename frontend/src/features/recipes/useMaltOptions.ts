@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { useFermentables } from '../library/hooks/useLibrary'
 import { useInventoryList } from '../inventory/hooks/useInventory'
 
@@ -51,64 +52,68 @@ export function useMaltOptions() {
   const generic = useFermentables({ page_size: 200 })
   const stock = useInventoryList({ type: 'fermentable', page_size: 200 })
 
-  const genericOptions: MaltOption[] = (generic.data?.items ?? [])
-    .map((f) => ({
-      key: `generic:${f.id}`,
-      name: f.name,
-      label: f.name,
-      type: f.type ?? undefined,
-      color_ebc: midpoint(f.colour_ebc_min, f.colour_ebc_max),
-      potential_ppg: extractToPpg(f.extract_litres_per_kg),
-      source: 'generic' as const,
-    }))
-    .sort((a, b) => a.name.localeCompare(b.name))
+  const derived = useMemo(() => {
+    const genericOptions: MaltOption[] = (generic.data?.items ?? [])
+      .map((f) => ({
+        key: `generic:${f.id}`,
+        name: f.name,
+        label: f.name,
+        type: f.type ?? undefined,
+        color_ebc: midpoint(f.colour_ebc_min, f.colour_ebc_max),
+        potential_ppg: extractToPpg(f.extract_litres_per_kg),
+        source: 'generic' as const,
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name))
 
-  // PPG by name, so a stock malt can borrow potential from its generic match.
-  const ppgByName = new Map<string, number>()
-  for (const g of genericOptions) {
-    if (g.potential_ppg != null) ppgByName.set(g.name.toLowerCase(), g.potential_ppg)
-  }
+    // PPG by name, so a stock malt can borrow potential from its generic match.
+    const ppgByName = new Map<string, number>()
+    for (const g of genericOptions) {
+      if (g.potential_ppg != null) ppgByName.set(g.name.toLowerCase(), g.potential_ppg)
+    }
 
-  // Inventory is per-lot; collapse to one option per name, summing quantity.
-  const stockAgg = new Map<string, { color?: number; amount: number; unit: string }>()
-  for (const it of stock.data?.items ?? []) {
-    const cur = stockAgg.get(it.name)
-    if (cur) cur.amount += it.amount
-    else stockAgg.set(it.name, { color: it.color_ebc ?? undefined, amount: it.amount, unit: it.unit })
-  }
-  const stockOptions: MaltOption[] = [...stockAgg.entries()]
-    .map(([name, v]) => ({
-      key: `stock:${name}`,
-      name,
-      label: `${name} — ${v.amount} ${v.unit} in stock`,
-      type: 'In stock',
-      color_ebc: v.color,
-      potential_ppg: ppgByName.get(name.toLowerCase()),
-      source: 'stock' as const,
-    }))
-    .sort((a, b) => a.name.localeCompare(b.name))
+    // Inventory is per-lot; collapse to one option per name, summing quantity.
+    const stockAgg = new Map<string, { color?: number; amount: number; unit: string }>()
+    for (const it of stock.data?.items ?? []) {
+      const cur = stockAgg.get(it.name)
+      if (cur) cur.amount += it.amount
+      else stockAgg.set(it.name, { color: it.color_ebc ?? undefined, amount: it.amount, unit: it.unit })
+    }
+    const stockOptions: MaltOption[] = [...stockAgg.entries()]
+      .map(([name, v]) => ({
+        key: `stock:${name}`,
+        name,
+        label: `${name} — ${v.amount} ${v.unit} in stock`,
+        type: 'In stock',
+        color_ebc: v.color,
+        potential_ppg: ppgByName.get(name.toLowerCase()),
+        source: 'stock' as const,
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name))
 
-  const options: MaltOption[] = [...stockOptions, ...genericOptions]
-  const byKey = new Map(options.map((o) => [o.key, o]))
+    const options: MaltOption[] = [...stockOptions, ...genericOptions]
+    const byKey = new Map(options.map((o) => [o.key, o]))
 
-  // Match an existing row name to an option, preferring stock.
-  const byName = new Map<string, MaltOption>()
-  for (const o of options) if (!byName.has(o.name)) byName.set(o.name, o)
+    // Match an existing row name to an option, preferring stock.
+    const byName = new Map<string, MaltOption>()
+    for (const o of options) if (!byName.has(o.name)) byName.set(o.name, o)
 
-  // Grouped view: In stock first, then generic types in order.
-  const groups: MaltGroup[] = []
-  if (stockOptions.length) groups.push({ label: 'In stock', options: stockOptions })
-  const byType = new Map<string, MaltOption[]>()
-  for (const g of genericOptions) {
-    const t = g.type || 'Other'
-    if (!byType.has(t)) byType.set(t, [])
-    byType.get(t)!.push(g)
-  }
-  const orderedTypes = [
-    ...GENERIC_TYPE_ORDER.filter((t) => byType.has(t)),
-    ...[...byType.keys()].filter((t) => !GENERIC_TYPE_ORDER.includes(t)).sort(),
-  ]
-  for (const t of orderedTypes) groups.push({ label: t, options: byType.get(t)! })
+    // Grouped view: In stock first, then generic types in order.
+    const groups: MaltGroup[] = []
+    if (stockOptions.length) groups.push({ label: 'In stock', options: stockOptions })
+    const byType = new Map<string, MaltOption[]>()
+    for (const g of genericOptions) {
+      const t = g.type || 'Other'
+      if (!byType.has(t)) byType.set(t, [])
+      byType.get(t)!.push(g)
+    }
+    const orderedTypes = [
+      ...GENERIC_TYPE_ORDER.filter((t) => byType.has(t)),
+      ...[...byType.keys()].filter((t) => !GENERIC_TYPE_ORDER.includes(t)).sort(),
+    ]
+    for (const t of orderedTypes) groups.push({ label: t, options: byType.get(t)! })
 
-  return { options, byKey, byName, groups, loading: generic.isLoading || stock.isLoading }
+    return { options, byKey, byName, groups }
+  }, [generic.data, stock.data])
+
+  return { ...derived, loading: generic.isLoading || stock.isLoading }
 }

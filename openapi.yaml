@@ -415,16 +415,17 @@ components:
               infusion_volume_liters: { type: ["number", "null"] }
     Yeast:
       type: object
-      required: [id, tenant_id, name, type, created_at, updated_at]
+      required: [id, tenant_id, name, created_at, updated_at]
       properties:
         id: { type: string, format: uuid }
         tenant_id: { type: string, format: uuid }
         name: { type: string }
-        type: { type: string, enum: [ale, lager, wheat, wine, champagne, other] }
-        lab: { type: ["string", "null"] }
+        type: { type: ["string", "null"], enum: [ale, lager, wild, bacteria, other, null] }
+        manufacturer: { type: ["string", "null"] }
         product_code: { type: ["string", "null"] }
-        attenuation_min: { type: ["number", "null"] }
-        attenuation_max: { type: ["number", "null"] }
+        form: { type: ["string", "null"], enum: [dry, liquid, slant, null] }
+        attenuation_min_pct: { type: ["number", "null"] }
+        attenuation_max_pct: { type: ["number", "null"] }
         temp_min_c: { type: ["number", "null"] }
         temp_max_c: { type: ["number", "null"] }
         flocculation: { type: ["string", "null"] }
@@ -433,14 +434,15 @@ components:
         updated_at: { type: string, format: date-time }
     YeastRequest:
       type: object
-      required: [name, type]
+      required: [name]
       properties:
         name: { type: string, minLength: 1, maxLength: 255 }
-        type: { type: string, enum: [ale, lager, wheat, wine, champagne, other] }
-        lab: { type: string, maxLength: 100 }
+        type: { type: string, enum: [ale, lager, wild, bacteria, other] }
+        manufacturer: { type: string, maxLength: 100 }
         product_code: { type: string, maxLength: 100 }
-        attenuation_min: { type: ["number", "null"] }
-        attenuation_max: { type: ["number", "null"] }
+        form: { type: string, enum: [dry, liquid, slant] }
+        attenuation_min_pct: { type: ["number", "null"] }
+        attenuation_max_pct: { type: ["number", "null"] }
         temp_min_c: { type: ["number", "null"] }
         temp_max_c: { type: ["number", "null"] }
         flocculation: { type: string, maxLength: 50 }
@@ -1437,6 +1439,8 @@ components:
             properties:
               type: { type: string }
               amount: { type: number }
+              form: { type: string, enum: [anhydrous, hydrate, liquid], description: "Salt form. Omitted: per-salt default (anhydrous for Na2SO4, hydrate otherwise). The legacy value dihydrate is accepted as an alias of hydrate." }
+              strength_pct: { type: number, description: "Solution strength (%w/w), used only when form is liquid." }
         acid_additions:
           type: array
           items:
