@@ -33,9 +33,14 @@ pub struct Tenant {
 #[derive(Debug, Default, Deserialize, Validate)]
 #[serde(deny_unknown_fields)]
 pub struct UpdateRequest {
+    #[validate(length(min = 1, max = 100))]
     pub tenant_name: Option<String>,
+    /// ISO 3166-1 alpha-2 (the column is `CHAR(2)`).
+    #[validate(length(equal = 2))]
     pub country: Option<String>,
+    #[validate(length(max = 100))]
     pub region: Option<String>,
+    #[validate(length(max = 500))]
     pub address: Option<String>,
     pub next_batch_number: Option<i32>,
     pub next_order_number: Option<i32>,

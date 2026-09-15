@@ -124,12 +124,17 @@ pub async fn get_refresh_token_by_hash(
 }
 
 /// Marks a refresh token as used (rotation / logout).
-pub async fn mark_refresh_token_used(pool: &PgPool, id: Uuid) -> Result<(), sqlx::Error> {
-    sqlx::query("UPDATE refresh_tokens SET used_at=now() WHERE id=$1")
+///
+/// The update is conditional on `used_at IS NULL`, so two concurrent
+/// rotations of the same token cannot both succeed: the caller that gets
+/// `false` back lost the race (or presented an already-used token) and must
+/// treat it as a replay.
+pub async fn mark_refresh_token_used(pool: &PgPool, id: Uuid) -> Result<bool, sqlx::Error> {
+    let r = sqlx::query("UPDATE refresh_tokens SET used_at=now() WHERE id=$1 AND used_at IS NULL")
         .bind(id)
         .execute(pool)
-        .await
-        .map(|_| ())
+        .await?;
+    Ok(r.rows_affected() == 1)
 }
 
 /// Deletes all refresh tokens for a user (password change / account deletion).

@@ -1,14 +1,18 @@
 //! Opaque refresh-token generation and hashing.
 //!
-//! Port of the Go `internal/auth/refresh.go`. The token is a ULID; only its
-//! SHA-256 hex digest is stored.
+//! Port of the Go `internal/auth/refresh.go`. The token is 256 random bits
+//! encoded as unpadded base64url; only its SHA-256 hex digest is stored.
 
+use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
+use rand::rngs::OsRng;
+use rand::RngCore;
 use sha2::{Digest, Sha256};
-use ulid::Ulid;
 
-/// Returns a new opaque ULID token and its SHA-256 hex hash.
+/// Returns a new opaque token (32 random bytes as unpadded base64url) and its SHA-256 hex hash.
 pub fn generate_refresh_token() -> (String, String) {
-    let token = Ulid::new().to_string();
+    let mut bytes = [0u8; 32];
+    OsRng.fill_bytes(&mut bytes);
+    let token = URL_SAFE_NO_PAD.encode(bytes);
     let hash = hash_refresh_token(&token);
     (token, hash)
 }
@@ -35,7 +39,7 @@ mod tests {
     #[test]
     fn token_and_hash_are_stable() {
         let (token, hash) = generate_refresh_token();
-        assert_eq!(token.len(), 26); // ULID
+        assert_eq!(token.len(), 43); // 32 bytes -> 43 base64url chars
         assert_eq!(hash.len(), 64); // sha256 hex
         assert_eq!(hash_refresh_token(&token), hash);
     }

@@ -15,6 +15,13 @@ async fn main() -> anyhow::Result<()> {
 
     let cfg = Config::load()?;
     logger::init(&cfg.app_env, &cfg.log_level);
+    if cfg.bootstrap_registration_enabled {
+        tracing::warn!(
+            "BOOTSTRAP_REGISTRATION_ENABLED is on: /auth/register without tenant_name \
+             creates users in the shared system tenant (write access to the reference \
+             library). Disable after initial setup."
+        );
+    }
 
     let pool = database::connect(&cfg.database_url).await?;
     if cfg.migrations_disabled {
