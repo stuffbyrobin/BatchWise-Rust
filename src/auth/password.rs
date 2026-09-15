@@ -55,11 +55,43 @@ pub fn hash_password(plain: &str) -> Result<String, ApiError> {
 /// Returns true if `plain` matches the PHC-encoded Argon2id `encoded` hash.
 pub fn verify_password(plain: &str, encoded: &str) -> bool {
     match PasswordHash::new(encoded) {
-        Ok(parsed) => Argon2::default()
-            .verify_password(plain.as_bytes(), &parsed)
-            .is_ok(),
+        Ok(parsed) => hasher().verify_password(plain.as_bytes(), &parsed).is_ok(),
         Err(_) => false,
     }
+}
+
+/// Asynchronously hashes `plain` with Argon2id on a blocking thread.
+///
+/// Argon2id is CPU-heavy (64 MiB, ~100-200 ms). Running it on tokio worker
+/// threads would block the async runtime, allowing a handful of login requests
+/// to stall every other request, including health checks. `spawn_blocking`
+/// moves the work off those threads.
+pub async fn hash_password_async(plain: String) -> Result<String, ApiError> {
+    tokio::task::spawn_blocking(move || hash_password(&plain))
+        .await
+        .map_err(|e| ApiError::internal(format!("hash task: {e}")))?
+}
+
+/// Asynchronously verifies `plain` against the PHC-encoded Argon2id `encoded`
+/// hash on a blocking thread.
+///
+/// See `hash_password_async` for why this uses `spawn_blocking`.
+pub async fn verify_password_async(plain: String, encoded: String) -> bool {
+    tokio::task::spawn_blocking(move || verify_password(&plain, &encoded))
+        .await
+        .unwrap_or(false)
+}
+
+/// A pre-computed Argon2id hash of a constant string, computed once at first use.
+///
+/// Login verifies against this dummy hash when the email is unknown so that
+/// unknown and known emails take the same time, preventing user-enumeration
+/// timing oracles.
+static DUMMY_HASH: OnceLock<String> = OnceLock::new();
+
+/// Returns the dummy hash. Computed once on first call.
+pub fn dummy_hash() -> &'static str {
+    DUMMY_HASH.get_or_init(|| hash_password("batchwise-dummy-password-for-timing").unwrap())
 }
 
 /// Returns a validation [`ApiError`] if `plain` fails the password policy:
@@ -159,5 +191,20 @@ mod tests {
         // composed to pass class checks would defeat the test, so verify the
         // list lookup directly.
         assert!(common_passwords().contains("password"));
+    }
+
+    #[test]
+    fn verify_uses_same_params_as_hash() {
+        let hash = hash_password("Sup3rSecret!pw").unwrap();
+        assert!(verify_password("Sup3rSecret!pw", &hash));
+        assert!(!verify_password("wrong-password", &hash));
+    }
+
+    #[test]
+    fn dummy_hash_is_stable() {
+        let h1 = dummy_hash();
+        let h2 = dummy_hash();
+        assert_eq!(h1, h2);
+        assert!(!verify_password("anything", h1));
     }
 }

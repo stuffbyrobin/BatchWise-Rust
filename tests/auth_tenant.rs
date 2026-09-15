@@ -47,6 +47,7 @@ fn test_config(database_url: String) -> Config {
         rate_limit_login_per_minute: 1000,
         rate_limit_refresh_per_minute: 1000,
         rate_limit_default_per_minute: 1000,
+        trust_proxy_headers: false,
         migrations_disabled: false,
         log_level: "info".into(),
     }
@@ -295,4 +296,84 @@ async fn protected_routes_require_auth() {
         .await
         .unwrap();
     assert_eq!(resp.status(), 401);
+}
+
+#[tokio::test]
+async fn refresh_replay_revokes_token_family() {
+    let app = spawn_app().await;
+    let email = format!("revoke-{}+{}", uniq(), "@example.com");
+    let tenant = format!("Revoke Tenant {}", uniq());
+    let reg = app.register(&email, Some(&tenant)).await;
+    let r1 = reg["refresh_token"].as_str().unwrap().to_string();
+
+    let resp = app
+        .post("/api/v1/auth/refresh", json!({"refresh_token": r1}))
+        .await;
+    assert_eq!(resp.status(), 200);
+    let body: Value = resp.json().await.unwrap();
+    let r2 = body["refresh_token"].as_str().unwrap().to_string();
+
+    let resp = app
+        .post("/api/v1/auth/refresh", json!({"refresh_token": r1}))
+        .await;
+    assert_eq!(resp.status(), 401);
+
+    let resp = app
+        .post("/api/v1/auth/refresh", json!({"refresh_token": r2}))
+        .await;
+    assert_eq!(resp.status(), 401);
+}
+
+#[tokio::test]
+async fn concurrent_refresh_yields_exactly_one_success() {
+    let app = spawn_app().await;
+    let email = format!("concurrent-{}+{}", uniq(), "@example.com");
+    let reg = app.register(&email, None).await;
+    let r1 = reg["refresh_token"].as_str().unwrap().to_string();
+
+    let f1 = app.post("/api/v1/auth/refresh", json!({"refresh_token": r1.clone()}));
+    let f2 = app.post("/api/v1/auth/refresh", json!({"refresh_token": r1.clone()}));
+    let f3 = app.post("/api/v1/auth/refresh", json!({"refresh_token": r1.clone()}));
+    let f4 = app.post("/api/v1/auth/refresh", json!({"refresh_token": r1.clone()}));
+    let f5 = app.post("/api/v1/auth/refresh", json!({"refresh_token": r1.clone()}));
+
+    let responses = tokio::join!(f1, f2, f3, f4, f5);
+    let statuses = [
+        responses.0.status(),
+        responses.1.status(),
+        responses.2.status(),
+        responses.3.status(),
+        responses.4.status(),
+    ];
+    let success_count = statuses.iter().filter(|&&s| s == 200).count();
+    assert_eq!(success_count, 1);
+    for s in statuses {
+        assert!(s == 200 || s == 401);
+    }
+}
+
+#[tokio::test]
+async fn repeated_failed_logins_lock_the_account() {
+    let app = spawn_app().await;
+    let email = format!("locked-{}+{}", uniq(), "@example.com");
+    let password = "Sup3rSecret!pw";
+    app.register(&email, None).await;
+
+    for i in 0..10 {
+        let resp = app
+            .post(
+                "/api/v1/auth/login",
+                json!({"email": email, "password": "Wrong-Password-123!"}),
+            )
+            .await;
+        assert_eq!(resp.status(), 401, "attempt {i}");
+    }
+
+    let resp = app
+        .post(
+            "/api/v1/auth/login",
+            json!({"email": email, "password": password}),
+        )
+        .await;
+    assert_eq!(resp.status(), 429);
 }

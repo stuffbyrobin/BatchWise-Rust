@@ -62,17 +62,17 @@ violations) in one place instead of 30.
 
 All in `src/auth` and `src/platform/config.rs`; one PR, one test file.
 
-- [ ] `config.rs:66`: run `validate_production` for every `app_env != "development"` (and enforce minimum `JWT_SECRET` length unconditionally).
-- [ ] Refresh rotation: `UPDATE refresh_tokens SET used_at=now() WHERE id=$1 AND used_at IS NULL` and require `rows_affected()==1`; on replay of a used token call `delete_refresh_tokens_for_user` (family revocation).
-- [ ] Wrap `hash_password` and `verify_password` calls in `tokio::task::spawn_blocking`.
-- [ ] Login: verify against a fixed dummy PHC hash when the email is unknown (timing oracle). Use `hasher()` in `verify_password` too.
-- [ ] Register: consider a generic response for duplicate email/tenant name, or at least document the enumeration trade-off.
-- [ ] Refresh token: 32 bytes from `OsRng`, base64url, instead of ULID.
-- [ ] Rate limiter: evict idle keys (periodic sweep or bounded LRU); add optional trusted-proxy `X-Forwarded-For` handling behind a config flag; add a per-account failed-login counter.
-- [ ] Bootstrap registration: create a dedicated tenant instead of landing users in the nil system tenant.
-- [ ] Manual `Debug` for `Config` that redacts `jwt_secret` and `database_url`.
-- [ ] Add `#[validate]` to `tenant_name` (length), `country` (exactly 2), `display_name`, and `password` (max 128) on the auth and tenant DTOs.
-- [ ] Tests: concurrent refresh yields exactly one success; replayed token revokes the family; weak secret rejected when `APP_ENV` is unset.
+- [x] `config.rs:66`: run `validate_production` for every `app_env != "development"` (and enforce minimum `JWT_SECRET` length unconditionally).
+- [x] Refresh rotation: `UPDATE refresh_tokens SET used_at=now() WHERE id=$1 AND used_at IS NULL` and require `rows_affected()==1`; on replay of a used token call `delete_refresh_tokens_for_user` (family revocation).
+- [x] Wrap `hash_password` and `verify_password` calls in `tokio::task::spawn_blocking`.
+- [x] Login: verify against a fixed dummy PHC hash when the email is unknown (timing oracle). Use `hasher()` in `verify_password` too.
+- [x] Register: kept the 409s (usability) and documented the enumeration trade-off in the service; login now hashes against a dummy PHC string on unknown email so timing no longer distinguishes.
+- [x] Refresh token: 32 bytes from `OsRng`, base64url, instead of ULID.
+- [x] Rate limiter: idle keys swept every 1024 ops; `TRUST_PROXY_HEADERS` (default false) keys by the last `X-Forwarded-For` entry; per-account failed-login limiter (10/min, `AppState::login_failures`).
+- [x] Bootstrap registration: kept the system-tenant behaviour (it is the only API path for curating the shared reference library) but documented it in the service, `.env.example`, and a startup warning. Default remains off.
+- [x] Manual `Debug` for `Config` that redacts `jwt_secret` and `database_url`.
+- [x] Add `#[validate]` to `tenant_name` (length), `country` (exactly 2), `display_name`, and `password` (max 128) on the auth and tenant DTOs.
+- [x] Tests: concurrent refresh yields exactly one success; replayed token revokes the family; weak secret rejected when `APP_ENV` is unset.
 
 ---
 

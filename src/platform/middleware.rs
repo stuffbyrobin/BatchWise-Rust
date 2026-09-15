@@ -5,7 +5,10 @@
 
 use std::collections::HashMap;
 use std::net::SocketAddr;
-use std::sync::Mutex;
+use std::sync::{
+    atomic::{AtomicUsize, Ordering},
+    Mutex,
+};
 use std::time::{Duration, Instant};
 
 use axum::extract::{ConnectInfo, Request, State};
@@ -84,10 +87,14 @@ pub async fn check_feature(
     }
 }
 /// (per-IP for auth routes). In-memory only; Redis is a future enhancement.
+/// Keys are evicted lazily during a sweep triggered every `sweep_every` operations
+/// to prevent unbounded growth when an attacker rotates source IPs.
 #[derive(Debug)]
 pub struct RateLimiter {
     limit: usize,
     window: Duration,
+    sweep_every: usize,
+    ops: AtomicUsize,
     hits: Mutex<HashMap<String, Vec<Instant>>>,
 }
 
@@ -97,6 +104,20 @@ impl RateLimiter {
         Self {
             limit: limit.max(1) as usize,
             window: Duration::from_secs(60),
+            sweep_every: 1024,
+            ops: AtomicUsize::new(0),
+            hits: Mutex::new(HashMap::new()),
+        }
+    }
+
+    /// New limiter with a custom window for testing.
+    #[cfg(test)]
+    pub fn with_window(limit: usize, window: Duration) -> Self {
+        Self {
+            limit,
+            window,
+            sweep_every: 1024,
+            ops: AtomicUsize::new(0),
             hits: Mutex::new(HashMap::new()),
         }
     }
@@ -106,6 +127,15 @@ impl RateLimiter {
     pub fn check(&self, key: &str) -> Result<(), u64> {
         let now = Instant::now();
         let mut hits = self.hits.lock().expect("rate limiter mutex");
+        // Every call counts toward the sweep, including rejected ones, so a
+        // flood of blocked requests cannot starve eviction.
+        let op_count = self.ops.fetch_add(1, Ordering::Relaxed) + 1;
+        if op_count.is_multiple_of(self.sweep_every) {
+            hits.retain(|_, v| {
+                v.retain(|&t| now.duration_since(t) < self.window);
+                !v.is_empty()
+            });
+        }
         let bucket = hits.entry(key.to_string()).or_default();
         bucket.retain(|&t| now.duration_since(t) < self.window);
         if bucket.len() >= self.limit {
@@ -116,10 +146,46 @@ impl RateLimiter {
         bucket.push(now);
         Ok(())
     }
+
+    /// Returns `Some(retry_after_seconds)` when the bucket for `key` is already
+    /// at the limit, without recording a hit. Used for the per-account failed-login
+    /// check, where only failures count as hits.
+    pub fn is_limited(&self, key: &str) -> Option<u64> {
+        let now = Instant::now();
+        let mut hits = self.hits.lock().expect("rate limiter mutex");
+        let bucket = hits.entry(key.to_string()).or_default();
+        bucket.retain(|&t| now.duration_since(t) < self.window);
+        if bucket.len() >= self.limit {
+            let oldest = bucket.first().copied().unwrap_or(now);
+            let retry = self.window.saturating_sub(now.duration_since(oldest));
+            Some(retry.as_secs().max(1))
+        } else {
+            None
+        }
+    }
+
+    /// Returns the number of tracked keys, for testing sweep behavior.
+    #[cfg(test)]
+    fn len(&self) -> usize {
+        self.hits.lock().expect("rate limiter mutex").len()
+    }
 }
 
 /// Best-effort client IP for rate-limit keying.
-pub fn client_ip(req: &Request) -> String {
+/// When `trust_proxy_headers` is true and the request has an `x-forwarded-for` header,
+/// returns the LAST comma-separated entry (trimmed) as the client IP — the entry
+/// appended by the trusted reverse proxy. Otherwise falls back to the ConnectInfo
+/// socket address or "unknown".
+pub fn client_ip(req: &Request, trust_proxy_headers: bool) -> String {
+    if trust_proxy_headers {
+        if let Some(values) = req.headers().get("x-forwarded-for") {
+            if let Ok(header) = values.to_str() {
+                if let Some(last) = header.rsplit(',').next() {
+                    return last.trim().to_string();
+                }
+            }
+        }
+    }
     if let Some(ConnectInfo(addr)) = req.extensions().get::<ConnectInfo<SocketAddr>>() {
         return addr.ip().to_string();
     }
@@ -145,5 +211,27 @@ mod tests {
         assert!(rl.check("a").is_ok());
         assert!(rl.check("b").is_ok());
         assert!(rl.check("a").is_err());
+    }
+
+    #[test]
+    fn is_limited_does_not_record() {
+        let rl = RateLimiter::per_minute(1);
+        assert_eq!(rl.is_limited("key"), None);
+        assert!(rl.check("key").is_ok());
+        assert!(rl.is_limited("key").is_some());
+    }
+
+    #[test]
+    fn sweep_evicts_idle_keys() {
+        let rl = RateLimiter::with_window(1, Duration::from_millis(10));
+        assert!(rl.check("a").is_ok());
+        assert!(rl.check("b").is_ok());
+        assert_eq!(rl.len(), 2);
+        std::thread::sleep(Duration::from_millis(20));
+        // Rejected checks still count toward the sweep; 1024 ops trigger it.
+        for _ in 0..1024 {
+            let _ = rl.check("c");
+        }
+        assert_eq!(rl.len(), 1);
     }
 }

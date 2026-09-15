@@ -30,16 +30,19 @@ pub fn routes(state: AppState) -> Router {
             "/register",
             post(register),
             state.config.rate_limit_register_per_minute,
+            state.config.trust_proxy_headers,
         ))
         .merge(rate_limited(
             "/login",
             post(login),
             state.config.rate_limit_login_per_minute,
+            state.config.trust_proxy_headers,
         ))
         .merge(rate_limited(
             "/refresh",
             post(refresh),
             state.config.rate_limit_refresh_per_minute,
+            state.config.trust_proxy_headers,
         ))
         .route("/logout", post(logout));
 
@@ -55,12 +58,13 @@ fn rate_limited(
     path: &str,
     handler: axum::routing::MethodRouter<AppState>,
     limit: u32,
+    trust_proxy_headers: bool,
 ) -> Router<AppState> {
     let limiter = Arc::new(RateLimiter::per_minute(limit));
     let layer = from_fn(move |req: Request, next: Next| {
         let limiter = limiter.clone();
         async move {
-            match limiter.check(&client_ip(&req)) {
+            match limiter.check(&client_ip(&req, trust_proxy_headers)) {
                 Ok(()) => Ok(next.run(req).await),
                 Err(retry) => Err(ApiError::rate_limited(retry)),
             }

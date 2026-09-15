@@ -9,7 +9,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use uuid::Uuid;
-use validator::Validate;
+use validator::{Validate, ValidationError};
 
 /// Database representation of a user.
 #[derive(Debug, Clone, FromRow)]
@@ -42,14 +42,29 @@ pub struct RefreshToken {
 pub struct RegisterRequest {
     #[validate(email)]
     pub email: String,
-    #[validate(length(min = 1))]
+    /// The 12-char minimum and character classes are enforced by
+    /// `password::check_password_policy`; this only bounds the input size.
+    #[validate(length(min = 1, max = 128))]
     pub password: String,
     #[validate(length(min = 1, max = 100))]
     pub display_name: String,
+    #[validate(length(min = 1, max = 100))]
     pub tenant_name: Option<String>,
+    /// ISO 3166-1 alpha-2; empty means "GB" (the column is `CHAR(2)`).
     #[serde(default)]
+    #[validate(custom(function = "validate_country"))]
     pub country: String,
+    #[validate(length(max = 100))]
     pub region: Option<String>,
+}
+
+/// Accepts an empty string (defaulted later) or exactly two ASCII letters.
+fn validate_country(v: &str) -> Result<(), ValidationError> {
+    if v.is_empty() || (v.len() == 2 && v.chars().all(|c| c.is_ascii_alphabetic())) {
+        Ok(())
+    } else {
+        Err(ValidationError::new("country_code"))
+    }
 }
 
 /// Body for `POST /auth/login`.
@@ -82,8 +97,11 @@ pub struct LogoutRequest {
 #[derive(Debug, Deserialize, Validate)]
 #[serde(deny_unknown_fields)]
 pub struct UpdateMeRequest {
+    #[validate(length(min = 1, max = 100))]
     pub display_name: Option<String>,
+    #[validate(length(min = 1, max = 128))]
     pub current_password: Option<String>,
+    #[validate(length(min = 1, max = 128))]
     pub new_password: Option<String>,
 }
 

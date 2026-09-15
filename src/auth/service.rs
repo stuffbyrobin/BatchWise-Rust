@@ -10,7 +10,9 @@ use uuid::Uuid;
 use super::models::{
     AuthResponse, LoginRequest, MeResponse, RegisterRequest, UpdateMeRequest, User,
 };
-use super::password::{check_password_policy, hash_password, verify_password};
+use super::password::{
+    check_password_policy, dummy_hash, hash_password_async, verify_password_async,
+};
 use super::refresh::{generate_refresh_token, hash_refresh_token};
 use super::repository as repo;
 use crate::platform::errors::is_unique_violation;
@@ -18,12 +20,26 @@ use crate::platform::errors::ApiError;
 use crate::state::AppState;
 use crate::tenant::{presets, repository as tenant_repo};
 
+/// Maximum failed login attempts allowed per minute per account.
+/// This is a per-account throttle, independent of the per-IP limiter,
+/// so distributed credential stuffing against one account is slowed.
+pub const MAX_FAILED_LOGINS_PER_MINUTE: u32 = 10;
+
 /// Well-known tenant for bootstrap admin users.
+/// Used as the default tenant when `tenant_name` is omitted during registration
+/// and `BOOTSTRAP_REGISTRATION_ENABLED` is on.
 fn system_tenant_id() -> Uuid {
     Uuid::nil()
 }
 
 /// Registers a new user, creating a tenant when `tenant_name` is supplied.
+///
+/// The 409 responses for a taken email or tenant name are a deliberate usability
+/// trade-off (they reveal existence) mitigated by the per-IP register rate limit.
+/// When `tenant_name` is omitted and `BOOTSTRAP_REGISTRATION_ENABLED` is on,
+/// the user lands in the shared system tenant (Uuid::nil) and can edit the
+/// reference library every tenant reads; this is intended only for initial
+/// operator setup.
 pub async fn register(state: &AppState, req: RegisterRequest) -> Result<AuthResponse, ApiError> {
     check_password_policy(&req.password)?;
 
@@ -36,7 +52,7 @@ pub async fn register(state: &AppState, req: RegisterRequest) -> Result<AuthResp
     } else {
         req.country.clone()
     };
-    let hash = hash_password(&req.password)?;
+    let hash = hash_password_async(req.password.clone()).await?;
     let email = req.email.to_lowercase();
 
     // Name conflict check mirrors the Go service (runs on the pool).
@@ -90,17 +106,31 @@ pub async fn register(state: &AppState, req: RegisterRequest) -> Result<AuthResp
 /// Authenticates by email (global lookup) and password.
 pub async fn login(state: &AppState, req: LoginRequest) -> Result<AuthResponse, ApiError> {
     let invalid = || ApiError::unauthorized("Invalid email or password.");
-    let user = repo::get_user_by_email_global(&state.pool, &req.email.to_lowercase())
-        .await?
-        .ok_or_else(invalid)?;
+    let email = req.email.to_lowercase();
 
-    if !verify_password(&req.password, &user.password_hash) {
-        return Err(invalid());
+    if let Some(retry) = state.login_failures.is_limited(&email) {
+        return Err(ApiError::rate_limited(retry));
     }
-    if !user.is_active {
-        return Err(ApiError::forbidden("Account is inactive."));
+
+    let user = repo::get_user_by_email_global(&state.pool, &email).await?;
+
+    match user {
+        Some(user) => {
+            if !verify_password_async(req.password.clone(), user.password_hash.clone()).await {
+                let _ = state.login_failures.check(&email);
+                return Err(invalid());
+            }
+            if !user.is_active {
+                return Err(ApiError::forbidden("Account is inactive."));
+            }
+            issue_token_pair(state, &user).await
+        }
+        None => {
+            // Keep unknown and known emails on the same timing path.
+            let _ = verify_password_async(req.password.clone(), dummy_hash().to_string()).await;
+            Err(invalid())
+        }
     }
-    issue_token_pair(state, &user).await
 }
 
 /// Rotates a refresh token, returning a fresh token pair.
@@ -111,6 +141,9 @@ pub async fn refresh(state: &AppState, refresh_token: &str) -> Result<AuthRespon
         .ok_or_else(invalid)?;
 
     if rt.used_at.is_some() {
+        // Presenting an already-rotated token is the primary signal of token theft
+        // (RFC 6819 \xA75.2.2.3), so the whole family for that user is revoked.
+        repo::delete_refresh_tokens_for_user(&state.pool, rt.user_id).await?;
         return Err(ApiError::unauthorized("Refresh token already used."));
     }
     if Utc::now() > rt.expires_at {
@@ -124,7 +157,11 @@ pub async fn refresh(state: &AppState, refresh_token: &str) -> Result<AuthRespon
         return Err(ApiError::forbidden("Account is inactive."));
     }
 
-    repo::mark_refresh_token_used(&state.pool, rt.id).await?;
+    if !repo::mark_refresh_token_used(&state.pool, rt.id).await? {
+        // Lost a concurrent rotation race: treat exactly like a replay.
+        repo::delete_refresh_tokens_for_user(&state.pool, rt.user_id).await?;
+        return Err(ApiError::unauthorized("Refresh token already used."));
+    }
     issue_token_pair(state, &user).await
 }
 
@@ -133,7 +170,7 @@ pub async fn logout(state: &AppState, refresh_token: &str) -> Result<(), ApiErro
     if let Some(rt) =
         repo::get_refresh_token_by_hash(&state.pool, &hash_refresh_token(refresh_token)).await?
     {
-        repo::mark_refresh_token_used(&state.pool, rt.id).await?;
+        let _ = repo::mark_refresh_token_used(&state.pool, rt.id).await?;
     }
     Ok(())
 }
@@ -179,11 +216,11 @@ pub async fn update_me(
         let current = req.current_password.as_deref().ok_or_else(|| {
             ApiError::validation("current_password", "required when changing password")
         })?;
-        if !verify_password(current, &user.password_hash) {
+        if !verify_password_async(current.to_string(), user.password_hash.clone()).await {
             return Err(ApiError::validation("current_password", "incorrect"));
         }
         check_password_policy(new_password)?;
-        new_hash = hash_password(new_password)?;
+        new_hash = hash_password_async(new_password.clone()).await?;
     }
 
     let new_display = req

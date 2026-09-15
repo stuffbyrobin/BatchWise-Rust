@@ -43,6 +43,7 @@ fn test_config(database_url: String) -> Config {
         rate_limit_login_per_minute: 1000,
         rate_limit_refresh_per_minute: 1000,
         rate_limit_default_per_minute: 1000,
+        trust_proxy_headers: false,
         migrations_disabled: false,
         log_level: "info".into(),
     }
