@@ -377,7 +377,7 @@ async fn brewing_records_every_lot_with_cost() {
     let trace: Value = trace_resp.json().await.unwrap();
     let batches = trace["batches"].as_array().unwrap();
     assert!(
-        batches.len() >= 1,
+        !batches.is_empty(),
         "second malt lot should have at least one batch"
     );
     let batch_ids: Vec<&str> = batches
