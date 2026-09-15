@@ -129,7 +129,7 @@ pub async fn list_profiles(
     state: &AppState,
     tenant_id: Uuid,
 ) -> Result<Vec<BrandProfile>, ApiError> {
-    repo::select_profiles(&state.pool, tenant_id).await
+    Ok(repo::select_profiles(&state.pool, tenant_id).await?)
 }
 
 pub async fn get_profile(

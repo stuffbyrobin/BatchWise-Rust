@@ -321,5 +321,5 @@ pub async fn list_maintenance_due(
     tenant_id: Uuid,
     filter: MaintenanceDueFilter,
 ) -> Result<Page<MaintenanceDueItem>, ApiError> {
-    repo::select_maintenance_due(&state.pool, tenant_id, &filter).await
+    Ok(repo::select_maintenance_due(&state.pool, tenant_id, &filter).await?)
 }
