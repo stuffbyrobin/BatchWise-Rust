@@ -130,7 +130,7 @@ impl RateLimiter {
         // Every call counts toward the sweep, including rejected ones, so a
         // flood of blocked requests cannot starve eviction.
         let op_count = self.ops.fetch_add(1, Ordering::Relaxed) + 1;
-        if op_count % self.sweep_every == 0 {
+        if op_count.is_multiple_of(self.sweep_every) {
             hits.retain(|_, v| {
                 v.retain(|&t| now.duration_since(t) < self.window);
                 !v.is_empty()
@@ -166,7 +166,7 @@ impl RateLimiter {
 
     /// Returns the number of tracked keys, for testing sweep behavior.
     #[cfg(test)]
-    pub fn len(&self) -> usize {
+    fn len(&self) -> usize {
         self.hits.lock().expect("rate limiter mutex").len()
     }
 }
@@ -180,7 +180,7 @@ pub fn client_ip(req: &Request, trust_proxy_headers: bool) -> String {
     if trust_proxy_headers {
         if let Some(values) = req.headers().get("x-forwarded-for") {
             if let Ok(header) = values.to_str() {
-                if let Some(last) = header.split(',').last() {
+                if let Some(last) = header.rsplit(',').next() {
                     return last.trim().to_string();
                 }
             }
