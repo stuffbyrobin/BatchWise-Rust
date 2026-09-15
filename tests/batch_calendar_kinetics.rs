@@ -12,9 +12,11 @@ use serde_json::{json, Value};
 use testcontainers::runners::AsyncRunner;
 use testcontainers::{ContainerAsync, ImageExt};
 use testcontainers_modules::postgres::Postgres;
+use uuid::Uuid;
 
 struct TestApp {
     base: String,
+    db_url: String,
     client: reqwest::Client,
     _node: Option<ContainerAsync<Postgres>>,
 }
@@ -65,7 +67,7 @@ async fn spawn_app() -> TestApp {
     let pool = database::connect(&url).await.expect("connect");
     database::migrate(&pool).await.expect("migrate");
     seed::run(&pool).await.expect("seed");
-    let state = AppState::new(pool, test_config(url));
+    let state = AppState::new(pool, test_config(url.clone()));
     let app = batchwise::app::build_router(state);
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let addr = listener.local_addr().unwrap();
@@ -79,13 +81,15 @@ async fn spawn_app() -> TestApp {
     });
     TestApp {
         base: format!("http://{addr}"),
+        db_url: url,
         client: reqwest::Client::new(),
         _node: node,
     }
 }
 
 impl TestApp {
-    async fn token(&self) -> String {
+    /// Registers a fresh owner; returns (token, tenant_id).
+    async fn register(&self) -> (String, Uuid) {
         let body = json!({
             "email": format!("b-{}@example.com", uniq()),
             "password": "Sup3rSecret!pw",
@@ -100,10 +104,26 @@ impl TestApp {
             .await
             .unwrap();
         assert_eq!(resp.status(), 201);
-        resp.json::<Value>().await.unwrap()["access_token"]
-            .as_str()
-            .unwrap()
-            .to_string()
+        let v: Value = resp.json().await.unwrap();
+        let token = v["access_token"].as_str().unwrap().to_string();
+        let tenant_id = Uuid::parse_str(v["tenant_id"].as_str().unwrap()).unwrap();
+        (token, tenant_id)
+    }
+
+    async fn token(&self) -> String {
+        self.register().await.0
+    }
+
+    /// Enables the pro-tier feature flags directly in the DB.
+    async fn enable_feature_flags(&self, tenant_id: Uuid) {
+        let pool = sqlx::PgPool::connect(&self.db_url).await.unwrap();
+        sqlx::query(
+            "UPDATE tenants SET feature_flags = feature_flags || '{\"reporting\":true,\"traceability\":true}'::jsonb WHERE id=$1",
+        )
+        .bind(tenant_id)
+        .execute(&pool)
+        .await
+        .unwrap();
     }
 
     async fn post(&self, path: &str, token: &str, body: Value) -> reqwest::Response {
@@ -152,6 +172,25 @@ impl TestApp {
         });
         let resp = self.post("/api/v1/inventory", token, body).await;
         assert_eq!(resp.status(), 201, "create lot {name}");
+    }
+
+    async fn create_lot_with_cost(
+        &self,
+        token: &str,
+        typ: &str,
+        name: &str,
+        unit: &str,
+        amount: f64,
+        cost_pence: i64,
+    ) -> Value {
+        let body = json!({
+            "type": typ, "name": name, "amount": amount, "unit": unit,
+            "lot_number": format!("LOT-{}", uniq()),
+            "cost_pence": cost_pence
+        });
+        let resp = self.post("/api/v1/inventory", token, body).await;
+        assert_eq!(resp.status(), 201, "create lot with cost {name}");
+        resp.json::<Value>().await.unwrap()
     }
 
     async fn transition(&self, token: &str, batch_id: &str, to: &str) -> reqwest::Response {
@@ -275,6 +314,93 @@ async fn brewing_transition_deducts_inventory() {
         .await
         .unwrap();
     assert_eq!(page["items"][0]["amount"].as_f64().unwrap(), 5.0);
+}
+
+#[tokio::test]
+async fn brewing_records_every_lot_with_cost() {
+    let app = spawn_app().await;
+    let (token, tenant_id) = app.register().await;
+    app.enable_feature_flags(tenant_id).await;
+    let base = uniq();
+    let recipe_id = app.create_recipe(&token, &base).await;
+
+    // Create two malt lots for FIFO consumption: first 3.0 kg @ 200 pence, second 3.0 kg @ 300 pence.
+    let malt_lot1 = app
+        .create_lot_with_cost(
+            &token,
+            "fermentable",
+            &format!("Malt {base}"),
+            "kg",
+            3.0,
+            200,
+        )
+        .await;
+    let _malt_lot1_number = malt_lot1["lot_number"].as_str().unwrap().to_string();
+    let malt_lot2 = app
+        .create_lot_with_cost(
+            &token,
+            "fermentable",
+            &format!("Malt {base}"),
+            "kg",
+            3.0,
+            300,
+        )
+        .await;
+    let malt_lot2_number = malt_lot2["lot_number"].as_str().unwrap().to_string();
+
+    // Create hop and yeast lots (zero cost, not tracked with cost_pence).
+    app.create_lot(&token, "hop", &format!("Hop {base}"), "g", 100.0)
+        .await;
+    app.create_lot(&token, "yeast", &format!("Yeast {base}"), "g", 50.0)
+        .await;
+
+    // Create and transition the batch.
+    let batch: Value = app
+        .post("/api/v1/batches", &token, json!({"recipe_id": recipe_id, "batch_number": format!("B-{}", uniq()), "name": "Cost Test"}))
+        .await
+        .json()
+        .await
+        .unwrap();
+    let batch_id = batch["batch"]["id"].as_str().unwrap();
+    let resp = app.transition(&token, batch_id, "brewing").await;
+    assert_eq!(resp.status(), 200);
+
+    // Assert forward traceability: the SECOND malt lot should appear in the trace for this batch.
+    // FIFO: 3.0 kg from lot1 + 2.0 kg from lot2 = 5.0 kg total.
+    let trace_resp = app
+        .get(
+            &format!("/api/v1/traceability/ingredient-lots/{}", malt_lot2_number),
+            &token,
+        )
+        .await;
+    assert_eq!(trace_resp.status(), 200);
+    let trace: Value = trace_resp.json().await.unwrap();
+    let batches = trace["batches"].as_array().unwrap();
+    assert!(
+        !batches.is_empty(),
+        "second malt lot should have at least one batch"
+    );
+    let batch_ids: Vec<&str> = batches
+        .iter()
+        .map(|b| b["batch"]["batch_id"].as_str().unwrap())
+        .collect();
+    assert!(
+        batch_ids.contains(&batch_id),
+        "batch {} not found in second malt lot trace",
+        batch_id
+    );
+
+    // Assert cost: 3.0 kg x 200 + 2.0 kg x 300 = 600 + 600 = 1200 pence.
+    let cost_resp = app
+        .post(
+            "/api/v1/reporting/batch-costs/compute",
+            &token,
+            json!({"batch_id": batch_id}),
+        )
+        .await;
+    assert_eq!(cost_resp.status(), 200);
+    let cost: Value = cost_resp.json().await.unwrap();
+    assert_eq!(cost["ingredient_cost_pence"].as_i64().unwrap(), 1200);
 }
 
 #[tokio::test]

@@ -32,13 +32,13 @@ refactors start from `main`.
 Standalone, highest business impact, no dependencies. Wrong numbers are being
 produced today.
 
-- [ ] `src/batch/service.rs` ~411: loop over **all** `result.allocations`, not just `.first()`.
-- [ ] Carry real cost: `cost_pence` = lot cost weighted by `amount_deducted` (lot cost is on the `Ingredient` rows returned by `select_for_deduct`; extend `DeductAllocation` to carry it).
-- [ ] Update the module header comment in `src/batch/service.rs` to describe the accounting.
-- [ ] Integration test: batch spanning two lots → two `batch_ingredients` rows with non-zero cost; `GET /reporting/batch-costs/{id}` reports the sum; `trace_ingredient_lot` on the second lot finds the batch.
-- [ ] `src/procurement/service.rs` `receive_po`: open a transaction, run every `update_line_received_qty` and the final `update_po` on `&mut *tx`, commit once.
-- [ ] Validate `received_quantity <= line.quantity` (or make over-receipt an explicit business rule).
-- [ ] Add `///` docs to every `pub fn` in `procurement/service.rs` and `equipment/service.rs` while in there (currently zero).
+- [x] `src/batch/service.rs` ~411: loop over **all** `result.allocations`, not just `.first()`.
+- [x] Carry real cost: `cost_pence` = lot cost weighted by `amount_deducted` (lot cost is on the `Ingredient` rows returned by `select_for_deduct`; extend `DeductAllocation` to carry it).
+- [x] Update the module header comment in `src/batch/service.rs` to describe the accounting.
+- [x] Integration test: batch spanning two lots → two `batch_ingredients` rows with non-zero cost; `GET /reporting/batch-costs/{id}` reports the sum; `trace_ingredient_lot` on the second lot finds the batch.
+- [x] `src/procurement/service.rs` `receive_po`: open a transaction, run every `update_line_received_qty` and the final `update_po` on `&mut *tx`, commit once.
+- [x] Validate `received_quantity <= line.quantity` (or make over-receipt an explicit business rule).
+- [x] Add `///` docs to every `pub fn` in `procurement/service.rs` and `equipment/service.rs` while in there (currently zero).
 
 ---
 

@@ -49,6 +49,8 @@ pub struct Ingredient {
     pub unit: String,
     pub lot_number: String,
     pub best_before_date: Option<String>,
+    /// Cost **per unit** in pence (e.g. pence per kg). Used for the weighted
+    /// average in inventory summaries and for FIFO batch cost allocation.
     pub cost_pence: i64,
     pub cost_currency: String,
     pub supplier: Option<String>,
@@ -97,6 +99,9 @@ pub struct AllocationEntry {
     pub best_before_date: Option<String>,
     pub amount_deducted: f64,
     pub remaining_in_lot: f64,
+    /// Cost attributed to this allocation: the lot's per-unit `cost_pence`
+    /// multiplied by `amount_deducted`, rounded to the nearest penny.
+    pub cost_pence: i64,
 }
 
 /// Returned by a successful deduct call.

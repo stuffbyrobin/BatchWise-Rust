@@ -21,6 +21,8 @@ use crate::state::AppState;
 
 // ---- equipment ----
 
+/// Creates an equipment record for the tenant with status "active", re-reads to populate computed fields.
+/// Returns not_found if the re-read fails.
 pub async fn create_equipment(
     state: &AppState,
     tenant_id: Uuid,
@@ -44,6 +46,7 @@ pub async fn create_equipment(
         .ok_or_else(|| ApiError::not_found("equipment"))
 }
 
+/// Lists equipment for the tenant with the given filter, returns paginated results.
 pub async fn list_equipment(
     state: &AppState,
     tenant_id: Uuid,
@@ -52,6 +55,8 @@ pub async fn list_equipment(
     Ok(repo::select_equipment(&state.pool, tenant_id, &filter).await?)
 }
 
+/// Gets an equipment record by ID for the tenant.
+/// Returns not_found if the equipment does not exist.
 pub async fn get_equipment(
     state: &AppState,
     tenant_id: Uuid,
@@ -62,6 +67,8 @@ pub async fn get_equipment(
         .ok_or_else(|| ApiError::not_found("equipment"))
 }
 
+/// Updates an equipment record for the tenant, re-reads to populate computed fields.
+/// Returns not_found if the equipment does not exist or the update affects no rows.
 pub async fn patch_equipment(
     state: &AppState,
     tenant_id: Uuid,
@@ -109,6 +116,8 @@ pub async fn patch_equipment(
     get_equipment(state, tenant_id, id).await
 }
 
+/// Deletes an equipment record by ID for the tenant.
+/// Returns not_found if no rows were affected.
 pub async fn delete_equipment(state: &AppState, tenant_id: Uuid, id: Uuid) -> Result<(), ApiError> {
     if !repo::delete_equipment(&state.pool, tenant_id, id).await? {
         return Err(ApiError::not_found("equipment"));
@@ -118,6 +127,9 @@ pub async fn delete_equipment(state: &AppState, tenant_id: Uuid, id: Uuid) -> Re
 
 // ---- schedules ----
 
+/// Creates a maintenance schedule for the equipment, validating equipment exists.
+/// Defaults active to true, re-reads to populate fields.
+/// Returns not_found if the re-read fails.
 pub async fn create_schedule(
     state: &AppState,
     tenant_id: Uuid,
@@ -142,6 +154,8 @@ pub async fn create_schedule(
         .ok_or_else(|| ApiError::not_found("maintenance_schedule"))
 }
 
+/// Lists maintenance schedules for the equipment, validating equipment exists.
+/// Returns paginated results.
 pub async fn list_schedules(
     state: &AppState,
     tenant_id: Uuid,
@@ -152,6 +166,8 @@ pub async fn list_schedules(
     Ok(repo::select_schedules(&state.pool, tenant_id, equipment_id, &filter).await?)
 }
 
+/// Updates a maintenance schedule for the tenant, validating it exists.
+/// Re-reads after update, returns not_found if the schedule does not exist or update affects no rows.
 pub async fn patch_schedule(
     state: &AppState,
     tenant_id: Uuid,
@@ -196,6 +212,8 @@ pub async fn patch_schedule(
         .ok_or_else(|| ApiError::not_found("maintenance_schedule"))
 }
 
+/// Deletes a maintenance schedule by ID for the tenant, validating it exists.
+/// Returns not_found if the schedule does not exist.
 pub async fn delete_schedule(
     state: &AppState,
     tenant_id: Uuid,
@@ -211,6 +229,9 @@ pub async fn delete_schedule(
 
 // ---- events ----
 
+/// Creates a maintenance event for the equipment, validating equipment exists.
+/// If a schedule_id is provided, validates the schedule exists and belongs to the same equipment.
+/// Advances the schedule's last_performed_at if linked. Returns business_rule on equipment mismatch.
 pub async fn create_event(
     state: &AppState,
     tenant_id: Uuid,
@@ -264,6 +285,8 @@ pub async fn create_event(
     Ok(event)
 }
 
+/// Lists maintenance events for the equipment, validating equipment exists.
+/// Returns paginated results.
 pub async fn list_events(
     state: &AppState,
     tenant_id: Uuid,
@@ -274,6 +297,8 @@ pub async fn list_events(
     Ok(repo::select_events(&state.pool, tenant_id, equipment_id, &filter).await?)
 }
 
+/// Deletes a maintenance event by ID for the tenant, validating it exists.
+/// Returns not_found if the event does not exist.
 pub async fn delete_event(
     state: &AppState,
     tenant_id: Uuid,
@@ -289,6 +314,8 @@ pub async fn delete_event(
 
 // ---- maintenance due feed ----
 
+/// Lists maintenance due items for the tenant with the given filter.
+/// Returns paginated results.
 pub async fn list_maintenance_due(
     state: &AppState,
     tenant_id: Uuid,

@@ -344,6 +344,7 @@ pub async fn deduct_in_tx(
             best_before_date: lot.best_before_date.clone(),
             amount_deducted: deduct_amt,
             remaining_in_lot: new_amount,
+            cost_pence: (lot.cost_pence as f64 * deduct_amt).round() as i64,
         });
         record_movement(
             &mut *conn,
@@ -375,6 +376,7 @@ pub async fn deduct_in_tx(
             best_before_date: oldest.best_before_date.clone(),
             amount_deducted: remaining,
             remaining_in_lot: new_amount,
+            cost_pence: (oldest.cost_pence as f64 * remaining).round() as i64,
         });
         record_movement(
             &mut *conn, tenant_id, user_id, oldest.id, -remaining, new_amount, req,

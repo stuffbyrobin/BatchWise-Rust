@@ -24,6 +24,8 @@ fn is_duplicate_name(e: &sqlx::Error) -> bool {
 
 // ---- suppliers ----
 
+/// Creates a supplier for the given tenant. Validates that the supplier name is unique within the tenant.
+/// Returns the created supplier, or a conflict error if the name is already taken, or not_found on lookup failure.
 pub async fn create_supplier(
     state: &AppState,
     tenant_id: Uuid,
@@ -50,6 +52,8 @@ pub async fn create_supplier(
     }
 }
 
+/// Lists suppliers for the given tenant with optional filtering and pagination.
+/// Returns a page of suppliers or an error if the query fails.
 pub async fn list_suppliers(
     state: &AppState,
     tenant_id: Uuid,
@@ -58,6 +62,8 @@ pub async fn list_suppliers(
     Ok(repo::select_suppliers(&state.pool, tenant_id, &filter).await?)
 }
 
+/// Retrieves a supplier by ID for the given tenant.
+/// Returns the supplier, or a not_found error if it does not exist.
 pub async fn get_supplier(
     state: &AppState,
     tenant_id: Uuid,
@@ -68,6 +74,8 @@ pub async fn get_supplier(
         .ok_or_else(|| ApiError::not_found("supplier"))
 }
 
+/// Updates a supplier by ID for the given tenant. Validates that the updated name is unique.
+/// Returns the updated supplier, a conflict error on duplicate name, or not_found if the supplier does not exist.
 pub async fn patch_supplier(
     state: &AppState,
     tenant_id: Uuid,
@@ -116,6 +124,8 @@ pub async fn patch_supplier(
     }
 }
 
+/// Deletes a supplier by ID for the given tenant. Validates that the supplier has no purchase orders.
+/// Returns an error if the supplier has POs (business_rule) or does not exist (not_found).
 pub async fn delete_supplier(state: &AppState, tenant_id: Uuid, id: Uuid) -> Result<(), ApiError> {
     if repo::supplier_has_pos(&state.pool, tenant_id, id).await? {
         return Err(ApiError::business_rule(
@@ -132,6 +142,9 @@ pub async fn delete_supplier(state: &AppState, tenant_id: Uuid, id: Uuid) -> Res
 
 // ---- purchase orders ----
 
+/// Creates a purchase order for the given tenant. Validates that the referenced supplier exists.
+/// Generates a sequential PO number within a transaction, inserts the PO, and returns it.
+/// Returns not_found if the supplier does not exist.
 pub async fn create_po(
     state: &AppState,
     tenant_id: Uuid,
@@ -161,6 +174,8 @@ pub async fn create_po(
     Ok(po)
 }
 
+/// Lists purchase orders for the given tenant with optional filtering and pagination.
+/// Returns a page of purchase orders or an error if the query fails.
 pub async fn list_pos(
     state: &AppState,
     tenant_id: Uuid,
@@ -169,6 +184,8 @@ pub async fn list_pos(
     Ok(repo::select_pos(&state.pool, tenant_id, &filter).await?)
 }
 
+/// Retrieves a purchase order by ID for the given tenant.
+/// Returns the purchase order, or a not_found error if it does not exist.
 pub async fn get_po(
     state: &AppState,
     tenant_id: Uuid,
@@ -215,6 +232,9 @@ fn validate_transition(po: &PurchaseOrder, to_status: &str) -> Result<(), ApiErr
     Ok(())
 }
 
+/// Updates a purchase order by ID for the given tenant. Validates status transitions:
+/// draft→sent/cancelled, sent→cancelled/partially_received/received, partially_received→received.
+/// Also validates that a PO cannot be marked as sent with no lines. Returns the updated PO.
 pub async fn patch_po(
     state: &AppState,
     tenant_id: Uuid,
@@ -246,6 +266,8 @@ pub async fn patch_po(
     get_po(state, tenant_id, id).await
 }
 
+/// Deletes a purchase order by ID for the given tenant. Validates that the PO is in draft status.
+/// Returns a business_rule error if the PO is not in draft, or not_found if it does not exist.
 pub async fn delete_po(state: &AppState, tenant_id: Uuid, id: Uuid) -> Result<(), ApiError> {
     let po = get_po(state, tenant_id, id).await?;
     if po.status != "draft" {
@@ -263,6 +285,8 @@ pub async fn delete_po(state: &AppState, tenant_id: Uuid, id: Uuid) -> Result<()
 
 // ---- lines ----
 
+/// Adds a line to a purchase order for the given tenant. Validates that the PO is in draft status.
+/// Defaults currency to GBP if not specified. Returns the created line or not_found/business_rule errors.
 pub async fn add_line(
     state: &AppState,
     tenant_id: Uuid,
@@ -295,6 +319,8 @@ pub async fn add_line(
     .await?)
 }
 
+/// Updates a line on a purchase order for the given tenant. Validates that the PO is in draft status.
+/// Returns the updated line, or not_found if the line does not exist.
 pub async fn patch_line(
     state: &AppState,
     tenant_id: Uuid,
@@ -349,6 +375,8 @@ pub async fn patch_line(
         .ok_or_else(|| ApiError::not_found("purchase_order_line"))
 }
 
+/// Deletes a line from a purchase order for the given tenant. Validates that the PO is in draft status.
+/// Returns a business_rule error if the PO is not in draft, or not_found if the line does not exist.
 pub async fn delete_line(
     state: &AppState,
     tenant_id: Uuid,
@@ -372,6 +400,9 @@ pub async fn delete_line(
 
 // ---- receipt ----
 
+/// Receives goods against a purchase order for the given tenant. Validates that the PO is in sent or
+/// partially_received status, and that received_quantity does not exceed the ordered quantity (over-receipt check).
+/// Updates line received quantities and PO status, and runs all writes in a single transaction.
 pub async fn receive_po(
     state: &AppState,
     tenant_id: Uuid,
@@ -388,11 +419,19 @@ pub async fn receive_po(
         ));
     }
 
+    let mut tx = state.pool.begin().await?;
+
     for rl in &req.lines {
         let Some(line) = po.lines.iter_mut().find(|l| l.id == rl.line_id) else {
             return Err(ApiError::not_found("purchase_order_line"));
         };
-        repo::update_line_received_qty(&state.pool, rl.line_id, rl.received_quantity).await?;
+        if rl.received_quantity > line.quantity {
+            return Err(ApiError::validation(
+                "received_quantity",
+                "cannot exceed the ordered quantity",
+            ));
+        }
+        repo::update_line_received_qty(&mut *tx, rl.line_id, rl.received_quantity).await?;
         line.received_quantity = Some(rl.received_quantity);
     }
 
@@ -415,7 +454,7 @@ pub async fn receive_po(
     }
 
     repo::update_po(
-        &state.pool,
+        &mut *tx,
         tenant_id,
         po_id,
         &po.status,
@@ -423,5 +462,6 @@ pub async fn receive_po(
         po.notes.as_deref(),
     )
     .await?;
+    tx.commit().await?;
     get_po(state, tenant_id, po_id).await
 }
