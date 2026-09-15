@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useBrewingPhysics } from '../../lib/physics/useBrewingPhysics'
 import { useRecipe, useCreateRecipe, useUpdateRecipe } from './hooks/useRecipes'
@@ -19,6 +19,7 @@ import { useYeastOptions } from './useYeastOptions'
 type RecipeType = 'all_grain' | 'extract' | 'partial_mash' | 'cider' | 'mead' | 'other'
 
 type Fermentable = {
+  uid: number
   step_order: number
   name: string
   amount: number
@@ -30,6 +31,7 @@ type Fermentable = {
 }
 
 type Hop = {
+  uid: number
   step_order: number
   name: string
   amount: number
@@ -41,6 +43,8 @@ type Hop = {
 }
 
 type Yeast = {
+  uid: number
+  yeast_id?: string
   name: string
   amount: number
   unit: 'g' | 'mL' | 'count'
@@ -48,12 +52,35 @@ type Yeast = {
 }
 
 type MashStep = {
+  uid: number
   step_order: number
   step_type: 'infusion' | 'temperature' | 'decoction'
   target_temp_c: number
   hold_minutes: number
   infusion_volume_liters?: number
 }
+
+// Client-only stable identity for editable rows (React keys + per-row UI
+// state). Never sent to the API: stripped in handleSubmit.
+let nextRowUid = 1
+const newUid = () => nextRowUid++
+
+// Fields coerced from text inputs to numbers. String fields (name/type/addition)
+// must stay strings, otherwise Number("") turns them into NaN.
+const NUMERIC_FERM_FIELDS = new Set<keyof Fermentable>([
+  'step_order',
+  'amount',
+  'color_ebc',
+  'potential_ppg',
+])
+const NUMERIC_HOP_FIELDS = new Set<keyof Hop>([
+  'step_order',
+  'amount',
+  'alpha_acid_pct',
+  'boil_time_minutes',
+])
+const NUMERIC_YEAST_FIELDS = new Set<keyof Yeast>(['amount', 'attenuation_pct'])
+const NUMERIC_MASH_FIELDS = new Set<keyof MashStep>(['step_order', 'target_temp_c', 'hold_minutes', 'infusion_volume_liters'])
 
 const TYPE_OPTIONS: { value: RecipeType; label: string }[] = [
   { value: 'all_grain', label: 'All Grain' },
@@ -134,6 +161,8 @@ export default function RecipeEditorPage() {
 
   // Load recipe data in edit mode
   const { data: recipeData, isLoading, isError: isLoadError, error: loadError } = useRecipe(id || '')
+  // Id of the recipe whose data has already been copied into local state.
+  const hydratedRecipeId = useRef<string | null>(null)
 
   // Create/Update mutations
   const createMutation = useCreateRecipe()
@@ -177,6 +206,11 @@ export default function RecipeEditorPage() {
   // Populate state from loaded recipe
   useEffect(() => {
     if (!recipeData) return
+    // Later refetches (e.g. the query invalidation after a save) must not
+    // overwrite in-progress edits or regenerate row uids, which would remount
+    // every row and drop the custom-row flags.
+    if (recipeData.id != null && hydratedRecipeId.current === recipeData.id) return
+    hydratedRecipeId.current = recipeData.id ?? null
 
     setName(recipeData.name ?? '')
     setType((recipeData.type as RecipeType) ?? 'all_grain')
@@ -196,6 +230,7 @@ export default function RecipeEditorPage() {
     // Map fermentables
     if (recipeData.fermentables) {
       const mapped = recipeData.fermentables.map((f) => ({
+        uid: newUid(),
         step_order: f.step_order ?? 1,
         name: f.name ?? '',
         amount: f.amount ?? 0,
@@ -205,12 +240,13 @@ export default function RecipeEditorPage() {
         type: f.type ?? undefined,
         addition: f.addition ?? undefined,
       }))
-      setFermentables(mapped.length > 0 ? mapped : [{ step_order: 1, name: '', amount: 0, unit: 'kg' }])
+      setFermentables(mapped.length > 0 ? mapped : [{ uid: newUid(), step_order: 1, name: '', amount: 0, unit: 'kg' }])
     }
 
     // Map hops
     if (recipeData.hops) {
       const mapped = recipeData.hops.map((h) => ({
+        uid: newUid(),
         step_order: h.step_order ?? 1,
         name: h.name ?? '',
         amount: h.amount ?? 0,
@@ -226,6 +262,8 @@ export default function RecipeEditorPage() {
     // Map yeasts
     if (recipeData.yeasts) {
       const mapped = recipeData.yeasts.map((y) => ({
+        uid: newUid(),
+        yeast_id: y.yeast_id ?? undefined,
         name: y.name ?? '',
         amount: y.amount ?? 0,
         unit: (y.unit as 'g' | 'mL' | 'count') ?? 'g',
@@ -237,6 +275,7 @@ export default function RecipeEditorPage() {
     // Map mash steps
     if (recipeData.mash_steps) {
       const mapped = recipeData.mash_steps.map((m) => ({
+        uid: newUid(),
         step_order: m.step_order ?? 1,
         step_type: (m.step_type as 'infusion' | 'temperature' | 'decoction') ?? 'infusion',
         target_temp_c: m.target_temp_c ?? 0,
@@ -250,14 +289,14 @@ export default function RecipeEditorPage() {
   // Initialize empty arrays for create mode
   useEffect(() => {
     if (!isEditMode && fermentables.length === 0) {
-      setFermentables([{ step_order: 1, name: '', amount: 0, unit: 'kg' }])
+      setFermentables([{ uid: newUid(), step_order: 1, name: '', amount: 0, unit: 'kg' }])
     }
   }, [isEditMode, fermentables.length])
 
   // Helper functions for arrays
   const addFermentable = () => {
     const newOrder = fermentables.length > 0 ? Math.max(...fermentables.map((f) => f.step_order)) + 1 : 1
-    setFermentables([...fermentables, { step_order: newOrder, name: '', amount: 0, unit: 'kg' }])
+    setFermentables([...fermentables, { uid: newUid(), step_order: newOrder, name: '', amount: 0, unit: 'kg' }])
   }
 
   const removeFermentable = (index: number) => {
@@ -266,14 +305,6 @@ export default function RecipeEditorPage() {
     setFermentables(newArray)
   }
 
-  // Numeric fermentable fields get coerced from their text inputs; string
-  // fields (name/type/addition) must stay strings (else they become NaN).
-  const NUMERIC_FERM_FIELDS = new Set<keyof Fermentable>([
-    'step_order',
-    'amount',
-    'color_ebc',
-    'potential_ppg',
-  ])
   const updateFermentable = (index: number, field: keyof Fermentable, value: string | number) => {
     const v =
       typeof value === 'string' && NUMERIC_FERM_FIELDS.has(field)
@@ -290,21 +321,29 @@ export default function RecipeEditorPage() {
   }
 
   // Malt dropdown: in-stock + generic library options, and which rows are in
-  // free-text "Custom / Other" mode (keyed by stable step_order).
+  // free-text "Custom / Other" mode (keyed by the row uid).
   const malts = useMaltOptions()
   const [customMaltRows, setCustomMaltRows] = useState<Set<number>>(new Set())
 
-  const pickMalt = (index: number, stepOrder: number, value: string) => {
+  const pickMalt = (index: number, rowUid: number, value: string) => {
     if (value === '__custom__') {
-      setCustomMaltRows((prev) => new Set(prev).add(stepOrder))
+      setCustomMaltRows((prev) => new Set(prev).add(rowUid))
       return
     }
-    if (value === '__none__') return
+    if (value === '__none__') {
+      setCustomMaltRows((prev) => {
+        const next = new Set(prev)
+        next.delete(rowUid)
+        return next
+      })
+      updateFermentable(index, 'name', '')
+      return
+    }
     const opt = malts.byKey.get(value)
     if (!opt) return
     setCustomMaltRows((prev) => {
       const next = new Set(prev)
-      next.delete(stepOrder)
+      next.delete(rowUid)
       return next
     })
     updateFermentableFields(index, {
@@ -317,7 +356,7 @@ export default function RecipeEditorPage() {
 
   const addHop = () => {
     const newOrder = hops.length > 0 ? Math.max(...hops.map((h) => h.step_order)) + 1 : 1
-    setHops([...hops, { step_order: newOrder, name: '', amount: 0, unit: 'g', alpha_acid_pct: 0, boil_time_minutes: 0 }])
+    setHops([...hops, { uid: newUid(), step_order: newOrder, name: '', amount: 0, unit: 'g', alpha_acid_pct: 0, boil_time_minutes: 0 }])
   }
 
   const removeHop = (index: number) => {
@@ -326,19 +365,15 @@ export default function RecipeEditorPage() {
     setHops(newArray)
   }
 
-  const NUMERIC_HOP_FIELDS = new Set<keyof Hop>([
-    'step_order',
-    'amount',
-    'alpha_acid_pct',
-    'boil_time_minutes',
-  ])
   const updateHop = (index: number, field: keyof Hop, value: string | number) => {
     const v =
       typeof value === 'string' && NUMERIC_HOP_FIELDS.has(field)
         ? value === ''
           ? 0
           : Number(value)
-        : value
+        : (field === 'form' || field === 'use') && value === ''
+          ? undefined
+          : value
     setHops((prev) => prev.map((h, i) => (i === index ? { ...h, [field]: v } : h)))
   }
   const updateHopFields = (index: number, patch: Partial<Hop>) => {
@@ -346,17 +381,25 @@ export default function RecipeEditorPage() {
   }
   const hopOptions = useHopOptions()
   const [customHopRows, setCustomHopRows] = useState<Set<number>>(new Set())
-  const pickHop = (index: number, stepOrder: number, value: string) => {
+  const pickHop = (index: number, rowUid: number, value: string) => {
     if (value === '__custom__') {
-      setCustomHopRows((prev) => new Set(prev).add(stepOrder))
+      setCustomHopRows((prev) => new Set(prev).add(rowUid))
       return
     }
-    if (value === '__none__') return
+    if (value === '__none__') {
+      setCustomHopRows((prev) => {
+        const next = new Set(prev)
+        next.delete(rowUid)
+        return next
+      })
+      updateHop(index, 'name', '')
+      return
+    }
     const opt = hopOptions.byKey.get(value)
     if (!opt) return
     setCustomHopRows((prev) => {
       const next = new Set(prev)
-      next.delete(stepOrder)
+      next.delete(rowUid)
       return next
     })
     updateHopFields(
@@ -366,7 +409,7 @@ export default function RecipeEditorPage() {
   }
 
   const addYeast = () => {
-    setYeasts([...yeasts, { name: '', amount: 0, unit: 'g' }])
+    setYeasts([...yeasts, { uid: newUid(), name: '', amount: 0, unit: 'g' }])
   }
 
   const removeYeast = (index: number) => {
@@ -375,7 +418,6 @@ export default function RecipeEditorPage() {
     setYeasts(newArray)
   }
 
-  const NUMERIC_YEAST_FIELDS = new Set<keyof Yeast>(['amount', 'attenuation_pct'])
   const updateYeast = (index: number, field: keyof Yeast, value: string | number) => {
     const v =
       typeof value === 'string' && NUMERIC_YEAST_FIELDS.has(field)
@@ -389,31 +431,42 @@ export default function RecipeEditorPage() {
     setYeasts((prev) => prev.map((y, i) => (i === index ? { ...y, ...patch } : y)))
   }
   const yeastOptions = useYeastOptions()
+  // While the option lists load, byName is empty; do not infer Custom mode from
+  // that or every saved row flashes as "Custom / Other" on first paint.
+  const optionsLoading = malts.loading || hopOptions.loading || yeastOptions.loading
   const [customYeastRows, setCustomYeastRows] = useState<Set<number>>(new Set())
-  const pickYeast = (index: number, value: string) => {
+  const pickYeast = (index: number, rowUid: number, value: string) => {
     if (value === '__custom__') {
-      setCustomYeastRows((prev) => new Set(prev).add(index))
+      setCustomYeastRows((prev) => new Set(prev).add(rowUid))
+      updateYeastFields(index, { yeast_id: undefined })
       return
     }
-    if (value === '__none__') return
+    if (value === '__none__') {
+      setCustomYeastRows((prev) => {
+        const next = new Set(prev)
+        next.delete(rowUid)
+        return next
+      })
+      updateYeastFields(index, { name: '', yeast_id: undefined })
+      return
+    }
     const opt = yeastOptions.byKey.get(value)
     if (!opt) return
     setCustomYeastRows((prev) => {
       const next = new Set(prev)
-      next.delete(index)
+      next.delete(rowUid)
       return next
     })
-    updateYeastFields(
-      index,
-      opt.attenuation_pct != null
-        ? { name: opt.name, attenuation_pct: opt.attenuation_pct }
-        : { name: opt.name }
-    )
+    // Generic (library) picks keep their strain id so batch scheduling can use
+    // its kinetics; stock picks have no library id.
+    const patch: Partial<Yeast> = { name: opt.name, yeast_id: opt.source === 'generic' ? opt.id : undefined }
+    if (opt.attenuation_pct != null) patch.attenuation_pct = opt.attenuation_pct
+    updateYeastFields(index, patch)
   }
 
   const addMashStep = () => {
     const newOrder = mashSteps.length > 0 ? Math.max(...mashSteps.map((m) => m.step_order)) + 1 : 1
-    setMashSteps([...mashSteps, { step_order: newOrder, step_type: 'infusion', target_temp_c: 0, hold_minutes: 0 }])
+    setMashSteps([...mashSteps, { uid: newUid(), step_order: newOrder, step_type: 'infusion', target_temp_c: 0, hold_minutes: 0 }])
   }
 
   const removeMashStep = (index: number) => {
@@ -423,9 +476,13 @@ export default function RecipeEditorPage() {
   }
 
   const updateMashStep = (index: number, field: keyof MashStep, value: string | number) => {
-    const newArray = [...mashSteps]
-    newArray[index] = { ...newArray[index], [field]: typeof value === 'string' ? (value === '' ? 0 : Number(value)) : value }
-    setMashSteps(newArray)
+    const v =
+      typeof value === 'string' && NUMERIC_MASH_FIELDS.has(field)
+        ? value === ''
+          ? 0
+          : Number(value)
+        : value
+    setMashSteps((prev) => prev.map((m, i) => (i === index ? { ...m, [field]: v } : m)))
   }
 
   const handleSave = () => {
@@ -437,10 +494,10 @@ export default function RecipeEditorPage() {
       boil_time_minutes: boilTimeMinutes ?? undefined,
       efficiency_pct: efficiencyPct ?? undefined,
       notes: notes || undefined,
-      fermentables: fermentables.length > 0 ? fermentables : undefined,
-      hops: hops.length > 0 ? hops : undefined,
-      yeasts: yeasts.length > 0 ? yeasts : undefined,
-      mash_steps: mashSteps.length > 0 ? mashSteps : undefined,
+      fermentables: fermentables.length > 0 ? fermentables.map(({ uid: _uid, ...f }) => f) : undefined,
+      hops: hops.length > 0 ? hops.map(({ uid: _uid, ...h }) => h) : undefined,
+      yeasts: yeasts.length > 0 ? yeasts.map(({ uid: _uid, ...y }) => y) : undefined,
+      mash_steps: mashSteps.length > 0 ? mashSteps.map(({ uid: _uid, ...m }) => m) : undefined,
     }
 
     if (isEditMode) {
@@ -475,7 +532,7 @@ export default function RecipeEditorPage() {
   // Render helpers
   const inputCls = "border border-[var(--color-border)] rounded px-2 py-1 bg-[var(--color-surface)] text-[var(--color-fg)]"
   const renderFermentableRow = (f: Fermentable, index: number) => (
-    <tr key={index} className="border-t border-[var(--color-border)]">
+    <tr key={f.uid} className="border-t border-[var(--color-border)]">
       <td className="px-3 py-2">
         <input
           type="number"
@@ -487,13 +544,13 @@ export default function RecipeEditorPage() {
       <td className="px-3 py-2">
         {(() => {
           const matched = malts.byName.get(f.name)
-          const isCustom = customMaltRows.has(f.step_order) || (f.name !== '' && !matched)
+          const isCustom = customMaltRows.has(f.uid) || (!optionsLoading && f.name !== '' && !matched)
           const selectValue = isCustom ? '__custom__' : matched ? matched.key : '__none__'
           return (
             <div className="flex flex-col gap-1">
               <select
                 value={selectValue}
-                onChange={(e) => pickMalt(index, f.step_order, e.target.value)}
+                onChange={(e) => pickMalt(index, f.uid, e.target.value)}
                 className={`${inputCls} w-44`}
               >
                 <option value="__none__">Select malt…</option>
@@ -587,7 +644,7 @@ export default function RecipeEditorPage() {
   )
 
   const renderHopRow = (h: Hop, index: number) => (
-    <tr key={index} className="border-t border-[var(--color-border)]">
+    <tr key={h.uid} className="border-t border-[var(--color-border)]">
       <td className="px-3 py-2">
         <input
           type="number"
@@ -599,13 +656,13 @@ export default function RecipeEditorPage() {
       <td className="px-3 py-2">
         {(() => {
           const matched = hopOptions.byName.get(h.name)
-          const isCustom = customHopRows.has(h.step_order) || (h.name !== '' && !matched)
+          const isCustom = customHopRows.has(h.uid) || (!optionsLoading && h.name !== '' && !matched)
           const selectValue = isCustom ? '__custom__' : matched ? matched.key : '__none__'
           return (
             <div className="flex flex-col gap-1">
               <select
                 value={selectValue}
-                onChange={(e) => pickHop(index, h.step_order, e.target.value)}
+                onChange={(e) => pickHop(index, h.uid, e.target.value)}
                 className={`${inputCls} w-44`}
               >
                 <option value="__none__">Select hop…</option>
@@ -722,17 +779,17 @@ export default function RecipeEditorPage() {
   )
 
   const renderYeastRow = (y: Yeast, index: number) => (
-    <tr key={index} className="border-t border-[var(--color-border)]">
+    <tr key={y.uid} className="border-t border-[var(--color-border)]">
       <td className="px-3 py-2">
         {(() => {
           const matched = yeastOptions.byName.get(y.name)
-          const isCustom = customYeastRows.has(index) || (y.name !== '' && !matched)
+          const isCustom = customYeastRows.has(y.uid) || (!optionsLoading && y.name !== '' && !matched)
           const selectValue = isCustom ? '__custom__' : matched ? matched.key : '__none__'
           return (
             <div className="flex flex-col gap-1">
               <select
                 value={selectValue}
-                onChange={(e) => pickYeast(index, e.target.value)}
+                onChange={(e) => pickYeast(index, y.uid, e.target.value)}
                 className={`${inputCls} w-44`}
               >
                 <option value="__none__">Select yeast…</option>
@@ -799,7 +856,7 @@ export default function RecipeEditorPage() {
   )
 
   const renderMashStepRow = (m: MashStep, index: number) => (
-    <tr key={index} className="border-t border-[var(--color-border)]">
+    <tr key={m.uid} className="border-t border-[var(--color-border)]">
       <td className="px-3 py-2">
         <input
           type="number"

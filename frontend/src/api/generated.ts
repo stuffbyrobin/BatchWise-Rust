@@ -2510,12 +2510,14 @@ export interface components {
             /** Format: uuid */
             tenant_id: string;
             name: string;
-            /** @enum {string} */
-            type: "ale" | "lager" | "wheat" | "wine" | "champagne" | "other";
-            lab?: string | null;
+            /** @enum {string|null} */
+            type?: "ale" | "lager" | "wild" | "bacteria" | "other" | null;
+            manufacturer?: string | null;
             product_code?: string | null;
-            attenuation_min?: number | null;
-            attenuation_max?: number | null;
+            /** @enum {string|null} */
+            form?: "dry" | "liquid" | "slant" | null;
+            attenuation_min_pct?: number | null;
+            attenuation_max_pct?: number | null;
             temp_min_c?: number | null;
             temp_max_c?: number | null;
             flocculation?: string | null;
@@ -2528,11 +2530,13 @@ export interface components {
         YeastRequest: {
             name: string;
             /** @enum {string} */
-            type: "ale" | "lager" | "wheat" | "wine" | "champagne" | "other";
-            lab?: string;
+            type?: "ale" | "lager" | "wild" | "bacteria" | "other";
+            manufacturer?: string;
             product_code?: string;
-            attenuation_min?: number | null;
-            attenuation_max?: number | null;
+            /** @enum {string} */
+            form?: "dry" | "liquid" | "slant";
+            attenuation_min_pct?: number | null;
+            attenuation_max_pct?: number | null;
             temp_min_c?: number | null;
             temp_max_c?: number | null;
             flocculation?: string;
@@ -3572,7 +3576,12 @@ export interface components {
             mineral_additions?: {
                 type?: string;
                 amount?: number;
-                form?: string;
+                /**
+                 * @description Salt form. Omitted: per-salt default (anhydrous for Na2SO4, hydrate otherwise). The legacy value dihydrate is accepted as an alias of hydrate.
+                 * @enum {string}
+                 */
+                form?: "anhydrous" | "hydrate" | "liquid";
+                /** @description Solution strength (%w/w), used only when form is liquid. */
                 strength_pct?: number;
             }[];
             acid_additions?: {
