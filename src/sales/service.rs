@@ -18,14 +18,11 @@ use super::repository as repo;
 use crate::batch::service as batch_svc;
 use crate::pkg::duty;
 use crate::pkg::gravity;
+use crate::platform::errors::is_unique_violation;
 use crate::platform::errors::ApiError;
+use crate::platform::sort;
 use crate::state::AppState;
 use crate::tenant::repository as tenant_repo;
-
-fn is_unique_violation(e: &sqlx::Error) -> bool {
-    e.as_database_error()
-        .is_some_and(|d| d.is_unique_violation())
-}
 
 fn today() -> String {
     Utc::now().date_naive().to_string()
@@ -98,7 +95,7 @@ pub async fn list_customers(
     tenant_id: Uuid,
     filter: CustomerFilter,
 ) -> Result<Page<Customer>, ApiError> {
-    let order_by = customer_sort(&filter.sort);
+    let order_by = sort::parse(&filter.sort, CUSTOMER_ALLOWED_SORT, "name")?;
     Ok(repo::select_customers(&state.pool, tenant_id, &filter, &order_by).await?)
 }
 
@@ -253,7 +250,7 @@ pub async fn list_orders(
     tenant_id: Uuid,
     filter: OrderFilter,
 ) -> Result<Page<Order>, ApiError> {
-    let order_by = order_sort(&filter.sort);
+    let order_by = sort::parse(&filter.sort, ORDER_ALLOWED_SORT, "-order_date")?;
     Ok(repo::select_orders(&state.pool, tenant_id, &filter, &order_by).await?)
 }
 
@@ -565,7 +562,7 @@ pub async fn list_duty_events(
     tenant_id: Uuid,
     filter: DutyEventFilter,
 ) -> Result<Page<DutyEvent>, ApiError> {
-    let order_by = duty_event_sort(&filter.sort);
+    let order_by = sort::parse(&filter.sort, DUTY_EVENT_ALLOWED_SORT, "-crystallised_at")?;
     Ok(repo::select_duty_events(&state.pool, tenant_id, &filter, &order_by).await?)
 }
 
@@ -590,33 +587,18 @@ pub async fn sum_revenue_for_batch(
 
 // ---- sort builders ----
 
-fn customer_sort(sort: &str) -> String {
-    let desc = sort.starts_with('-');
-    let col = sort.trim_start_matches('-');
-    match col {
-        "name" | "created_at" => format!("{col} {}", if desc { "DESC" } else { "ASC" }),
-        _ => "name ASC".to_string(),
-    }
-}
+/// Allowed sort fields for customers.
+const CUSTOMER_ALLOWED_SORT: sort::Allowed = &[("name", "name"), ("created_at", "created_at")];
 
-fn order_sort(sort: &str) -> String {
-    let desc = sort.starts_with('-');
-    let col = sort.trim_start_matches('-');
-    match col {
-        "order_date" | "order_number" | "created_at" => {
-            format!("o.{col} {}", if desc { "DESC" } else { "ASC" })
-        }
-        _ => "o.order_date DESC".to_string(),
-    }
-}
+/// Allowed sort fields for orders.
+const ORDER_ALLOWED_SORT: sort::Allowed = &[
+    ("order_date", "o.order_date"),
+    ("order_number", "o.order_number"),
+    ("created_at", "o.created_at"),
+];
 
-fn duty_event_sort(sort: &str) -> String {
-    let desc = sort.starts_with('-');
-    let col = sort.trim_start_matches('-');
-    match col {
-        "crystallised_at" | "created_at" => {
-            format!("{col} {}", if desc { "DESC" } else { "ASC" })
-        }
-        _ => "crystallised_at DESC".to_string(),
-    }
-}
+/// Allowed sort fields for duty events.
+const DUTY_EVENT_ALLOWED_SORT: sort::Allowed = &[
+    ("crystallised_at", "crystallised_at"),
+    ("created_at", "created_at"),
+];

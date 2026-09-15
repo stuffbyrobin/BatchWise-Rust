@@ -9,34 +9,8 @@ use sqlx::FromRow;
 use uuid::Uuid;
 use validator::{Validate, ValidationError};
 
+pub use crate::platform::pagination::Page;
 use crate::recipe::models::{Fermentable, Hop, MashStep, Yeast};
-
-/// Generic paginated response envelope.
-#[derive(Debug, Serialize)]
-pub struct Page<T> {
-    pub items: Vec<T>,
-    pub total: i64,
-    pub page: i64,
-    pub page_size: i64,
-    pub total_pages: i64,
-}
-
-impl<T> Page<T> {
-    pub fn new(items: Vec<T>, total: i64, page: i64, page_size: i64) -> Self {
-        let total_pages = if page_size > 0 && total > 0 {
-            (total + page_size - 1) / page_size
-        } else {
-            0
-        };
-        Page {
-            items,
-            total,
-            page,
-            page_size,
-            total_pages,
-        }
-    }
-}
 
 /// Recipe state captured at batch creation.
 #[derive(Debug, Clone, Serialize, Deserialize)]

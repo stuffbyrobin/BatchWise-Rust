@@ -9,26 +9,16 @@ use sqlx::{PgExecutor, PgPool, Postgres, QueryBuilder};
 use uuid::Uuid;
 
 use super::models::{Kinetics, ListFilter, Page, SYSTEM_TENANT_ID};
+use crate::platform::errors::ApiError;
+use crate::platform::pagination;
+use crate::platform::sort;
 
 const COLS: &str = "id, tenant_id, yeast_id, \
     fermentation_temp_c::float8 AS fermentation_temp_c, \
     primary_fermentation_days, conditioning_days, lag_phase_hours, \
     attenuation_pct::float8 AS attenuation_pct, notes, created_at, updated_at";
 
-/// Clamps page (>=1) and page_size (1..=100, default 20).
-fn clamp_page(page: i64, page_size: i64) -> (i64, i64) {
-    let page = if page < 1 { 1 } else { page };
-    let page_size = if page_size < 1 {
-        20
-    } else if page_size > 100 {
-        100
-    } else {
-        page_size
-    };
-    (page, page_size)
-}
-
-/// Scalar columns for inserting/updating a kinetics row.
+/// Clamps page (>=1) and page_size (1..=100, default 20)./// Scalar columns for inserting/updating a kinetics row.
 #[derive(Debug, Clone)]
 pub struct KineticsWrite {
     pub yeast_id: Uuid,
@@ -106,38 +96,20 @@ pub async fn select_by_id(
         .await
 }
 
-const ALLOWED_SORT: &[(&str, &str)] = &[
+/// Yeast kinetics sort allow-list.
+const KINETICS_ALLOWED_SORT: sort::Allowed = &[
     ("created_at", "created_at"),
     ("fermentation_temp_c", "fermentation_temp_c"),
 ];
-
-/// Builds a safe `ORDER BY` from the sort spec (default `created_at ASC`).
-/// Unknown fields fall back to `created_at`, matching the Go allow-list.
-fn build_order_by(sort: &str) -> String {
-    let spec = sort.trim();
-    if spec.is_empty() {
-        return "created_at ASC".to_string();
-    }
-    let (name, dir) = match spec.strip_prefix('-') {
-        Some(rest) => (rest, "DESC"),
-        None => (spec, "ASC"),
-    };
-    let col = ALLOWED_SORT
-        .iter()
-        .find(|(k, _)| *k == name)
-        .map(|(_, c)| *c)
-        .unwrap_or("created_at");
-    format!("{col} {dir}")
-}
 
 /// Lists kinetics rows with filters, tenant-scoped.
 pub async fn select_list(
     pool: &PgPool,
     tenant_id: Uuid,
     filter: &ListFilter,
-) -> Result<Page<Kinetics>, sqlx::Error> {
-    let (page, page_size) = clamp_page(filter.page, filter.page_size);
-    let order_by = build_order_by(&filter.sort);
+) -> Result<Page<Kinetics>, ApiError> {
+    let (page, page_size) = pagination::clamp(filter.page, filter.page_size);
+    let order_by = sort::parse(&filter.sort, KINETICS_ALLOWED_SORT, "created_at")?;
 
     let push_where = |qb: &mut QueryBuilder<Postgres>| {
         qb.push(" WHERE tenant_id = ").push_bind(tenant_id);
@@ -152,9 +124,11 @@ pub async fn select_list(
 
     let mut list_qb = QueryBuilder::<Postgres>::new(format!("SELECT {COLS} FROM yeast_kinetics"));
     push_where(&mut list_qb);
-    list_qb.push(format!(" ORDER BY {order_by} "));
+    list_qb.push(format!(" ORDER BY {} ", &order_by));
     list_qb.push(" LIMIT ").push_bind(page_size);
-    list_qb.push(" OFFSET ").push_bind((page - 1) * page_size);
+    list_qb
+        .push(" OFFSET ")
+        .push_bind(pagination::offset(page, page_size));
     let items = list_qb.build_query_as::<Kinetics>().fetch_all(pool).await?;
 
     Ok(Page::new(items, total, page, page_size))

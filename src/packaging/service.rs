@@ -16,13 +16,9 @@ use super::models::{
 };
 use super::repository as repo;
 use crate::audit;
+use crate::platform::errors::is_unique_violation;
 use crate::platform::errors::ApiError;
 use crate::state::AppState;
-
-fn is_unique_violation(e: &sqlx::Error) -> bool {
-    e.as_database_error()
-        .is_some_and(|d| d.is_unique_violation())
-}
 
 // ---- packaging runs ----
 

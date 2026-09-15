@@ -356,3 +356,113 @@ async fn deduct_insufficient_stock_overdraft_on_warns() {
     let last = allocs.last().unwrap();
     assert_eq!(last["remaining_in_lot"].as_f64().unwrap(), -3.0);
 }
+
+#[tokio::test]
+async fn list_pagination_is_clamped_and_overflow_safe() {
+    let app = spawn_app(false).await;
+    let token = app.token().await;
+    let name = format!("Citra {}", uniq());
+    app.create_lot(&token, &name, 5.0, &format!("LOT-{}", uniq()), None)
+        .await;
+
+    let resp = app
+        .client
+        .get(format!("{}/api/v1/inventory?page_size=1000000", app.base))
+        .bearer_auth(&token)
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), 200);
+    let body: Value = resp.json().await.unwrap();
+    assert_eq!(body["page_size"].as_i64(), Some(100));
+
+    let resp = app
+        .client
+        .get(format!(
+            "{}/api/v1/inventory?page=9223372036854775807",
+            app.base
+        ))
+        .bearer_auth(&token)
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), 200);
+    let body: Value = resp.json().await.unwrap();
+    assert!(body["items"].as_array().unwrap().is_empty());
+
+    let resp = app
+        .client
+        .get(format!("{}/api/v1/inventory?page=-5", app.base))
+        .bearer_auth(&token)
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), 200);
+    let body: Value = resp.json().await.unwrap();
+    assert_eq!(body["page"].as_i64(), Some(1));
+}
+
+#[tokio::test]
+async fn unknown_sort_field_is_rejected() {
+    let app = spawn_app(false).await;
+    let token = app.token().await;
+
+    let resp = app
+        .client
+        .get(format!("{}/api/v1/inventory?sort=bogus", app.base))
+        .bearer_auth(&token)
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), 400);
+    let body: Value = resp.json().await.unwrap();
+    assert_eq!(body["details"]["field"], json!("sort"));
+
+    let resp = app
+        .client
+        .get(format!("{}/api/v1/library/styles?sort=bogus", app.base))
+        .bearer_auth(&token)
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), 400);
+    let body: Value = resp.json().await.unwrap();
+    assert_eq!(body["details"]["field"], json!("sort"));
+
+    let resp = app
+        .client
+        .get(format!("{}/api/v1/inventory?sort=-name", app.base))
+        .bearer_auth(&token)
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), 200);
+}
+
+#[tokio::test]
+async fn check_violation_maps_to_validation_error() {
+    let app = spawn_app(false).await;
+    let token = app.token().await;
+    let lot = app
+        .create_lot(
+            &token,
+            &format!("Test {}", uniq()),
+            5.0,
+            &format!("LOT-{}", uniq()),
+            None,
+        )
+        .await;
+    let id = lot["id"].as_str().unwrap();
+
+    let resp = app
+        .client
+        .patch(format!("{}/api/v1/inventory/{id}", app.base))
+        .bearer_auth(&token)
+        .json(&json!({"type": "bogus"}))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), 400);
+    let body: Value = resp.json().await.unwrap();
+    assert_eq!(body["details"]["field"], json!("body"));
+}

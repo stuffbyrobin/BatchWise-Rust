@@ -13,13 +13,10 @@ use super::models::{
     RecipeWithIngredients, Yeast,
 };
 use super::repository::{self as repo, RecipeWrite};
+use crate::platform::errors::is_unique_violation;
 use crate::platform::errors::ApiError;
+use crate::platform::sort;
 use crate::state::AppState;
-
-fn is_unique_violation(e: &sqlx::Error) -> bool {
-    e.as_database_error()
-        .is_some_and(|d| d.is_unique_violation())
-}
 
 fn write_from_create(req: &CreateRequest) -> RecipeWrite {
     RecipeWrite {
@@ -177,7 +174,12 @@ pub async fn list(
     tenant_id: Uuid,
     filter: ListFilter,
 ) -> Result<Page<Recipe>, ApiError> {
-    let order_by = build_sort(&filter.sort)?;
+    let order_by = sort::parse_with(
+        &filter.sort,
+        RECIPE_ALLOWED_SORT,
+        "-created_at",
+        sort::Nulls::Last,
+    )?;
     Ok(repo::select_list(&state.pool, tenant_id, &filter, &order_by).await?)
 }
 
@@ -477,28 +479,17 @@ fn child_step(recipe_id: Uuid, i: super::models::MashStepInput) -> MashStep {
     }
 }
 
-/// Builds a safe `ORDER BY` from the sort spec (default `-created_at`).
-fn build_sort(sort: &str) -> Result<String, ApiError> {
-    let spec = if sort.is_empty() { "-created_at" } else { sort };
-    let desc = spec.starts_with('-');
-    let col = spec.trim_start_matches('-');
-    let mapped = match col {
-        "created_at" => "created_at",
-        "updated_at" => "updated_at",
-        "name" => "name",
-        "type" => "type",
-        "batch_size_liters" => "batch_size_liters",
-        "calc_og" => "calc_og",
-        "calc_fg" => "calc_fg",
-        "calc_abv_pct" => "calc_abv_pct",
-        "calc_ibu" => "calc_ibu",
-        "calc_color_ebc" => "calc_color_ebc",
-        _ => "created_at",
-    };
-    // NULLS LAST so recipes missing a computed value (e.g. no calc_ibu yet) sort
-    // to the end regardless of direction, rather than dominating one end.
-    Ok(format!(
-        "{mapped} {} NULLS LAST",
-        if desc { "DESC" } else { "ASC" }
-    ))
-}
+// NULLS LAST so recipes missing a computed value (e.g. no calc_ibu yet) sort
+// to the end regardless of direction, rather than dominating one end.
+const RECIPE_ALLOWED_SORT: sort::Allowed = &[
+    ("created_at", "created_at"),
+    ("updated_at", "updated_at"),
+    ("name", "name"),
+    ("type", "type"),
+    ("batch_size_liters", "batch_size_liters"),
+    ("calc_og", "calc_og"),
+    ("calc_fg", "calc_fg"),
+    ("calc_abv_pct", "calc_abv_pct"),
+    ("calc_ibu", "calc_ibu"),
+    ("calc_color_ebc", "calc_color_ebc"),
+];

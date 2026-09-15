@@ -196,13 +196,52 @@ impl IntoResponse for ApiError {
     }
 }
 
-/// Map a `sqlx` error to an [`ApiError`]: missing rows become 404, everything
-/// else becomes an internal error.
+/// Check if a sqlx error is a Postgres unique violation (23505).
+/// Services can use this to pre-empt the generic conflict error with
+/// a resource-specific message.
+pub fn is_unique_violation(e: &sqlx::Error) -> bool {
+    e.as_database_error()
+        .is_some_and(|d| d.is_unique_violation())
+}
+
+/// Map a `sqlx` error to an [`ApiError`].
+///
+/// Database error mapping by SQLSTATE:
+/// - 23505 (unique_violation) -> conflict("resource", "already exists")
+/// - 23514 (check_violation) -> validation("body", "violates constraint <name>")
+/// - 23503 (foreign_key_violation) -> validation("body", "references a resource that does not exist")
+/// - 22001 (string_data_right_truncation) -> validation("body", "value too long")
+/// - 22P02 (invalid_text_representation) -> validation("body", "invalid value")
+/// - RowNotFound -> not_found("resource")
+///
+/// Services may still pre-empt 23505 with a resource-specific message via
+/// `is_unique_violation`. Everything else becomes an internal error with the
+/// original sqlx error preserved for logging.
 impl From<sqlx::Error> for ApiError {
     fn from(err: sqlx::Error) -> Self {
-        match err {
+        match &err {
             sqlx::Error::RowNotFound => ApiError::not_found("resource"),
-            other => ApiError::internal(other),
+            sqlx::Error::Database(dbe) => {
+                let code = dbe.code().map(|c| c.to_string());
+                let constraint = dbe.constraint().map(|s| s.to_string());
+                match code.as_deref() {
+                    Some("23505") => ApiError::conflict("resource", "already exists"),
+                    Some("23514") => ApiError::validation(
+                        "body",
+                        &format!(
+                            "violates constraint {}",
+                            constraint.as_deref().unwrap_or("unknown")
+                        ),
+                    ),
+                    Some("23503") => {
+                        ApiError::validation("body", "references a resource that does not exist")
+                    }
+                    Some("22001") => ApiError::validation("body", "value too long"),
+                    Some("22P02") => ApiError::validation("body", "invalid value"),
+                    _ => ApiError::internal(err),
+                }
+            }
+            _ => ApiError::internal(err),
         }
     }
 }
@@ -242,5 +281,11 @@ mod tests {
     fn row_not_found_maps_to_404() {
         let e: ApiError = sqlx::Error::RowNotFound.into();
         assert_eq!(e.status(), StatusCode::NOT_FOUND);
+    }
+
+    #[test]
+    fn is_unique_violation_row_not_found_returns_false() {
+        let e = sqlx::Error::RowNotFound;
+        assert!(!is_unique_violation(&e));
     }
 }

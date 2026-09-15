@@ -11,6 +11,8 @@ use uuid::Uuid;
 use super::models::{
     Customer, CustomerFilter, DutyEvent, DutyEventFilter, Order, OrderFilter, OrderItem, Page,
 };
+use crate::platform::pagination;
+use crate::platform::sql::like_prefix;
 
 const CUSTOMER_COLS: &str = "id, tenant_id, name, contact_name, email, phone, \
     address_line1, address_line2, city, postcode, country, notes, created_at, updated_at";
@@ -31,18 +33,6 @@ const ITEM_COLS: &str = "id, tenant_id, order_id, batch_id, product_name, \
 const DUTY_COLS: &str = "id, tenant_id, order_id, batch_id, event_type, \
     volume_liters::float8 AS volume_liters, abv_pct::float8 AS abv_pct, duty_pence, \
     jurisdiction, crystallised_at, created_at";
-
-fn clamp_page(page: i64, page_size: i64) -> (i64, i64) {
-    let page = if page < 1 { 1 } else { page };
-    let page_size = if page_size < 1 {
-        20
-    } else if page_size > 100 {
-        100
-    } else {
-        page_size
-    };
-    (page, page_size)
-}
 
 // ---- customers ----
 
@@ -95,12 +85,12 @@ pub async fn select_customers(
     filter: &CustomerFilter,
     order_by: &str,
 ) -> Result<Page<Customer>, sqlx::Error> {
-    let (page, page_size) = clamp_page(filter.page, filter.page_size);
+    let (page, page_size) = pagination::clamp(filter.page, filter.page_size);
     let q = filter.q.clone().filter(|s| !s.is_empty());
     let push_where = |qb: &mut QueryBuilder<Postgres>| {
         qb.push(" WHERE tenant_id = ").push_bind(tenant_id);
         if let Some(s) = &q {
-            qb.push(" AND name ILIKE ").push_bind(format!("{s}%"));
+            qb.push(" AND name ILIKE ").push_bind(like_prefix(s));
         }
     };
 
@@ -112,7 +102,8 @@ pub async fn select_customers(
     push_where(&mut qb);
     qb.push(format!(" ORDER BY {order_by} "));
     qb.push(" LIMIT ").push_bind(page_size);
-    qb.push(" OFFSET ").push_bind((page - 1) * page_size);
+    qb.push(" OFFSET ")
+        .push_bind(pagination::offset(page, page_size));
     let items = qb.build_query_as::<Customer>().fetch_all(pool).await?;
     Ok(Page::new(items, total, page, page_size))
 }
@@ -228,7 +219,7 @@ pub async fn select_orders(
     filter: &OrderFilter,
     order_by: &str,
 ) -> Result<Page<Order>, sqlx::Error> {
-    let (page, page_size) = clamp_page(filter.page, filter.page_size);
+    let (page, page_size) = pagination::clamp(filter.page, filter.page_size);
     let status = filter.status.clone().filter(|s| !s.is_empty());
     let from_date = filter.from_date.clone().filter(|s| !s.is_empty());
     let to_date = filter.to_date.clone().filter(|s| !s.is_empty());
@@ -263,7 +254,8 @@ pub async fn select_orders(
     push_where(&mut qb);
     qb.push(format!(" ORDER BY {order_by} "));
     qb.push(" LIMIT ").push_bind(page_size);
-    qb.push(" OFFSET ").push_bind((page - 1) * page_size);
+    qb.push(" OFFSET ")
+        .push_bind(pagination::offset(page, page_size));
     let mut items = qb.build_query_as::<Order>().fetch_all(pool).await?;
     for o in &mut items {
         o.items = Vec::new();
@@ -437,7 +429,7 @@ pub async fn select_duty_events(
     filter: &DutyEventFilter,
     order_by: &str,
 ) -> Result<Page<DutyEvent>, sqlx::Error> {
-    let (page, page_size) = clamp_page(filter.page, filter.page_size);
+    let (page, page_size) = pagination::clamp(filter.page, filter.page_size);
     let from_date = filter.from_date.clone().filter(|s| !s.is_empty());
     let to_date = filter.to_date.clone().filter(|s| !s.is_empty());
     let push_where = |qb: &mut QueryBuilder<Postgres>| {
@@ -468,7 +460,8 @@ pub async fn select_duty_events(
     push_where(&mut qb);
     qb.push(format!(" ORDER BY {order_by} "));
     qb.push(" LIMIT ").push_bind(page_size);
-    qb.push(" OFFSET ").push_bind((page - 1) * page_size);
+    qb.push(" OFFSET ")
+        .push_bind(pagination::offset(page, page_size));
     let items = qb.build_query_as::<DutyEvent>().fetch_all(pool).await?;
     Ok(Page::new(items, total, page, page_size))
 }

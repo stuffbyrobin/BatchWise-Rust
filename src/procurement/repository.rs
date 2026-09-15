@@ -9,6 +9,10 @@ use sqlx::{PgConnection, PgExecutor, PgPool, Postgres, QueryBuilder};
 use uuid::Uuid;
 
 use super::models::{POFilter, Page, PurchaseOrder, PurchaseOrderLine, Supplier, SupplierFilter};
+use crate::platform::errors::ApiError;
+use crate::platform::pagination;
+use crate::platform::sort;
+use crate::platform::sql::like_prefix;
 
 const SUPPLIER_COLS: &str = "id, tenant_id, name, contact_name, email, phone, website, notes, \
     created_at, updated_at";
@@ -25,45 +29,18 @@ const LINE_COLS: &str = "id, purchase_order_id, ingredient_type, ingredient_name
     quantity::float8 AS quantity, unit, unit_cost_pence, unit_cost_currency, \
     received_quantity::float8 AS received_quantity, created_at, updated_at";
 
-fn clamp_page(page: i64, page_size: i64) -> (i64, i64) {
-    let page = if page < 1 { 1 } else { page };
-    let page_size = if page_size < 1 {
-        20
-    } else if page_size > 100 {
-        100
-    } else {
-        page_size
-    };
-    (page, page_size)
-}
+/// Supplier sort allow-list.
+const SUPPLIER_ALLOWED_SORT: sort::Allowed = &[("name", "name"), ("created_at", "created_at")];
 
-fn supplier_order_by(sort: &str) -> &'static str {
-    match sort {
-        "name" => "name ASC",
-        "-name" => "name DESC",
-        "created_at" => "created_at ASC",
-        "-created_at" => "created_at DESC",
-        _ => "name ASC",
-    }
-}
-
-fn po_order_by(sort: &str) -> &'static str {
-    match sort {
-        "order_date" => "po.order_date ASC",
-        "-order_date" => "po.order_date DESC",
-        "po_number" => "po.po_number ASC",
-        "-po_number" => "po.po_number DESC",
-        "status" => "po.status ASC",
-        "-status" => "po.status DESC",
-        "expected_delivery" => "po.expected_delivery ASC NULLS LAST",
-        "-expected_delivery" => "po.expected_delivery DESC NULLS LAST",
-        "supplier_name" => "s.name ASC",
-        "-supplier_name" => "s.name DESC",
-        "created_at" => "po.created_at ASC",
-        "-created_at" => "po.created_at DESC",
-        _ => "po.created_at DESC",
-    }
-}
+/// Purchase order sort allow-list.
+const PO_ALLOWED_SORT: sort::Allowed = &[
+    ("order_date", "po.order_date"),
+    ("po_number", "po.po_number"),
+    ("status", "po.status"),
+    ("expected_delivery", "po.expected_delivery"),
+    ("supplier_name", "s.name"),
+    ("created_at", "po.created_at"),
+];
 
 // ---- suppliers ----
 
@@ -114,27 +91,26 @@ pub async fn select_suppliers(
     pool: &PgPool,
     tenant_id: Uuid,
     filter: &SupplierFilter,
-) -> Result<Page<Supplier>, sqlx::Error> {
-    let (page, page_size) = clamp_page(filter.page, filter.page_size);
+) -> Result<Page<Supplier>, ApiError> {
+    let (page, page_size) = pagination::clamp(filter.page, filter.page_size);
     let search = filter.search.clone();
     let push_where = |qb: &mut QueryBuilder<Postgres>| {
         qb.push(" WHERE tenant_id = ").push_bind(tenant_id);
         if !search.is_empty() {
-            qb.push(" AND name ILIKE ")
-                .push_bind(search.clone())
-                .push(" || '%'");
+            qb.push(" AND name ILIKE ").push_bind(like_prefix(&search));
         }
     };
     let mut count_qb = QueryBuilder::<Postgres>::new("SELECT COUNT(*) FROM suppliers");
     push_where(&mut count_qb);
     let total: i64 = count_qb.build_query_scalar().fetch_one(pool).await?;
 
-    let order_by = supplier_order_by(&filter.sort);
+    let order_by = sort::parse(&filter.sort, SUPPLIER_ALLOWED_SORT, "name")?;
     let mut qb = QueryBuilder::<Postgres>::new(format!("SELECT {SUPPLIER_COLS} FROM suppliers"));
     push_where(&mut qb);
     qb.push(format!(" ORDER BY {order_by}"));
     qb.push(" LIMIT ").push_bind(page_size);
-    qb.push(" OFFSET ").push_bind((page - 1) * page_size);
+    qb.push(" OFFSET ")
+        .push_bind(pagination::offset(page, page_size));
     let items = qb.build_query_as::<Supplier>().fetch_all(pool).await?;
     Ok(Page::new(items, total, page, page_size))
 }
@@ -282,8 +258,8 @@ pub async fn select_pos(
     pool: &PgPool,
     tenant_id: Uuid,
     filter: &POFilter,
-) -> Result<Page<PurchaseOrder>, sqlx::Error> {
-    let (page, page_size) = clamp_page(filter.page, filter.page_size);
+) -> Result<Page<PurchaseOrder>, ApiError> {
+    let (page, page_size) = pagination::clamp(filter.page, filter.page_size);
     let push_where = |qb: &mut QueryBuilder<Postgres>| {
         qb.push(" WHERE po.tenant_id = ").push_bind(tenant_id);
         if let Some(s) = filter.supplier_id {
@@ -297,12 +273,18 @@ pub async fn select_pos(
     push_where(&mut count_qb);
     let total: i64 = count_qb.build_query_scalar().fetch_one(pool).await?;
 
-    let order_by = po_order_by(&filter.sort);
+    let order_by = sort::parse_with(
+        &filter.sort,
+        PO_ALLOWED_SORT,
+        "-created_at",
+        sort::Nulls::Last,
+    )?;
     let mut qb = QueryBuilder::<Postgres>::new(format!("SELECT {PO_COLS} {PO_FROM}"));
     push_where(&mut qb);
     qb.push(format!(" ORDER BY {order_by}"));
     qb.push(" LIMIT ").push_bind(page_size);
-    qb.push(" OFFSET ").push_bind((page - 1) * page_size);
+    qb.push(" OFFSET ")
+        .push_bind(pagination::offset(page, page_size));
     let mut items = qb.build_query_as::<PurchaseOrder>().fetch_all(pool).await?;
     for po in &mut items {
         po.lines = Vec::new();

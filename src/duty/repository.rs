@@ -10,6 +10,7 @@ use sqlx::{PgExecutor, PgPool, Postgres, QueryBuilder};
 use uuid::Uuid;
 
 use super::models::{Page, Return, ReturnFilter};
+use crate::platform::pagination;
 
 const RETURN_COLS: &str = "id, tenant_id, \
     to_char(period_start, 'YYYY-MM-DD') AS period_start, \
@@ -18,16 +19,6 @@ const RETURN_COLS: &str = "id, tenant_id, \
     sbr_annual_production_hl_pa::float8 AS sbr_annual_production_hl_pa, \
     sbr_relief_rate_pct::float8 AS sbr_relief_rate_pct, sbr_relief_pence, \
     net_duty_pence, submitted_at, created_at, updated_at";
-
-fn clamp_page(page: i64, page_size: i64) -> (i64, i64) {
-    let page = if page < 1 { 1 } else { page };
-    let page_size = if !(1..=100).contains(&page_size) {
-        20
-    } else {
-        page_size
-    };
-    (page, page_size)
-}
 
 /// The aggregate from `duty_events` for a period.
 pub struct EventSummary {
@@ -176,7 +167,7 @@ pub async fn select_returns(
     tenant_id: Uuid,
     filter: &ReturnFilter,
 ) -> Result<Page<Return>, sqlx::Error> {
-    let (page, page_size) = clamp_page(filter.page, filter.page_size);
+    let (page, page_size) = pagination::clamp(filter.page, filter.page_size);
 
     let push_where = |qb: &mut QueryBuilder<Postgres>| {
         qb.push(" WHERE tenant_id = ").push_bind(tenant_id);
@@ -214,7 +205,9 @@ pub async fn select_returns(
     push_where(&mut list_qb);
     list_qb.push(format!(" ORDER BY {order_by} "));
     list_qb.push(" LIMIT ").push_bind(page_size);
-    list_qb.push(" OFFSET ").push_bind((page - 1) * page_size);
+    list_qb
+        .push(" OFFSET ")
+        .push_bind(pagination::offset(page, page_size));
     let items = list_qb.build_query_as::<Return>().fetch_all(pool).await?;
 
     Ok(Page::new(items, total, page, page_size))

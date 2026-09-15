@@ -62,7 +62,8 @@ fn decode_error(e: &serde_json::Error) -> ApiError {
 }
 
 /// Translate `validator` errors into an [`ApiError`], reporting the first failing field.
-fn validation_to_api_error(errs: validator::ValidationErrors) -> ApiError {
+/// Services may call it after validating a DTO they built in code (e.g. importers).
+pub(crate) fn validation_to_api_error(errs: validator::ValidationErrors) -> ApiError {
     if let Some((field, field_errs)) = errs.field_errors().into_iter().next() {
         let reason = field_errs
             .first()
