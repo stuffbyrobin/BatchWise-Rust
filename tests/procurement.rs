@@ -394,3 +394,65 @@ async fn po_lifecycle_and_receive() {
         .await;
     assert_eq!(r.status(), 204);
 }
+
+#[tokio::test]
+async fn receive_rejects_over_receipt() {
+    let app = spawn_app().await;
+    let (token, tid) = app.register().await;
+    app.enable(tid, "{\"procurement\":true}").await;
+
+    let sup = app.create_supplier(&token).await;
+    let sid = sup["id"].as_str().unwrap().to_string();
+
+    let po = app.create_po(&token, &sid).await;
+    let pid = po["id"].as_str().unwrap().to_string();
+
+    let l1 = app.add_line(&token, &pid, 10.0).await;
+    let l1id = l1["id"].as_str().unwrap().to_string();
+
+    let r = app
+        .patch(
+            &format!("/api/v1/purchase-orders/{pid}"),
+            &token,
+            json!({ "status": "sent" }),
+        )
+        .await;
+    assert_eq!(r.status(), 200);
+    assert_eq!(r.json::<Value>().await.unwrap()["status"], json!("sent"));
+
+    let r = app
+        .post(
+            &format!("/api/v1/purchase-orders/{pid}/receive"),
+            &token,
+            json!({ "lines": [{ "line_id": l1id, "received_quantity": 11.0 }] }),
+        )
+        .await;
+    assert_eq!(r.status(), 400);
+    let body: Value = r.json().await.unwrap();
+    assert_eq!(body["code"], json!("validation_error"));
+    assert_eq!(body["details"]["field"], json!("received_quantity"));
+
+    let got: Value = app
+        .get(&format!("/api/v1/purchase-orders/{pid}"), &token)
+        .await
+        .json()
+        .await
+        .unwrap();
+    assert_eq!(got["status"], json!("sent"));
+    let lines = got["lines"].as_array().unwrap();
+    let line = lines.iter().find(|l| l["id"] == json!(l1id)).unwrap();
+    assert!(line["received_quantity"].is_null());
+
+    let r = app
+        .post(
+            &format!("/api/v1/purchase-orders/{pid}/receive"),
+            &token,
+            json!({ "lines": [{ "line_id": l1id, "received_quantity": 10.0 }] }),
+        )
+        .await;
+    assert_eq!(r.status(), 200);
+    assert_eq!(
+        r.json::<Value>().await.unwrap()["status"],
+        json!("received")
+    );
+}

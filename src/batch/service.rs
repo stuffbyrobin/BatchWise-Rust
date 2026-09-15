@@ -1,6 +1,8 @@
 //! Batch business logic: recipe snapshotting, calendar-event generation, the
 //! status FSM, and deferred inventory deduction on the `planned → brewing`
-//! transition.
+//! transition. Each lot consumed by that deduction is recorded in
+//! `batch_ingredients` with its FIFO-allocated cost, which feeds batch
+//! costing and ingredient-lot traceability.
 //!
 //! Port of the Go `internal/batch/service.go`.
 
@@ -408,15 +410,18 @@ async fn deduct_for_brewing(
         };
         let result =
             inventory_svc::deduct_in_tx(&mut *tx, overdraft, tenant_id, user_id, &req).await?;
-        if let Some(first) = result.allocations.first() {
+        // One batch_ingredients row per lot touched: this table drives both
+        // batch costing (SUM(cost_pence)) and forward traceability (which
+        // batches used a given lot), so every allocation must be recorded.
+        for alloc in &result.allocations {
             repo::insert_batch_ingredient(
                 &mut *tx,
                 &BatchIngredient {
                     batch_id: batch.id,
-                    ingredient_id: first.lot_id,
-                    amount_deducted: first.amount_deducted,
+                    ingredient_id: alloc.lot_id,
+                    amount_deducted: alloc.amount_deducted,
                     unit: result.unit.clone(),
-                    cost_pence: 0,
+                    cost_pence: alloc.cost_pence,
                 },
             )
             .await?;

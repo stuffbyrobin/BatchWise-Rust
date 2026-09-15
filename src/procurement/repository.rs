@@ -5,7 +5,7 @@
 //! via `::date`. `quantity` and `received_quantity` are `NUMERIC` (selected as
 //! `float8`). Every supplier/PO query is tenant-scoped.
 
-use sqlx::{PgConnection, PgPool, Postgres, QueryBuilder};
+use sqlx::{PgConnection, PgExecutor, PgPool, Postgres, QueryBuilder};
 use uuid::Uuid;
 
 use super::models::{POFilter, Page, PurchaseOrder, PurchaseOrderLine, Supplier, SupplierFilter};
@@ -311,8 +311,8 @@ pub async fn select_pos(
 }
 
 /// Updates the mutable PO fields (status, expected_delivery, notes).
-pub async fn update_po(
-    pool: &PgPool,
+pub async fn update_po<'e, E: PgExecutor<'e>>(
+    exec: E,
     tenant_id: Uuid,
     id: Uuid,
     status: &str,
@@ -328,7 +328,7 @@ pub async fn update_po(
     .bind(status)
     .bind(expected_delivery)
     .bind(notes)
-    .execute(pool)
+    .execute(exec)
     .await?;
     Ok(r.rows_affected() > 0)
 }
@@ -445,8 +445,8 @@ pub async fn delete_line(pool: &PgPool, line_id: Uuid) -> Result<(), sqlx::Error
 }
 
 /// Updates a line's received quantity.
-pub async fn update_line_received_qty(
-    pool: &PgPool,
+pub async fn update_line_received_qty<'e, E: PgExecutor<'e>>(
+    exec: E,
     line_id: Uuid,
     qty: f64,
 ) -> Result<(), sqlx::Error> {
@@ -455,7 +455,7 @@ pub async fn update_line_received_qty(
     )
     .bind(line_id)
     .bind(qty)
-    .execute(pool)
+    .execute(exec)
     .await?;
     Ok(())
 }

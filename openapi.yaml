@@ -587,6 +587,7 @@ components:
         best_before_date: { type: string, format: date }
         amount_deducted: { type: number }
         remaining_in_lot: { type: number }
+        cost_pence: { type: integer, description: "Cost attributed to this allocation: the lot's per-unit cost_pence multiplied by amount_deducted, rounded to the nearest penny." }
     DeductResult:
       type: object
       properties:
