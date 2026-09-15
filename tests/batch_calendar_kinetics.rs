@@ -393,7 +393,7 @@ async fn brewing_records_every_lot_with_cost() {
     // Assert cost: 3.0 kg x 200 + 2.0 kg x 300 = 600 + 600 = 1200 pence.
     let cost_resp = app
         .post(
-            "/api/v1/batch-costs/compute",
+            "/api/v1/reporting/batch-costs/compute",
             &token,
             json!({"batch_id": batch_id}),
         )
