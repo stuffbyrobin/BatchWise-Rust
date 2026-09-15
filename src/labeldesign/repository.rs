@@ -261,7 +261,7 @@ pub async fn select_designs(
     let order_by = sort::parse(&filter.sort, DESIGN_ALLOWED_SORT, "-created_at")?;
     let mut qb = QueryBuilder::<Postgres>::new(format!("SELECT {DESIGN_COLS} FROM label_designs"));
     push_where(&mut qb);
-    qb.push(format!(" ORDER BY {}", &order_by));
+    qb.push(format!(" ORDER BY {order_by}"));
     qb.push(" LIMIT ").push_bind(page_size);
     qb.push(" OFFSET ")
         .push_bind(pagination::offset(page, page_size));

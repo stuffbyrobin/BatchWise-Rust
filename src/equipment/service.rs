@@ -52,7 +52,7 @@ pub async fn list_equipment(
     tenant_id: Uuid,
     filter: Filter,
 ) -> Result<Page<Equipment>, ApiError> {
-    Ok(repo::select_equipment(&state.pool, tenant_id, &filter).await?)
+    repo::select_equipment(&state.pool, tenant_id, &filter).await
 }
 
 /// Gets an equipment record by ID for the tenant.
@@ -163,7 +163,7 @@ pub async fn list_schedules(
     filter: ScheduleFilter,
 ) -> Result<Page<MaintenanceSchedule>, ApiError> {
     get_equipment(state, tenant_id, equipment_id).await?;
-    Ok(repo::select_schedules(&state.pool, tenant_id, equipment_id, &filter).await?)
+    repo::select_schedules(&state.pool, tenant_id, equipment_id, &filter).await
 }
 
 /// Updates a maintenance schedule for the tenant, validating it exists.
@@ -294,7 +294,7 @@ pub async fn list_events(
     filter: EventFilter,
 ) -> Result<Page<MaintenanceEvent>, ApiError> {
     get_equipment(state, tenant_id, equipment_id).await?;
-    Ok(repo::select_events(&state.pool, tenant_id, equipment_id, &filter).await?)
+    repo::select_events(&state.pool, tenant_id, equipment_id, &filter).await
 }
 
 /// Deletes a maintenance event by ID for the tenant, validating it exists.
@@ -321,5 +321,5 @@ pub async fn list_maintenance_due(
     tenant_id: Uuid,
     filter: MaintenanceDueFilter,
 ) -> Result<Page<MaintenanceDueItem>, ApiError> {
-    Ok(repo::select_maintenance_due(&state.pool, tenant_id, &filter).await?)
+    repo::select_maintenance_due(&state.pool, tenant_id, &filter).await
 }

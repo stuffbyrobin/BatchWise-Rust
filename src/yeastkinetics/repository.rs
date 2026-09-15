@@ -124,7 +124,7 @@ pub async fn select_list(
 
     let mut list_qb = QueryBuilder::<Postgres>::new(format!("SELECT {COLS} FROM yeast_kinetics"));
     push_where(&mut list_qb);
-    list_qb.push(format!(" ORDER BY {} ", &order_by));
+    list_qb.push(format!(" ORDER BY {order_by} "));
     list_qb.push(" LIMIT ").push_bind(page_size);
     list_qb
         .push(" OFFSET ")

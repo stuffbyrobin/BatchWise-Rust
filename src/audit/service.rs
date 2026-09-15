@@ -39,7 +39,7 @@ pub async fn list(
     tenant_id: Uuid,
     f: ListFilter,
 ) -> Result<AuditEventList, ApiError> {
-    Ok(repo::select_list(pool, tenant_id, &f).await?)
+    repo::select_list(pool, tenant_id, &f).await
 }
 
 /// Returns a single audit event, or a not-found error.

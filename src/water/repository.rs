@@ -119,8 +119,8 @@ pub async fn select_water_profiles(
     let items: Vec<Profile> = sqlx::query_as::<_, Profile>(&sql)
         .bind(tenant_id)
         .bind(SYSTEM_TENANT_ID)
-        .bind(i64::from(page_size))
-        .bind(i64::from(offset))
+        .bind(page_size)
+        .bind(offset)
         .fetch_all(pool)
         .await?;
 
@@ -304,9 +304,9 @@ pub async fn select_water_adjustments(
         list.push(" AND recipe_id = ").push_bind(recipe_id);
     }
     list.push(format!(" ORDER BY {order_by} LIMIT "))
-        .push_bind(i64::from(page_size))
+        .push_bind(page_size)
         .push(" OFFSET ")
-        .push_bind(i64::from(offset));
+        .push_bind(offset);
     let rows: Vec<AdjustmentRow> = list.build_query_as().fetch_all(pool).await?;
 
     let items = rows

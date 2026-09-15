@@ -133,9 +133,9 @@ pub async fn select_styles(
             .push_bind(like_contains(&name.to_lowercase()));
     }
     list.push(format!(" ORDER BY {order_by} LIMIT "))
-        .push_bind(i64::from(page_size))
+        .push_bind(page_size)
         .push(" OFFSET ")
-        .push_bind(i64::from(offset));
+        .push_bind(offset);
     let items: Vec<Style> = list.build_query_as().fetch_all(pool).await?;
 
     Ok(Page::new(items, total, page, page_size))
@@ -332,9 +332,9 @@ pub async fn select_equipment(
             .push_bind(like_contains(&name.to_lowercase()));
     }
     list.push(format!(" ORDER BY {order_by} LIMIT "))
-        .push_bind(i64::from(page_size))
+        .push_bind(page_size)
         .push(" OFFSET ")
-        .push_bind(i64::from(offset));
+        .push_bind(offset);
     let items: Vec<EquipmentProfile> = list.build_query_as().fetch_all(pool).await?;
 
     Ok(Page::new(items, total, page, page_size))
@@ -522,9 +522,9 @@ pub async fn select_mash_profiles(
             .push_bind(like_contains(&name.to_lowercase()));
     }
     list.push(format!(" ORDER BY {order_by} LIMIT "))
-        .push_bind(i64::from(page_size))
+        .push_bind(page_size)
         .push(" OFFSET ")
-        .push_bind(i64::from(offset));
+        .push_bind(offset);
     let rows: Vec<MashProfileRow> = list.build_query_as().fetch_all(pool).await?;
 
     let mut items = Vec::with_capacity(rows.len());
@@ -694,9 +694,9 @@ pub async fn select_yeasts(
         .push(")");
     apply_yeast_filters(&mut list, filter);
     list.push(format!(" ORDER BY {order_by} LIMIT "))
-        .push_bind(i64::from(page_size))
+        .push_bind(page_size)
         .push(" OFFSET ")
-        .push_bind(i64::from(offset));
+        .push_bind(offset);
     let items: Vec<Yeast> = list.build_query_as().fetch_all(pool).await?;
 
     Ok(Page::new(items, total, page, page_size))
@@ -857,9 +857,9 @@ pub async fn select_fermentables(
         .push(")");
     apply_fermentable_filters(&mut list, filter);
     list.push(format!(" ORDER BY {order_by} LIMIT "))
-        .push_bind(i64::from(page_size))
+        .push_bind(page_size)
         .push(" OFFSET ")
-        .push_bind(i64::from(offset));
+        .push_bind(offset);
     let items: Vec<Fermentable> = list.build_query_as().fetch_all(pool).await?;
 
     Ok(Page::new(items, total, page, page_size))

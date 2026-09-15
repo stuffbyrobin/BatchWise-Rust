@@ -59,7 +59,7 @@ pub async fn list_suppliers(
     tenant_id: Uuid,
     filter: SupplierFilter,
 ) -> Result<Page<Supplier>, ApiError> {
-    Ok(repo::select_suppliers(&state.pool, tenant_id, &filter).await?)
+    repo::select_suppliers(&state.pool, tenant_id, &filter).await
 }
 
 /// Retrieves a supplier by ID for the given tenant.
@@ -181,7 +181,7 @@ pub async fn list_pos(
     tenant_id: Uuid,
     filter: POFilter,
 ) -> Result<Page<PurchaseOrder>, ApiError> {
-    Ok(repo::select_pos(&state.pool, tenant_id, &filter).await?)
+    repo::select_pos(&state.pool, tenant_id, &filter).await
 }
 
 /// Retrieves a purchase order by ID for the given tenant.

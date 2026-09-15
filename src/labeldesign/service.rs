@@ -129,7 +129,7 @@ pub async fn list_profiles(
     state: &AppState,
     tenant_id: Uuid,
 ) -> Result<Vec<BrandProfile>, ApiError> {
-    Ok(repo::select_profiles(&state.pool, tenant_id).await?)
+    repo::select_profiles(&state.pool, tenant_id).await
 }
 
 pub async fn get_profile(
@@ -237,7 +237,7 @@ pub async fn list_designs(
     tenant_id: Uuid,
     filter: ListFilter,
 ) -> Result<Page<LabelDesign>, ApiError> {
-    Ok(repo::select_designs(&state.pool, tenant_id, &filter).await?)
+    repo::select_designs(&state.pool, tenant_id, &filter).await
 }
 
 pub async fn get_design(

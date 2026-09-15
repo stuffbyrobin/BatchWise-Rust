@@ -71,7 +71,7 @@ pub async fn list(
     tenant_id: Uuid,
     filter: ListFilter,
 ) -> Result<Page<Kinetics>, ApiError> {
-    Ok(repo::select_list(&state.pool, tenant_id, &filter).await?)
+    repo::select_list(&state.pool, tenant_id, &filter).await
 }
 
 /// Fetches a yeast kinetics entry by id, tenant-scoped.

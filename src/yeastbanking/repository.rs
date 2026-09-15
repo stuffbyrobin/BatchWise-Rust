@@ -96,7 +96,7 @@ pub async fn select_entries(
     let order_by = sort::parse(&filter.sort, ENTRY_ALLOWED_SORT, "-created_at")?;
     let mut qb = QueryBuilder::<Postgres>::new(format!("SELECT {ENTRY_COLS} FROM yeast_bank"));
     push_where(&mut qb);
-    qb.push(format!(" ORDER BY {}", &order_by));
+    qb.push(format!(" ORDER BY {order_by}"));
     qb.push(" LIMIT ").push_bind(page_size);
     qb.push(" OFFSET ")
         .push_bind(pagination::offset(page, page_size));

@@ -87,7 +87,7 @@ pub async fn list_runs(
     tenant_id: Uuid,
     filter: ListPackagingRunsFilter,
 ) -> Result<Page<PackagingRun>, ApiError> {
-    Ok(repo::select_runs(&state.pool, tenant_id, &filter).await?)
+    repo::select_runs(&state.pool, tenant_id, &filter).await
 }
 
 pub async fn patch_run(
@@ -242,7 +242,7 @@ pub async fn list_movements(
     tenant_id: Uuid,
     filter: ListMovementsFilter,
 ) -> Result<Page<DistributionMovement>, ApiError> {
-    Ok(repo::select_movements(&state.pool, tenant_id, &filter).await?)
+    repo::select_movements(&state.pool, tenant_id, &filter).await
 }
 
 pub async fn delete_movement(
