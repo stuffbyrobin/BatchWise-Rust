@@ -5,6 +5,7 @@
 //! fermentables. `NUMERIC` columns are selected as `float8` so they decode into
 //! `f64`; `INTEGER` columns map to `i32`.
 
+pub use crate::platform::pagination::Page;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
@@ -13,34 +14,6 @@ use validator::Validate;
 
 /// The reserved tenant id for system-owned (shared) library data.
 pub const SYSTEM_TENANT_ID: Uuid = Uuid::nil();
-
-/// A generic paginated response envelope. Mirrors the Go `Page[T]`.
-#[derive(Debug, Clone, Serialize)]
-pub struct Page<T> {
-    pub items: Vec<T>,
-    pub total: i64,
-    pub page: i32,
-    pub page_size: i32,
-    pub total_pages: i32,
-}
-
-impl<T> Page<T> {
-    /// Builds a page envelope, computing the total page count.
-    pub fn new(items: Vec<T>, total: i64, page: i32, page_size: i32) -> Self {
-        let total_pages = if page_size > 0 && total > 0 {
-            ((total + i64::from(page_size) - 1) / i64::from(page_size)) as i32
-        } else {
-            0
-        };
-        Page {
-            items,
-            total,
-            page,
-            page_size,
-            total_pages,
-        }
-    }
-}
 
 // ---- Beer styles ----
 
@@ -111,9 +84,9 @@ pub struct StyleFilter {
     pub category: Option<String>,
     pub name: Option<String>,
     #[serde(default)]
-    pub page: i32,
+    pub page: i64,
     #[serde(default)]
-    pub page_size: i32,
+    pub page_size: i64,
     #[serde(default)]
     pub sort: String,
 }
@@ -228,9 +201,9 @@ pub struct PatchEquipmentRequest {
 pub struct EquipmentFilter {
     pub name: Option<String>,
     #[serde(default)]
-    pub page: i32,
+    pub page: i64,
     #[serde(default)]
-    pub page_size: i32,
+    pub page_size: i64,
     #[serde(default)]
     pub sort: String,
 }
@@ -337,9 +310,9 @@ pub struct PatchMashProfileRequest {
 pub struct MashFilter {
     pub name: Option<String>,
     #[serde(default)]
-    pub page: i32,
+    pub page: i64,
     #[serde(default)]
-    pub page_size: i32,
+    pub page_size: i64,
     #[serde(default)]
     pub sort: String,
 }
@@ -413,9 +386,9 @@ pub struct YeastFilter {
     pub attenuation_min: Option<f64>,
     pub attenuation_max: Option<f64>,
     #[serde(default)]
-    pub page: i32,
+    pub page: i64,
     #[serde(default)]
-    pub page_size: i32,
+    pub page_size: i64,
     #[serde(default)]
     pub sort: String,
 }
@@ -495,9 +468,9 @@ pub struct FermentableFilter {
     #[serde(rename = "type")]
     pub fermentable_type: Option<String>,
     #[serde(default)]
-    pub page: i32,
+    pub page: i64,
     #[serde(default)]
-    pub page_size: i32,
+    pub page_size: i64,
     #[serde(default)]
     pub sort: String,
 }

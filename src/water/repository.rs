@@ -17,22 +17,8 @@ use super::models::{
     UpdateWaterAdjustmentRequest, UpdateWaterProfileRequest, SYSTEM_TENANT_ID,
 };
 use crate::platform::errors::ApiError;
-
-// ---- pagination helper ----
-
-/// Clamps page (>=1) and page_size (1..=100, default 20). Mirrors the Go
-/// service-layer clamping.
-fn clamp_page(page: i32, page_size: i32) -> (i32, i32) {
-    let page = if page < 1 { 1 } else { page };
-    let page_size = if page_size < 1 {
-        20
-    } else if page_size > 100 {
-        100
-    } else {
-        page_size
-    };
-    (page, page_size)
-}
+use crate::platform::pagination;
+use crate::platform::sort;
 
 /// Maps a `sqlx` error to an [`ApiError`], surfacing unique-violations as 409
 /// with the supplied message.
@@ -57,16 +43,8 @@ const PROFILE_COLS: &str = "id, tenant_id, name, description, \
     notes, (tenant_id = '00000000-0000-0000-0000-000000000000') AS is_system, \
     created_at, updated_at";
 
-/// Resolves the profile sort string to a trusted `ORDER BY` fragment, matching
-/// the Go `resolveProfileSort` (default `name ASC`).
-fn resolve_profile_sort(sort: &str) -> &'static str {
-    match sort {
-        "-name" => "name DESC",
-        "created_at" => "created_at ASC",
-        "-created_at" => "created_at DESC",
-        _ => "name ASC",
-    }
-}
+/// Allowed sort fields for water profiles.
+const PROFILE_ALLOWED_SORT: sort::Allowed = &[("name", "name"), ("created_at", "created_at")];
 
 /// Inserts a water profile owned by the caller and returns the persisted row.
 pub async fn insert_water_profile(
@@ -120,8 +98,8 @@ pub async fn select_water_profiles(
     tenant_id: Uuid,
     filter: &ProfileFilter,
 ) -> std::result::Result<Page<Profile>, ApiError> {
-    let (page, page_size) = clamp_page(filter.page, filter.page_size);
-    let order_by = resolve_profile_sort(&filter.sort);
+    let (page, page_size) = pagination::clamp(filter.page, filter.page_size);
+    let order_by = sort::parse(&filter.sort, PROFILE_ALLOWED_SORT, "name")?;
 
     // CROSS-TENANT QUERY: reads include the shared system-tenant water profiles.
     let total: i64 = sqlx::query_scalar(
@@ -132,7 +110,7 @@ pub async fn select_water_profiles(
     .fetch_one(pool)
     .await?;
 
-    let offset = (page - 1) * page_size;
+    let offset = pagination::offset(page, page_size);
     // CROSS-TENANT QUERY: reads include the shared system-tenant water profiles.
     let sql = format!(
         "SELECT {PROFILE_COLS} FROM water_profiles WHERE tenant_id = $1 OR tenant_id = $2 \
@@ -141,8 +119,8 @@ pub async fn select_water_profiles(
     let items: Vec<Profile> = sqlx::query_as::<_, Profile>(&sql)
         .bind(tenant_id)
         .bind(SYSTEM_TENANT_ID)
-        .bind(i64::from(page_size))
-        .bind(i64::from(offset))
+        .bind(page_size)
+        .bind(offset)
         .fetch_all(pool)
         .await?;
 
@@ -211,16 +189,8 @@ const ADJ_COLS: &str = "id, tenant_id, name, source_profile_id, target_profile_i
     result_mash_ph::float8 AS result_mash_ph, \
     notes, created_at, updated_at";
 
-/// Resolves the adjustment sort string to a trusted `ORDER BY` fragment,
-/// matching the Go `resolveAdjSort` (default `created_at DESC`).
-fn resolve_adj_sort(sort: &str) -> &'static str {
-    match sort {
-        "name" => "name ASC",
-        "-name" => "name DESC",
-        "created_at" => "created_at ASC",
-        _ => "created_at DESC",
-    }
-}
+/// Allowed sort fields for water adjustments.
+const ADJUSTMENT_ALLOWED_SORT: sort::Allowed = &[("name", "name"), ("created_at", "created_at")];
 
 /// The ten nullable result-column binds, in column order. All `None` when no
 /// cached result is supplied (mirrors the Go `resultFields`).
@@ -308,8 +278,8 @@ pub async fn select_water_adjustments(
     tenant_id: Uuid,
     filter: &AdjustmentFilter,
 ) -> std::result::Result<Page<Adjustment>, ApiError> {
-    let (page, page_size) = clamp_page(filter.page, filter.page_size);
-    let order_by = resolve_adj_sort(&filter.sort);
+    let (page, page_size) = pagination::clamp(filter.page, filter.page_size);
+    let order_by = sort::parse(&filter.sort, ADJUSTMENT_ALLOWED_SORT, "-created_at")?;
 
     let mut count: QueryBuilder<Postgres> =
         QueryBuilder::new("SELECT COUNT(*) FROM water_adjustments WHERE tenant_id = ");
@@ -322,7 +292,7 @@ pub async fn select_water_adjustments(
     }
     let total: i64 = count.build_query_scalar().fetch_one(pool).await?;
 
-    let offset = (page - 1) * page_size;
+    let offset = pagination::offset(page, page_size);
     let mut list: QueryBuilder<Postgres> = QueryBuilder::new(format!(
         "SELECT {ADJ_COLS} FROM water_adjustments WHERE tenant_id = "
     ));
@@ -334,9 +304,9 @@ pub async fn select_water_adjustments(
         list.push(" AND recipe_id = ").push_bind(recipe_id);
     }
     list.push(format!(" ORDER BY {order_by} LIMIT "))
-        .push_bind(i64::from(page_size))
+        .push_bind(page_size)
         .push(" OFFSET ")
-        .push_bind(i64::from(offset));
+        .push_bind(offset);
     let rows: Vec<AdjustmentRow> = list.build_query_as().fetch_all(pool).await?;
 
     let items = rows

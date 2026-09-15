@@ -13,13 +13,10 @@ use super::models::{
 };
 use super::qr;
 use super::repository as repo;
+use crate::platform::errors::is_unique_violation;
 use crate::platform::errors::ApiError;
+use crate::platform::sort;
 use crate::state::AppState;
-
-fn is_unique_violation(e: &sqlx::Error) -> bool {
-    e.as_database_error()
-        .is_some_and(|d| d.is_unique_violation())
-}
 
 fn today() -> String {
     Utc::now().date_naive().to_string()
@@ -51,12 +48,19 @@ pub async fn create_asset(
     }
 }
 
+/// Allowed sort fields for assets.
+const ASSET_ALLOWED_SORT: sort::Allowed = &[
+    ("asset_number", "asset_number"),
+    ("status", "status"),
+    ("created_at", "created_at"),
+];
+
 pub async fn list_assets(
     state: &AppState,
     tenant_id: Uuid,
     filter: AssetFilter,
 ) -> Result<Page<Asset>, ApiError> {
-    let order_by = asset_sort(&filter.sort);
+    let order_by = sort::parse(&filter.sort, ASSET_ALLOWED_SORT, "-created_at")?;
     Ok(repo::select_assets(&state.pool, tenant_id, &filter, &order_by).await?)
 }
 
@@ -352,15 +356,4 @@ pub async fn count_assets_by_statuses(
     statuses: &[String],
 ) -> Result<i64, ApiError> {
     Ok(repo::count_assets_by_statuses(&state.pool, tenant_id, statuses).await?)
-}
-
-fn asset_sort(sort: &str) -> String {
-    let spec = if sort.is_empty() { "-created_at" } else { sort };
-    let desc = spec.starts_with('-');
-    let col = match spec.trim_start_matches('-') {
-        "asset_number" => "asset_number",
-        "status" => "status",
-        _ => "created_at",
-    };
-    format!("{col} {}", if desc { "DESC" } else { "ASC" })
 }

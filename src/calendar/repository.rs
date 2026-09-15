@@ -8,21 +8,10 @@ use sqlx::{PgExecutor, PgPool, Postgres, QueryBuilder};
 use uuid::Uuid;
 
 use super::models::{Event, EventWrite, ListFilter, Page};
+use crate::platform::pagination;
 
 const EVENT_COLS: &str = "id, tenant_id, batch_id, event_type, title, start_time, end_time, \
     status, notify_minutes_before, notes, created_at, updated_at";
-
-fn clamp_page(page: i64, page_size: i64) -> (i64, i64) {
-    let page = if page < 1 { 1 } else { page };
-    let page_size = if page_size < 1 {
-        20
-    } else if page_size > 100 {
-        100
-    } else {
-        page_size
-    };
-    (page, page_size)
-}
 
 /// Inserts an event and returns the created row.
 pub async fn insert<'e, E: PgExecutor<'e>>(
@@ -97,7 +86,7 @@ pub async fn select_list(
     filter: &ListFilter,
     order_by: &str,
 ) -> Result<Page<Event>, sqlx::Error> {
-    let (page, page_size) = clamp_page(filter.page, filter.page_size);
+    let (page, page_size) = pagination::clamp(filter.page, filter.page_size);
 
     let push_where = |qb: &mut QueryBuilder<Postgres>| {
         qb.push(" WHERE tenant_id = ").push_bind(tenant_id);
@@ -127,7 +116,9 @@ pub async fn select_list(
     push_where(&mut list_qb);
     list_qb.push(format!(" ORDER BY {order_by} "));
     list_qb.push(" LIMIT ").push_bind(page_size);
-    list_qb.push(" OFFSET ").push_bind((page - 1) * page_size);
+    list_qb
+        .push(" OFFSET ")
+        .push_bind(pagination::offset(page, page_size));
     let items = list_qb.build_query_as::<Event>().fetch_all(pool).await?;
 
     Ok(Page::new(items, total, page, page_size))

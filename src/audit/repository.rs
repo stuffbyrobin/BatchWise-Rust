@@ -9,21 +9,19 @@ use sqlx::{PgPool, Postgres, QueryBuilder};
 use uuid::Uuid;
 
 use super::models::{AuditEvent, AuditEventList, ListFilter};
+use crate::platform::errors::ApiError;
+use crate::platform::pagination;
+use crate::platform::sort;
 
 const COLS: &str = "id, tenant_id, event_type, entity_type, entity_id, actor_user_id, \
     event_data, created_at";
 
-fn clamp_page(page: i64, page_size: i64) -> (i64, i64) {
-    let page = if page < 1 { 1 } else { page };
-    let page_size = if page_size < 1 {
-        50
-    } else if page_size > 200 {
-        200
-    } else {
-        page_size
-    };
-    (page, page_size)
-}
+/// Allowed sort fields for audit events.
+const AUDIT_ALLOWED_SORT: sort::Allowed = &[
+    ("created_at", "created_at"),
+    ("event_type", "event_type"),
+    ("entity_type", "entity_type"),
+];
 
 /// Inserts an audit event.
 #[allow(clippy::too_many_arguments)]
@@ -70,26 +68,13 @@ pub async fn select_by_id(
         .await
 }
 
-/// Lists audit events matching the filter, newest first.
-/// Safe `ORDER BY` for the audit log; default `-created_at` (newest first).
-fn build_sort(sort: &str) -> String {
-    let spec = if sort.is_empty() { "-created_at" } else { sort };
-    let desc = spec.starts_with('-');
-    let col = match spec.trim_start_matches('-') {
-        "created_at" => "created_at",
-        "event_type" => "event_type",
-        "entity_type" => "entity_type",
-        _ => "created_at",
-    };
-    format!("{col} {}", if desc { "DESC" } else { "ASC" })
-}
-
 pub async fn select_list(
     pool: &PgPool,
     tenant_id: Uuid,
     f: &ListFilter,
-) -> Result<AuditEventList, sqlx::Error> {
-    let (page, page_size) = clamp_page(f.page, f.page_size);
+) -> Result<AuditEventList, ApiError> {
+    let order_by = sort::parse(&f.sort, AUDIT_ALLOWED_SORT, "-created_at")?;
+    let (page, page_size) = pagination::clamp(f.page, f.page_size);
     let push_where = |qb: &mut QueryBuilder<Postgres>| {
         qb.push(" WHERE tenant_id = ").push_bind(tenant_id);
         if let Some(t) = &f.entity_type {
@@ -115,9 +100,10 @@ pub async fn select_list(
 
     let mut qb = QueryBuilder::<Postgres>::new(format!("SELECT {COLS} FROM compliance_audit_log"));
     push_where(&mut qb);
-    qb.push(format!(" ORDER BY {}", build_sort(&f.sort)));
+    qb.push(format!(" ORDER BY {order_by}"));
     qb.push(" LIMIT ").push_bind(page_size);
-    qb.push(" OFFSET ").push_bind((page - 1) * page_size);
+    qb.push(" OFFSET ")
+        .push_bind(pagination::offset(page, page_size));
     let items = qb.build_query_as::<AuditEvent>().fetch_all(pool).await?;
 
     Ok(AuditEventList::new(items, total, page, page_size))

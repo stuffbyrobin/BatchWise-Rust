@@ -5,6 +5,7 @@
 //! results). `NUMERIC` columns are selected as `float8` so they decode into
 //! `f64`; the additions arrays are stored as JSONB.
 
+pub use crate::platform::pagination::Page;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
@@ -13,34 +14,6 @@ use validator::Validate;
 
 /// The reserved tenant id for system-owned (shared) water profiles.
 pub const SYSTEM_TENANT_ID: Uuid = Uuid::nil();
-
-/// A generic paginated response envelope. Mirrors the Go `Page[T]`.
-#[derive(Debug, Clone, Serialize)]
-pub struct Page<T> {
-    pub items: Vec<T>,
-    pub total: i64,
-    pub page: i32,
-    pub page_size: i32,
-    pub total_pages: i32,
-}
-
-impl<T> Page<T> {
-    /// Builds a page envelope, computing the total page count.
-    pub fn new(items: Vec<T>, total: i64, page: i32, page_size: i32) -> Self {
-        let total_pages = if page_size > 0 && total > 0 {
-            ((total + i64::from(page_size) - 1) / i64::from(page_size)) as i32
-        } else {
-            0
-        };
-        Page {
-            items,
-            total,
-            page,
-            page_size,
-            total_pages,
-        }
-    }
-}
 
 // ---- Water profiles ----
 
@@ -328,8 +301,8 @@ pub struct InlineWaterProfile {
 /// List-query parameters for water profiles.
 #[derive(Debug, Default)]
 pub struct ProfileFilter {
-    pub page: i32,
-    pub page_size: i32,
+    pub page: i64,
+    pub page_size: i64,
     pub sort: String,
 }
 
@@ -338,7 +311,7 @@ pub struct ProfileFilter {
 pub struct AdjustmentFilter {
     pub batch_id: Option<Uuid>,
     pub recipe_id: Option<Uuid>,
-    pub page: i32,
-    pub page_size: i32,
+    pub page: i64,
+    pub page_size: i64,
     pub sort: String,
 }

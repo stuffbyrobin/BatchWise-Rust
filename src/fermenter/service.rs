@@ -4,12 +4,10 @@ use uuid::Uuid;
 
 use super::models::{CreateRequest, Fermenter, FermenterWrite, ListFilter, Page, UpdateRequest};
 use super::repository as repo;
+use crate::platform::errors::is_unique_violation;
 use crate::platform::errors::ApiError;
+use crate::platform::sort;
 use crate::state::AppState;
-
-fn is_unique_violation(e: &sqlx::Error) -> bool {
-    matches!(e, sqlx::Error::Database(d) if d.is_unique_violation())
-}
 
 fn write_from_create(req: &CreateRequest) -> FermenterWrite {
     FermenterWrite {
@@ -47,7 +45,12 @@ pub async fn list(
     tenant_id: Uuid,
     filter: ListFilter,
 ) -> Result<Page<Fermenter>, ApiError> {
-    let order_by = build_sort(&filter.sort);
+    let order_by = sort::parse_with(
+        &filter.sort,
+        FERMENTER_ALLOWED_SORT,
+        "name",
+        sort::Nulls::Last,
+    )?;
     Ok(repo::select_list(&state.pool, tenant_id, &filter, &order_by).await?)
 }
 
@@ -110,15 +113,9 @@ pub async fn delete(state: &AppState, tenant_id: Uuid, id: Uuid) -> Result<(), A
     Ok(())
 }
 
-/// Builds a safe `ORDER BY` from the sort spec (default `name`).
-fn build_sort(sort: &str) -> String {
-    let spec = if sort.is_empty() { "name" } else { sort };
-    let desc = spec.starts_with('-');
-    let col = match spec.trim_start_matches('-') {
-        "name" => "name",
-        "capacity_liters" => "capacity_liters",
-        "created_at" => "created_at",
-        _ => "name",
-    };
-    format!("{col} {} NULLS LAST", if desc { "DESC" } else { "ASC" })
-}
+/// Allowed sort fields for fermenter list.
+const FERMENTER_ALLOWED_SORT: sort::Allowed = &[
+    ("name", "name"),
+    ("capacity_liters", "capacity_liters"),
+    ("created_at", "created_at"),
+];

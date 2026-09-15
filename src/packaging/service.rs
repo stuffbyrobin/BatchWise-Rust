@@ -16,13 +16,9 @@ use super::models::{
 };
 use super::repository as repo;
 use crate::audit;
+use crate::platform::errors::is_unique_violation;
 use crate::platform::errors::ApiError;
 use crate::state::AppState;
-
-fn is_unique_violation(e: &sqlx::Error) -> bool {
-    e.as_database_error()
-        .is_some_and(|d| d.is_unique_violation())
-}
 
 // ---- packaging runs ----
 
@@ -91,7 +87,7 @@ pub async fn list_runs(
     tenant_id: Uuid,
     filter: ListPackagingRunsFilter,
 ) -> Result<Page<PackagingRun>, ApiError> {
-    Ok(repo::select_runs(&state.pool, tenant_id, &filter).await?)
+    repo::select_runs(&state.pool, tenant_id, &filter).await
 }
 
 pub async fn patch_run(
@@ -246,7 +242,7 @@ pub async fn list_movements(
     tenant_id: Uuid,
     filter: ListMovementsFilter,
 ) -> Result<Page<DistributionMovement>, ApiError> {
-    Ok(repo::select_movements(&state.pool, tenant_id, &filter).await?)
+    repo::select_movements(&state.pool, tenant_id, &filter).await
 }
 
 pub async fn delete_movement(

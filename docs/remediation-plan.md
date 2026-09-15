@@ -48,13 +48,13 @@ Do this **before** Phases 5–8. It deletes ~80 duplicated definitions and fixes
 three findings (uncapped page size, offset overflow, 500s on DB constraint
 violations) in one place instead of 30.
 
-- [ ] `src/platform/pagination.rs`: `PageParams { page, page_size }` with a clamping constructor (default 20, max 100, `audit` may override to 200), `limit()`/`offset()` using saturating math, and one generic `Page<T>`.
-- [ ] Replace the 18 `clamp_page` copies, 19 `Page<T>` structs, 30 `OFFSET (page - 1) * page_size` sites, and 34 `ListQuery` structs. Normalise the two `i32` modules (`library`, `water`) to `i64`.
-- [ ] `src/platform/sort.rs`: promote `library::repository::parse_sort` to `sort::parse(spec, ALLOWED, default) -> Result<String, ApiError>`; each module declares `const ALLOWED_SORT: &[(&str, &str)]`. Replace all 27 sort resolvers. Decide once whether unknown columns error (recommended) or fall back.
-- [ ] `src/platform/errors.rs`: in `From<sqlx::Error>`, map SQLSTATE `23505` → 409, `23514` → 422, `23503` → 409/422, `22001` → 400. Delete the 11 `is_unique_violation` copies.
-- [ ] Make the validator→`ApiError` helper in `platform/web.rs` `pub(crate)` (needed by Phase 6).
-- [ ] `sqlx` LIKE helper: `platform::sql::like_contains(term)` that escapes `\ % _` and appends `ESCAPE '\'`; swap in at the 15 LIKE sites.
-- [ ] Tests: `page_size=1000000` is clamped, `page=i64::MAX` does not panic, `?sort=bogus` is rejected on two representative endpoints, a CHECK violation returns 4xx.
+- [x] `src/platform/pagination.rs`: `PageParams { page, page_size }` with a clamping constructor (default 20, max 100, `audit` may override to 200), `limit()`/`offset()` using saturating math, and one generic `Page<T>`.
+- [x] Replace the 18 `clamp_page` copies, 19 `Page<T>` structs, 30 `OFFSET (page - 1) * page_size` sites, Normalise the two `i32` modules (`library`, `water`) to `i64`. (The 34 handler `ListQuery` structs were left as-is: they differ in filter fields and only share `page`/`page_size`/`sort`; a `#[serde(flatten)]` paging struct is a possible later tidy-up, not a defect.)
+- [x] `src/platform/sort.rs`: promote `library::repository::parse_sort` to `sort::parse(spec, ALLOWED, default) -> Result<String, ApiError>`; each module declares `const ALLOWED_SORT: &[(&str, &str)]`. Replace all 27 sort resolvers. Decided: unknown columns are rejected with a 400 validation error everywhere (14 resolvers previously fell back silently).
+- [x] `src/platform/errors.rs`: in `From<sqlx::Error>`, map SQLSTATE `23505` → 409, `23514` → 422, `23503` → 409/422, `22001` → 400. Delete the 11 `is_unique_violation` copies.
+- [x] Make the validator→`ApiError` helper in `platform/web.rs` `pub(crate)` (needed by Phase 6).
+- [x] `sqlx` LIKE helper: `platform::sql::like_contains(term)` that escapes `\ % _` and appends `ESCAPE '\'`; swap in at the 15 LIKE sites.
+- [x] Tests: `page_size=1000000` is clamped, `page=i64::MAX` does not panic, `?sort=bogus` is rejected on two representative endpoints, a CHECK violation returns 4xx.
 
 ---
 

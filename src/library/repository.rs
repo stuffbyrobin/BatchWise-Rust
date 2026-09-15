@@ -15,49 +15,13 @@ use super::models::{
     SYSTEM_TENANT_ID,
 };
 use crate::platform::errors::ApiError;
+use crate::platform::pagination;
+use crate::platform::sort;
+use crate::platform::sql::like_contains;
 
 // ---- pagination / sort helpers ----
 
-/// Clamps page (>=1) and page_size (1..=100, default 20).
-fn clamp_page(page: i32, page_size: i32) -> (i32, i32) {
-    let page = if page < 1 { 1 } else { page };
-    let page_size = if page_size < 1 {
-        20
-    } else if page_size > 100 {
-        100
-    } else {
-        page_size
-    };
-    (page, page_size)
-}
-
-/// Validates a comma-separated sort string against an allow-list and builds an
-/// `ORDER BY` fragment. An unknown field yields a validation error (matching the
-/// Go `ErrInvalidSort` → 400 mapping). The returned fragment is built only from
-/// the trusted allow-list values, never from user input.
-fn parse_sort(sort: &str, allowed: &[(&str, &str)], default_col: &str) -> Result<String, ApiError> {
-    let sort = sort.trim();
-    if sort.is_empty() {
-        return Ok(format!("{default_col} ASC"));
-    }
-    let mut parts = Vec::new();
-    for field in sort.split(',') {
-        let field = field.trim();
-        let (name, dir) = match field.strip_prefix('-') {
-            Some(rest) => (rest, "DESC"),
-            None => (field, "ASC"),
-        };
-        let col = allowed
-            .iter()
-            .find(|(k, _)| *k == name)
-            .map(|(_, c)| *c)
-            .ok_or_else(|| ApiError::validation("sort", &format!("invalid sort field: {name}")))?;
-        parts.push(format!("{col} {dir}"));
-    }
-    Ok(parts.join(", "))
-}
-
-const STYLE_ALLOWED_SORT: &[(&str, &str)] = &[
+const STYLE_ALLOWED_SORT: sort::Allowed = &[
     ("name", "name"),
     ("category", "category"),
     ("og_min", "og_min"),
@@ -65,22 +29,22 @@ const STYLE_ALLOWED_SORT: &[(&str, &str)] = &[
     ("created_at", "created_at"),
 ];
 
-const EQUIP_ALLOWED_SORT: &[(&str, &str)] = &[
+const EQUIP_ALLOWED_SORT: sort::Allowed = &[
     ("name", "name"),
     ("batch_size_liters", "batch_size_liters"),
     ("created_at", "created_at"),
 ];
 
-const MASH_ALLOWED_SORT: &[(&str, &str)] = &[("name", "name"), ("created_at", "created_at")];
+const MASH_ALLOWED_SORT: sort::Allowed = &[("name", "name"), ("created_at", "created_at")];
 
-const YEAST_ALLOWED_SORT: &[(&str, &str)] = &[
+const YEAST_ALLOWED_SORT: sort::Allowed = &[
     ("name", "name"),
     ("type", "type"),
     ("product_code", "product_code"),
     ("created_at", "created_at"),
 ];
 
-const FERMENTABLE_ALLOWED_SORT: &[(&str, &str)] = &[
+const FERMENTABLE_ALLOWED_SORT: sort::Allowed = &[
     ("name", "name"),
     ("supplier", "supplier"),
     ("type", "type"),
@@ -132,8 +96,8 @@ pub async fn select_styles(
     tenant_id: Uuid,
     filter: &StyleFilter,
 ) -> Result<Page<Style>, ApiError> {
-    let (page, page_size) = clamp_page(filter.page, filter.page_size);
-    let order_by = parse_sort(&filter.sort, STYLE_ALLOWED_SORT, "name")?;
+    let (page, page_size) = pagination::clamp(filter.page, filter.page_size);
+    let order_by = sort::parse(&filter.sort, STYLE_ALLOWED_SORT, "name")?;
 
     // CROSS-TENANT QUERY: reads include the shared system-tenant library rows.
     let mut count: QueryBuilder<Postgres> =
@@ -149,11 +113,11 @@ pub async fn select_styles(
     if let Some(name) = &filter.name {
         count
             .push(" AND lower(name) LIKE ")
-            .push_bind(format!("%{}%", name.to_lowercase()));
+            .push_bind(like_contains(&name.to_lowercase()));
     }
     let total: i64 = count.build_query_scalar().fetch_one(pool).await?;
 
-    let offset = (page - 1) * page_size;
+    let offset = pagination::offset(page, page_size);
     let mut list: QueryBuilder<Postgres> = QueryBuilder::new(format!(
         "SELECT {STYLE_COLS} FROM styles WHERE tenant_id IN ("
     ));
@@ -166,12 +130,12 @@ pub async fn select_styles(
     }
     if let Some(name) = &filter.name {
         list.push(" AND lower(name) LIKE ")
-            .push_bind(format!("%{}%", name.to_lowercase()));
+            .push_bind(like_contains(&name.to_lowercase()));
     }
     list.push(format!(" ORDER BY {order_by} LIMIT "))
-        .push_bind(i64::from(page_size))
+        .push_bind(page_size)
         .push(" OFFSET ")
-        .push_bind(i64::from(offset));
+        .push_bind(offset);
     let items: Vec<Style> = list.build_query_as().fetch_all(pool).await?;
 
     Ok(Page::new(items, total, page, page_size))
@@ -337,8 +301,8 @@ pub async fn select_equipment(
     tenant_id: Uuid,
     filter: &EquipmentFilter,
 ) -> Result<Page<EquipmentProfile>, ApiError> {
-    let (page, page_size) = clamp_page(filter.page, filter.page_size);
-    let order_by = parse_sort(&filter.sort, EQUIP_ALLOWED_SORT, "name")?;
+    let (page, page_size) = pagination::clamp(filter.page, filter.page_size);
+    let order_by = sort::parse(&filter.sort, EQUIP_ALLOWED_SORT, "name")?;
 
     // CROSS-TENANT QUERY: reads include the shared system-tenant library rows.
     let mut count: QueryBuilder<Postgres> =
@@ -351,11 +315,11 @@ pub async fn select_equipment(
     if let Some(name) = &filter.name {
         count
             .push(" AND lower(name) LIKE ")
-            .push_bind(format!("%{}%", name.to_lowercase()));
+            .push_bind(like_contains(&name.to_lowercase()));
     }
     let total: i64 = count.build_query_scalar().fetch_one(pool).await?;
 
-    let offset = (page - 1) * page_size;
+    let offset = pagination::offset(page, page_size);
     let mut list: QueryBuilder<Postgres> = QueryBuilder::new(format!(
         "SELECT {EQUIP_COLS} FROM equipment_profiles WHERE tenant_id IN ("
     ));
@@ -365,12 +329,12 @@ pub async fn select_equipment(
         .push(")");
     if let Some(name) = &filter.name {
         list.push(" AND lower(name) LIKE ")
-            .push_bind(format!("%{}%", name.to_lowercase()));
+            .push_bind(like_contains(&name.to_lowercase()));
     }
     list.push(format!(" ORDER BY {order_by} LIMIT "))
-        .push_bind(i64::from(page_size))
+        .push_bind(page_size)
         .push(" OFFSET ")
-        .push_bind(i64::from(offset));
+        .push_bind(offset);
     let items: Vec<EquipmentProfile> = list.build_query_as().fetch_all(pool).await?;
 
     Ok(Page::new(items, total, page, page_size))
@@ -527,8 +491,8 @@ pub async fn select_mash_profiles(
     tenant_id: Uuid,
     filter: &MashFilter,
 ) -> Result<Page<MashProfile>, ApiError> {
-    let (page, page_size) = clamp_page(filter.page, filter.page_size);
-    let order_by = parse_sort(&filter.sort, MASH_ALLOWED_SORT, "name")?;
+    let (page, page_size) = pagination::clamp(filter.page, filter.page_size);
+    let order_by = sort::parse(&filter.sort, MASH_ALLOWED_SORT, "name")?;
 
     // CROSS-TENANT QUERY: reads include the shared system-tenant library rows.
     let mut count: QueryBuilder<Postgres> =
@@ -541,11 +505,11 @@ pub async fn select_mash_profiles(
     if let Some(name) = &filter.name {
         count
             .push(" AND lower(name) LIKE ")
-            .push_bind(format!("%{}%", name.to_lowercase()));
+            .push_bind(like_contains(&name.to_lowercase()));
     }
     let total: i64 = count.build_query_scalar().fetch_one(pool).await?;
 
-    let offset = (page - 1) * page_size;
+    let offset = pagination::offset(page, page_size);
     let mut list: QueryBuilder<Postgres> = QueryBuilder::new(format!(
         "SELECT {MASH_COLS} FROM mash_profiles WHERE tenant_id IN ("
     ));
@@ -555,12 +519,12 @@ pub async fn select_mash_profiles(
         .push(")");
     if let Some(name) = &filter.name {
         list.push(" AND lower(name) LIKE ")
-            .push_bind(format!("%{}%", name.to_lowercase()));
+            .push_bind(like_contains(&name.to_lowercase()));
     }
     list.push(format!(" ORDER BY {order_by} LIMIT "))
-        .push_bind(i64::from(page_size))
+        .push_bind(page_size)
         .push(" OFFSET ")
-        .push_bind(i64::from(offset));
+        .push_bind(offset);
     let rows: Vec<MashProfileRow> = list.build_query_as().fetch_all(pool).await?;
 
     let mut items = Vec::with_capacity(rows.len());
@@ -706,8 +670,8 @@ pub async fn select_yeasts(
     tenant_id: Uuid,
     filter: &YeastFilter,
 ) -> Result<Page<Yeast>, ApiError> {
-    let (page, page_size) = clamp_page(filter.page, filter.page_size);
-    let order_by = parse_sort(&filter.sort, YEAST_ALLOWED_SORT, "name")?;
+    let (page, page_size) = pagination::clamp(filter.page, filter.page_size);
+    let order_by = sort::parse(&filter.sort, YEAST_ALLOWED_SORT, "name")?;
 
     // CROSS-TENANT QUERY: reads include the shared system-tenant library rows.
     let mut count: QueryBuilder<Postgres> =
@@ -720,7 +684,7 @@ pub async fn select_yeasts(
     apply_yeast_filters(&mut count, filter);
     let total: i64 = count.build_query_scalar().fetch_one(pool).await?;
 
-    let offset = (page - 1) * page_size;
+    let offset = pagination::offset(page, page_size);
     let mut list: QueryBuilder<Postgres> = QueryBuilder::new(format!(
         "SELECT {YEAST_COLS} FROM yeasts WHERE tenant_id IN ("
     ));
@@ -730,9 +694,9 @@ pub async fn select_yeasts(
         .push(")");
     apply_yeast_filters(&mut list, filter);
     list.push(format!(" ORDER BY {order_by} LIMIT "))
-        .push_bind(i64::from(page_size))
+        .push_bind(page_size)
         .push(" OFFSET ")
-        .push_bind(i64::from(offset));
+        .push_bind(offset);
     let items: Vec<Yeast> = list.build_query_as().fetch_all(pool).await?;
 
     Ok(Page::new(items, total, page, page_size))
@@ -742,11 +706,11 @@ pub async fn select_yeasts(
 fn apply_yeast_filters(qb: &mut QueryBuilder<Postgres>, filter: &YeastFilter) {
     if let Some(name) = &filter.name {
         qb.push(" AND lower(name) LIKE ")
-            .push_bind(format!("%{}%", name.to_lowercase()));
+            .push_bind(like_contains(&name.to_lowercase()));
     }
     if let Some(manufacturer) = &filter.manufacturer {
         qb.push(" AND lower(manufacturer) LIKE ")
-            .push_bind(format!("%{}%", manufacturer.to_lowercase()));
+            .push_bind(like_contains(&manufacturer.to_lowercase()));
     }
     if let Some(att_min) = filter.attenuation_min {
         qb.push(" AND attenuation_min_pct >= ").push_bind(att_min);
@@ -869,8 +833,8 @@ pub async fn select_fermentables(
     tenant_id: Uuid,
     filter: &FermentableFilter,
 ) -> Result<Page<Fermentable>, ApiError> {
-    let (page, page_size) = clamp_page(filter.page, filter.page_size);
-    let order_by = parse_sort(&filter.sort, FERMENTABLE_ALLOWED_SORT, "name")?;
+    let (page, page_size) = pagination::clamp(filter.page, filter.page_size);
+    let order_by = sort::parse(&filter.sort, FERMENTABLE_ALLOWED_SORT, "name")?;
 
     // CROSS-TENANT QUERY: reads include the shared system-tenant library rows.
     let mut count: QueryBuilder<Postgres> =
@@ -883,7 +847,7 @@ pub async fn select_fermentables(
     apply_fermentable_filters(&mut count, filter);
     let total: i64 = count.build_query_scalar().fetch_one(pool).await?;
 
-    let offset = (page - 1) * page_size;
+    let offset = pagination::offset(page, page_size);
     let mut list: QueryBuilder<Postgres> = QueryBuilder::new(format!(
         "SELECT {FERMENTABLE_COLS} FROM library_fermentables WHERE tenant_id IN ("
     ));
@@ -893,9 +857,9 @@ pub async fn select_fermentables(
         .push(")");
     apply_fermentable_filters(&mut list, filter);
     list.push(format!(" ORDER BY {order_by} LIMIT "))
-        .push_bind(i64::from(page_size))
+        .push_bind(page_size)
         .push(" OFFSET ")
-        .push_bind(i64::from(offset));
+        .push_bind(offset);
     let items: Vec<Fermentable> = list.build_query_as().fetch_all(pool).await?;
 
     Ok(Page::new(items, total, page, page_size))
@@ -905,11 +869,11 @@ pub async fn select_fermentables(
 fn apply_fermentable_filters(qb: &mut QueryBuilder<Postgres>, filter: &FermentableFilter) {
     if let Some(name) = &filter.name {
         qb.push(" AND lower(name) LIKE ")
-            .push_bind(format!("%{}%", name.to_lowercase()));
+            .push_bind(like_contains(&name.to_lowercase()));
     }
     if let Some(supplier) = &filter.supplier {
         qb.push(" AND lower(supplier) LIKE ")
-            .push_bind(format!("%{}%", supplier.to_lowercase()));
+            .push_bind(like_contains(&supplier.to_lowercase()));
     }
     if let Some(ftype) = &filter.fermentable_type {
         qb.push(" AND lower(type) = ")

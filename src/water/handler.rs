@@ -57,8 +57,8 @@ pub fn routes(state: AppState) -> Router {
 #[derive(Debug, Deserialize)]
 struct ProfileQuery {
     sort: Option<String>,
-    page: Option<i32>,
-    page_size: Option<i32>,
+    page: Option<i64>,
+    page_size: Option<i64>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -66,8 +66,8 @@ struct AdjustmentQuery {
     batch_id: Option<Uuid>,
     recipe_id: Option<Uuid>,
     sort: Option<String>,
-    page: Option<i32>,
-    page_size: Option<i32>,
+    page: Option<i64>,
+    page_size: Option<i64>,
 }
 
 // ---- Profiles ----

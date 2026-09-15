@@ -13,6 +13,7 @@ use super::models::{
 use super::password::{check_password_policy, hash_password, verify_password};
 use super::refresh::{generate_refresh_token, hash_refresh_token};
 use super::repository as repo;
+use crate::platform::errors::is_unique_violation;
 use crate::platform::errors::ApiError;
 use crate::state::AppState;
 use crate::tenant::{presets, repository as tenant_repo};
@@ -231,9 +232,4 @@ async fn issue_token_pair(state: &AppState, user: &User) -> Result<AuthResponse,
         token_type: "Bearer".to_string(),
         expires_in,
     })
-}
-
-fn is_unique_violation(e: &sqlx::Error) -> bool {
-    e.as_database_error()
-        .is_some_and(|d| d.is_unique_violation())
 }

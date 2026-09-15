@@ -8,6 +8,9 @@ use sqlx::{PgPool, Postgres, QueryBuilder};
 use uuid::Uuid;
 
 use super::models::{Page, Propagation, YeastBankEntry, YeastBankFilter};
+use crate::platform::errors::ApiError;
+use crate::platform::pagination;
+use crate::platform::sort;
 
 const ENTRY_COLS: &str = "id, tenant_id, name, library_yeast_id, generation, harvested_at, \
     viability_percent::float8 AS viability_percent, quantity_ml::float8 AS quantity_ml, \
@@ -27,16 +30,10 @@ fn norm_page(page: i64, page_size: i64) -> (i64, i64) {
     (page, page_size)
 }
 
-fn entry_order_by(sort: &str) -> &'static str {
-    match sort {
-        "name" => "name ASC",
-        "-name" => "name DESC",
-        "created_at" => "created_at ASC",
-        _ => "created_at DESC",
-    }
-}
-
 // ---- yeast bank entries ----
+
+/// Allow-list for yeast bank entry sorting: public name -> SQL column.
+const ENTRY_ALLOWED_SORT: sort::Allowed = &[("name", "name"), ("created_at", "created_at")];
 
 /// Inserts a yeast bank entry and returns it.
 #[allow(clippy::too_many_arguments)]
@@ -81,7 +78,7 @@ pub async fn select_entries(
     pool: &PgPool,
     tenant_id: Uuid,
     filter: &YeastBankFilter,
-) -> Result<Page<YeastBankEntry>, sqlx::Error> {
+) -> Result<Page<YeastBankEntry>, ApiError> {
     let (page, page_size) = norm_page(filter.page, filter.page_size);
     let push_where = |qb: &mut QueryBuilder<Postgres>| {
         qb.push(" WHERE tenant_id = ").push_bind(tenant_id);
@@ -96,12 +93,13 @@ pub async fn select_entries(
     push_where(&mut count_qb);
     let total: i64 = count_qb.build_query_scalar().fetch_one(pool).await?;
 
-    let order_by = entry_order_by(&filter.sort);
+    let order_by = sort::parse(&filter.sort, ENTRY_ALLOWED_SORT, "-created_at")?;
     let mut qb = QueryBuilder::<Postgres>::new(format!("SELECT {ENTRY_COLS} FROM yeast_bank"));
     push_where(&mut qb);
     qb.push(format!(" ORDER BY {order_by}"));
     qb.push(" LIMIT ").push_bind(page_size);
-    qb.push(" OFFSET ").push_bind((page - 1) * page_size);
+    qb.push(" OFFSET ")
+        .push_bind(pagination::offset(page, page_size));
     let items = qb
         .build_query_as::<YeastBankEntry>()
         .fetch_all(pool)
@@ -230,7 +228,7 @@ pub async fn select_propagations(
         .bind(tenant_id)
         .bind(bank_id)
         .bind(page_size)
-        .bind((page - 1) * page_size)
+        .bind(pagination::offset(page, page_size))
         .fetch_all(pool)
         .await?;
     Ok(Page::new(items, total, page, page_size))

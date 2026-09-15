@@ -12,6 +12,8 @@ use uuid::Uuid;
 use super::models::{
     DistributionMovement, ListMovementsFilter, ListPackagingRunsFilter, PackagingRun, Page,
 };
+use crate::platform::errors::ApiError;
+use crate::platform::{pagination, sort};
 
 /// The packaging-run columns plus the derived `stock_remaining`, for queries
 /// that LEFT JOIN distribution_movements and GROUP BY pr.id.
@@ -31,18 +33,6 @@ const RUN_FROM: &str =
 const MOV_COLS: &str = "dm.id, dm.tenant_id, dm.packaging_run_id, dm.movement_type, dm.quantity, \
     dm.from_location, dm.to_location, dm.order_id, dm.reference, dm.notes, dm.moved_at, \
     dm.created_at";
-
-fn clamp_page(page: i64, page_size: i64) -> (i64, i64) {
-    let page = if page < 1 { 1 } else { page };
-    let page_size = if page_size < 1 {
-        20
-    } else if page_size > 100 {
-        100
-    } else {
-        page_size
-    };
-    (page, page_size)
-}
 
 // ---- packaging runs ----
 
@@ -179,56 +169,36 @@ pub async fn stock_remaining(
     .await
 }
 
-/// Lists packaging runs with filters.
-/// Safe `ORDER BY` for packaging runs (alias `pr`); default `-packaged_at`.
-/// `pr.created_at DESC` is kept as a stable tiebreaker.
-fn build_run_sort(sort: &str) -> String {
-    let spec = if sort.is_empty() {
-        "-packaged_at"
-    } else {
-        sort
-    };
-    let desc = spec.starts_with('-');
-    let col = match spec.trim_start_matches('-') {
-        "lot_number" => "pr.lot_number",
-        "format" => "pr.format",
-        "unit_volume_ml" => "pr.unit_volume_ml",
-        "quantity" => "pr.quantity",
-        "packaged_at" => "pr.packaged_at",
-        "best_before_date" => "pr.best_before_date",
-        _ => "pr.packaged_at",
-    };
-    format!(
-        "{col} {}, pr.created_at DESC",
-        if desc { "DESC" } else { "ASC" }
-    )
-}
+/// Allow-list for packaging run sort fields.
+const RUN_ALLOWED_SORT: sort::Allowed = &[
+    ("lot_number", "pr.lot_number"),
+    ("format", "pr.format"),
+    ("unit_volume_ml", "pr.unit_volume_ml"),
+    ("quantity", "pr.quantity"),
+    ("packaged_at", "pr.packaged_at"),
+    ("best_before_date", "pr.best_before_date"),
+];
 
-/// Safe `ORDER BY` for distribution movements (alias `dm`); default `-moved_at`.
-fn build_movement_sort(sort: &str) -> String {
-    let spec = if sort.is_empty() { "-moved_at" } else { sort };
-    let desc = spec.starts_with('-');
-    let col = match spec.trim_start_matches('-') {
-        "movement_type" => "dm.movement_type",
-        "quantity" => "dm.quantity",
-        "from_location" => "dm.from_location",
-        "to_location" => "dm.to_location",
-        "moved_at" => "dm.moved_at",
-        "reference" => "dm.reference",
-        _ => "dm.moved_at",
-    };
-    format!(
-        "{col} {}, dm.created_at DESC",
-        if desc { "DESC" } else { "ASC" }
-    )
-}
+/// Allow-list for distribution movement sort fields.
+const MOVEMENT_ALLOWED_SORT: sort::Allowed = &[
+    ("movement_type", "dm.movement_type"),
+    ("quantity", "dm.quantity"),
+    ("from_location", "dm.from_location"),
+    ("to_location", "dm.to_location"),
+    ("moved_at", "dm.moved_at"),
+    ("reference", "dm.reference"),
+];
 
 pub async fn select_runs(
     pool: &PgPool,
     tenant_id: Uuid,
     filter: &ListPackagingRunsFilter,
-) -> Result<Page<PackagingRun>, sqlx::Error> {
-    let (page, page_size) = clamp_page(filter.page, filter.page_size);
+) -> Result<Page<PackagingRun>, ApiError> {
+    let (page, page_size) = pagination::clamp(filter.page, filter.page_size);
+    let order_by = format!(
+        "{}, pr.created_at DESC",
+        sort::parse(&filter.sort, RUN_ALLOWED_SORT, "-packaged_at")?
+    );
     let push_where = |qb: &mut QueryBuilder<Postgres>| {
         qb.push(" WHERE pr.tenant_id = ").push_bind(tenant_id);
         if let Some(b) = filter.batch_id {
@@ -244,12 +214,10 @@ pub async fn select_runs(
 
     let mut qb = QueryBuilder::<Postgres>::new(format!("SELECT {RUN_COLS} {RUN_FROM}"));
     push_where(&mut qb);
-    qb.push(format!(
-        " GROUP BY pr.id ORDER BY {}",
-        build_run_sort(&filter.sort)
-    ));
+    qb.push(format!(" GROUP BY pr.id ORDER BY {order_by}"));
     qb.push(" LIMIT ").push_bind(page_size);
-    qb.push(" OFFSET ").push_bind((page - 1) * page_size);
+    qb.push(" OFFSET ")
+        .push_bind(pagination::offset(page, page_size));
     let items = qb.build_query_as::<PackagingRun>().fetch_all(pool).await?;
     Ok(Page::new(items, total, page, page_size))
 }
@@ -326,8 +294,12 @@ pub async fn select_movements(
     pool: &PgPool,
     tenant_id: Uuid,
     filter: &ListMovementsFilter,
-) -> Result<Page<DistributionMovement>, sqlx::Error> {
-    let (page, page_size) = clamp_page(filter.page, filter.page_size);
+) -> Result<Page<DistributionMovement>, ApiError> {
+    let (page, page_size) = pagination::clamp(filter.page, filter.page_size);
+    let order_by = format!(
+        "{}, dm.created_at DESC",
+        sort::parse(&filter.sort, MOVEMENT_ALLOWED_SORT, "-moved_at")?
+    );
     let push_where = |qb: &mut QueryBuilder<Postgres>| {
         qb.push(" WHERE dm.tenant_id = ").push_bind(tenant_id);
         if let Some(r) = filter.packaging_run_id {
@@ -348,9 +320,10 @@ pub async fn select_movements(
     let mut qb =
         QueryBuilder::<Postgres>::new(format!("SELECT {MOV_COLS} FROM distribution_movements dm"));
     push_where(&mut qb);
-    qb.push(format!(" ORDER BY {}", build_movement_sort(&filter.sort)));
+    qb.push(format!(" ORDER BY {order_by}"));
     qb.push(" LIMIT ").push_bind(page_size);
-    qb.push(" OFFSET ").push_bind((page - 1) * page_size);
+    qb.push(" OFFSET ")
+        .push_bind(pagination::offset(page, page_size));
     let items = qb
         .build_query_as::<DistributionMovement>()
         .fetch_all(pool)

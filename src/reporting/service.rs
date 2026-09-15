@@ -20,15 +20,11 @@ use crate::inventory::models::ListFilter as InventoryListFilter;
 use crate::inventory::service as inventory_svc;
 use crate::pkg::duty;
 use crate::pkg::gravity;
+use crate::platform::errors::is_unique_violation;
 use crate::platform::errors::ApiError;
 use crate::recipe::service as recipe_svc;
 use crate::state::AppState;
 use crate::tenant::repository as tenant_repo;
-
-fn is_unique_violation(e: &sqlx::Error) -> bool {
-    e.as_database_error()
-        .is_some_and(|d| d.is_unique_violation())
-}
 
 /// Maps a `rate_type` to its allowed `unit` values (mirrors Go `allowedUnits`).
 fn allowed_units(rate_type: &str) -> Option<&'static [&'static str]> {

@@ -9,21 +9,10 @@ use sqlx::{PgPool, Postgres, QueryBuilder};
 use uuid::Uuid;
 
 use super::models::{Page, Reading, ReadingFilter};
+use crate::platform::pagination;
 
 const COLS: &str = "id, tenant_id, batch_id, recorded_at, stage, gravity::float8 AS gravity, \
     temp_c::float8 AS temp_c, ph::float8 AS ph, notes, created_at";
-
-fn clamp_page(page: i64, page_size: i64) -> (i64, i64) {
-    let page = if page < 1 { 1 } else { page };
-    let page_size = if page_size < 1 {
-        20
-    } else if page_size > 100 {
-        100
-    } else {
-        page_size
-    };
-    (page, page_size)
-}
 
 fn order_by(sort: &str) -> &'static str {
     match sort {
@@ -85,7 +74,7 @@ pub async fn select_readings(
     batch_id: Uuid,
     filter: &ReadingFilter,
 ) -> Result<Page<Reading>, sqlx::Error> {
-    let (page, page_size) = clamp_page(filter.page, filter.page_size);
+    let (page, page_size) = pagination::clamp(filter.page, filter.page_size);
     let push_where = |qb: &mut QueryBuilder<Postgres>| {
         qb.push(" WHERE tenant_id = ").push_bind(tenant_id);
         qb.push(" AND batch_id = ").push_bind(batch_id);
@@ -101,7 +90,8 @@ pub async fn select_readings(
     push_where(&mut qb);
     qb.push(format!(" ORDER BY {}", order_by(&filter.sort)));
     qb.push(" LIMIT ").push_bind(page_size);
-    qb.push(" OFFSET ").push_bind((page - 1) * page_size);
+    qb.push(" OFFSET ")
+        .push_bind(pagination::offset(page, page_size));
     let items = qb.build_query_as::<Reading>().fetch_all(pool).await?;
     Ok(Page::new(items, total, page, page_size))
 }

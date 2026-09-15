@@ -8,13 +8,9 @@ use uuid::Uuid;
 
 use super::models::{CreateRequest, Kinetics, ListFilter, Page, PatchRequest};
 use super::repository::{self as repo, KineticsWrite};
+use crate::platform::errors::is_unique_violation;
 use crate::platform::errors::ApiError;
 use crate::state::AppState;
-
-fn is_unique_violation(e: &sqlx::Error) -> bool {
-    e.as_database_error()
-        .is_some_and(|d| d.is_unique_violation())
-}
 
 fn write_from_create(req: &CreateRequest) -> KineticsWrite {
     KineticsWrite {
@@ -75,7 +71,7 @@ pub async fn list(
     tenant_id: Uuid,
     filter: ListFilter,
 ) -> Result<Page<Kinetics>, ApiError> {
-    Ok(repo::select_list(&state.pool, tenant_id, &filter).await?)
+    repo::select_list(&state.pool, tenant_id, &filter).await
 }
 
 /// Fetches a yeast kinetics entry by id, tenant-scoped.

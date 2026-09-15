@@ -12,6 +12,7 @@ use uuid::Uuid;
 use super::models::{
     BatchCost, BatchCostFilter, Page, ProfitabilityRow, Rate, RateFilter, Report, ReportFilter,
 };
+use crate::platform::pagination;
 
 const RATE_COLS: &str = "id, tenant_id, rate_type, rate_name, unit, \
     rate_value::float8 AS rate_value, currency, \
@@ -29,12 +30,6 @@ const REPORT_COLS: &str = "id, tenant_id, report_type, \
     to_char(period_start, 'YYYY-MM-DD') AS period_start, \
     to_char(period_end, 'YYYY-MM-DD') AS period_end, \
     report_data, generated_at";
-
-fn clamp_page(page: i64, page_size: i64) -> (i64, i64) {
-    let page = if page < 1 { 1 } else { page };
-    let page_size = if page_size < 1 { 20 } else { page_size };
-    (page, page_size)
-}
 
 // ---- cost rates ----
 
@@ -95,7 +90,7 @@ pub async fn select_rates(
     tenant_id: Uuid,
     filter: &RateFilter,
 ) -> Result<Page<Rate>, sqlx::Error> {
-    let (page, page_size) = clamp_page(filter.page, filter.page_size);
+    let (page, page_size) = pagination::clamp(filter.page, filter.page_size);
 
     let push_where = |qb: &mut QueryBuilder<Postgres>| {
         qb.push(" WHERE tenant_id = ").push_bind(tenant_id);
@@ -119,7 +114,9 @@ pub async fn select_rates(
     push_where(&mut list_qb);
     list_qb.push(" ORDER BY effective_from DESC, rate_type ");
     list_qb.push(" LIMIT ").push_bind(page_size);
-    list_qb.push(" OFFSET ").push_bind((page - 1) * page_size);
+    list_qb
+        .push(" OFFSET ")
+        .push_bind(pagination::offset(page, page_size));
     let items = list_qb.build_query_as::<Rate>().fetch_all(pool).await?;
 
     Ok(Page::new(items, total, page, page_size))
@@ -284,7 +281,7 @@ pub async fn select_batch_costs(
     tenant_id: Uuid,
     filter: &BatchCostFilter,
 ) -> Result<Page<BatchCost>, sqlx::Error> {
-    let (page, page_size) = clamp_page(filter.page, filter.page_size);
+    let (page, page_size) = pagination::clamp(filter.page, filter.page_size);
 
     let push_where = |qb: &mut QueryBuilder<Postgres>| {
         qb.push(" WHERE tenant_id = ").push_bind(tenant_id);
@@ -301,7 +298,9 @@ pub async fn select_batch_costs(
     push_where(&mut list_qb);
     list_qb.push(" ORDER BY computed_at DESC ");
     list_qb.push(" LIMIT ").push_bind(page_size);
-    list_qb.push(" OFFSET ").push_bind((page - 1) * page_size);
+    list_qb
+        .push(" OFFSET ")
+        .push_bind(pagination::offset(page, page_size));
     let items = list_qb
         .build_query_as::<BatchCost>()
         .fetch_all(pool)
@@ -360,7 +359,7 @@ pub async fn select_reports(
     tenant_id: Uuid,
     filter: &ReportFilter,
 ) -> Result<Page<Report>, sqlx::Error> {
-    let (page, page_size) = clamp_page(filter.page, filter.page_size);
+    let (page, page_size) = pagination::clamp(filter.page, filter.page_size);
 
     let push_where = |qb: &mut QueryBuilder<Postgres>| {
         qb.push(" WHERE tenant_id = ").push_bind(tenant_id);
@@ -384,7 +383,9 @@ pub async fn select_reports(
     push_where(&mut list_qb);
     list_qb.push(" ORDER BY generated_at DESC ");
     list_qb.push(" LIMIT ").push_bind(page_size);
-    list_qb.push(" OFFSET ").push_bind((page - 1) * page_size);
+    list_qb
+        .push(" OFFSET ")
+        .push_bind(pagination::offset(page, page_size));
     let items = list_qb.build_query_as::<Report>().fetch_all(pool).await?;
 
     Ok(Page::new(items, total, page, page_size))

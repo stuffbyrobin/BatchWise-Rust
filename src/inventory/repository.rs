@@ -12,6 +12,8 @@ use uuid::Uuid;
 use super::models::{
     Ingredient, ListFilter, MovementFilter, Page, StockMovement, SummaryFilter, SummaryRow,
 };
+use crate::platform::pagination;
+use crate::platform::sql::like_contains;
 
 /// Selected columns for `ingredients`, casting NUMERIC → float8 and the date to text.
 const ING_COLS: &str = "id, tenant_id, type, name, amount::float8 AS amount, unit, lot_number, \
@@ -56,20 +58,7 @@ pub struct MovementWrite {
     pub created_by_user_id: Option<Uuid>,
 }
 
-/// Clamps pagination to page ≥ 1 and 1 ≤ page_size ≤ 100 (default 20).
-pub fn clamp_page(page: i64, page_size: i64) -> (i64, i64) {
-    let page = if page < 1 { 1 } else { page };
-    let page_size = if page_size < 1 {
-        20
-    } else if page_size > 100 {
-        100
-    } else {
-        page_size
-    };
-    (page, page_size)
-}
-
-/// Inserts a lot and returns the created row.
+/// Clamps pagination to page ≥ 1 and 1 ≤ page_size ≤ 100 (default 20)./// Inserts a lot and returns the created row.
 pub async fn insert<'e, E: PgExecutor<'e>>(
     exec: E,
     tenant_id: Uuid,
@@ -250,7 +239,7 @@ pub async fn select_list(
     filter: &ListFilter,
     order_by: &str,
 ) -> Result<Page<Ingredient>, sqlx::Error> {
-    let (page, page_size) = clamp_page(filter.page, filter.page_size);
+    let (page, page_size) = pagination::clamp(filter.page, filter.page_size);
 
     // Shared WHERE builder used for both count and list.
     let push_where = |qb: &mut QueryBuilder<Postgres>| {
@@ -263,7 +252,7 @@ pub async fn select_list(
         }
         if let Some(n) = &filter.name {
             qb.push(" AND lower(name) LIKE ")
-                .push_bind(format!("%{}%", n.to_lowercase()));
+                .push_bind(like_contains(&n.to_lowercase()));
         }
         if let Some(l) = &filter.lot_number {
             qb.push(" AND lot_number = ").push_bind(l.clone());
@@ -288,7 +277,9 @@ pub async fn select_list(
     push_where(&mut list_qb);
     list_qb.push(format!(" ORDER BY {order_by} "));
     list_qb.push(" LIMIT ").push_bind(page_size);
-    list_qb.push(" OFFSET ").push_bind((page - 1) * page_size);
+    list_qb
+        .push(" OFFSET ")
+        .push_bind(pagination::offset(page, page_size));
     let items = list_qb
         .build_query_as::<Ingredient>()
         .fetch_all(pool)
@@ -303,7 +294,7 @@ pub async fn select_movements(
     tenant_id: Uuid,
     filter: &MovementFilter,
 ) -> Result<Page<StockMovement>, sqlx::Error> {
-    let (page, page_size) = clamp_page(filter.page, filter.page_size);
+    let (page, page_size) = pagination::clamp(filter.page, filter.page_size);
 
     let push_where = |qb: &mut QueryBuilder<Postgres>| {
         qb.push(" WHERE tenant_id = ").push_bind(tenant_id);
@@ -342,7 +333,9 @@ pub async fn select_movements(
     push_where(&mut list_qb);
     list_qb.push(format!(" ORDER BY {order} "));
     list_qb.push(" LIMIT ").push_bind(page_size);
-    list_qb.push(" OFFSET ").push_bind((page - 1) * page_size);
+    list_qb
+        .push(" OFFSET ")
+        .push_bind(pagination::offset(page, page_size));
     let items = list_qb
         .build_query_as::<StockMovement>()
         .fetch_all(pool)
@@ -357,7 +350,7 @@ pub async fn select_summary(
     tenant_id: Uuid,
     filter: &SummaryFilter,
 ) -> Result<Page<SummaryRow>, sqlx::Error> {
-    let (page, page_size) = clamp_page(filter.page, filter.page_size);
+    let (page, page_size) = pagination::clamp(filter.page, filter.page_size);
 
     let push_where = |qb: &mut QueryBuilder<Postgres>| {
         qb.push(" WHERE tenant_id = ").push_bind(tenant_id);
@@ -382,7 +375,8 @@ pub async fn select_summary(
     push_where(&mut qb);
     qb.push(" GROUP BY type, lower(name), name, unit ORDER BY type, name");
     qb.push(" LIMIT ").push_bind(page_size);
-    qb.push(" OFFSET ").push_bind((page - 1) * page_size);
+    qb.push(" OFFSET ")
+        .push_bind(pagination::offset(page, page_size));
     let items = qb.build_query_as::<SummaryRow>().fetch_all(pool).await?;
 
     Ok(Page::new(items, total, page, page_size))

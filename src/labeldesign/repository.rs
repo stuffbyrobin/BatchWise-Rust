@@ -10,6 +10,8 @@ use uuid::Uuid;
 use super::models::{BrandAsset, BrandProfile, LabelDesign, ListFilter, Page};
 use crate::pkg::labelkit::DesignOptions;
 use crate::platform::errors::ApiError;
+use crate::platform::pagination;
+use crate::platform::sort;
 
 const ASSET_COLS: &str = "id, tenant_id, filename, content_type, byte_size, created_at";
 
@@ -20,26 +22,8 @@ const PROFILE_COLS: &str =
 const DESIGN_COLS: &str = "id, tenant_id, kind, name, batch_id, recipe_id, brand_profile_id, \
     size_key, template_key, options, created_at, updated_at";
 
-fn clamp_page(page: i64, page_size: i64) -> (i64, i64) {
-    let page = if page < 1 { 1 } else { page };
-    let page_size = if page_size < 1 {
-        20
-    } else if page_size > 100 {
-        100
-    } else {
-        page_size
-    };
-    (page, page_size)
-}
-
-fn design_order_by(sort: &str) -> &'static str {
-    match sort {
-        "created_at" => "created_at ASC",
-        "name" => "name ASC",
-        "-name" => "name DESC",
-        _ => "created_at DESC",
-    }
-}
+/// Allowed sort fields for label designs
+const DESIGN_ALLOWED_SORT: sort::Allowed = &[("created_at", "created_at"), ("name", "name")];
 
 // ---- brand assets ----
 
@@ -256,8 +240,8 @@ pub async fn select_designs(
     pool: &PgPool,
     tenant_id: Uuid,
     filter: &ListFilter,
-) -> Result<Page<LabelDesign>, sqlx::Error> {
-    let (page, page_size) = clamp_page(filter.page, filter.page_size);
+) -> Result<Page<LabelDesign>, ApiError> {
+    let (page, page_size) = pagination::clamp(filter.page, filter.page_size);
     let push_where = |qb: &mut QueryBuilder<Postgres>| {
         qb.push(" WHERE tenant_id = ").push_bind(tenant_id);
         if let Some(k) = &filter.kind {
@@ -274,12 +258,13 @@ pub async fn select_designs(
     push_where(&mut count_qb);
     let total: i64 = count_qb.build_query_scalar().fetch_one(pool).await?;
 
-    let order_by = design_order_by(&filter.sort);
+    let order_by = sort::parse(&filter.sort, DESIGN_ALLOWED_SORT, "-created_at")?;
     let mut qb = QueryBuilder::<Postgres>::new(format!("SELECT {DESIGN_COLS} FROM label_designs"));
     push_where(&mut qb);
     qb.push(format!(" ORDER BY {order_by}"));
     qb.push(" LIMIT ").push_bind(page_size);
-    qb.push(" OFFSET ").push_bind((page - 1) * page_size);
+    qb.push(" OFFSET ")
+        .push_bind(pagination::offset(page, page_size));
     let items = qb.build_query_as::<LabelDesign>().fetch_all(pool).await?;
     Ok(Page::new(items, total, page, page_size))
 }

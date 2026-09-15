@@ -17,18 +17,13 @@ use super::models::{
 };
 use super::repository as repo;
 use crate::pkg::labelkit::{self, RenderBrand, RenderFields, RenderModel, RenderTasting};
+use crate::platform::errors::is_unique_violation;
 use crate::platform::errors::ApiError;
 use crate::state::AppState;
 
 const MAX_ASSET_BYTES: usize = 2 * 1024 * 1024; // 2 MiB
 
-/// True if the error is a unique-constraint violation.
-fn is_unique_violation(e: &sqlx::Error) -> bool {
-    e.as_database_error()
-        .is_some_and(|d| d.is_unique_violation())
-}
-
-/// `""` → `None`, matching the Go `strPtr` helper.
+/// True if the error is a unique-constraint violation./// `""` → `None`, matching the Go `strPtr` helper.
 fn str_ptr(s: String) -> Option<String> {
     if s.is_empty() {
         None
@@ -242,7 +237,7 @@ pub async fn list_designs(
     tenant_id: Uuid,
     filter: ListFilter,
 ) -> Result<Page<LabelDesign>, ApiError> {
-    Ok(repo::select_designs(&state.pool, tenant_id, &filter).await?)
+    repo::select_designs(&state.pool, tenant_id, &filter).await
 }
 
 pub async fn get_design(

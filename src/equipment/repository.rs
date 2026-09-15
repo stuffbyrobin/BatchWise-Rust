@@ -13,6 +13,9 @@ use super::models::{
     Equipment, EventFilter, Filter, MaintenanceDueFilter, MaintenanceDueItem, MaintenanceEvent,
     MaintenanceSchedule, Page, ScheduleFilter,
 };
+use crate::platform::errors::ApiError;
+use crate::platform::pagination;
+use crate::platform::sort;
 
 /// SQL expression for a schedule's next-due timestamp, with the given column
 /// prefix (`"ms."` in joins, `""` in the bare schedules table query).
@@ -71,32 +74,19 @@ fn norm_page(page: i64, page_size: i64) -> (i64, i64) {
     (page, page_size)
 }
 
-fn equipment_order_by(sort: &str) -> &'static str {
-    match sort {
-        "name" => "e.name ASC",
-        "-name" => "e.name DESC",
-        "created_at" => "e.created_at ASC",
-        "next_maintenance_due_at" => "sc.next_due_at ASC NULLS LAST",
-        "-next_maintenance_due_at" => "sc.next_due_at DESC NULLS LAST",
-        _ => "e.created_at DESC",
-    }
-}
+/// Allowed sort fields for equipment.
+const EQUIPMENT_ALLOWED_SORT: sort::Allowed = &[
+    ("name", "e.name"),
+    ("created_at", "e.created_at"),
+    ("next_maintenance_due_at", "sc.next_due_at"),
+];
 
-fn schedule_order_by(sort: &str) -> &'static str {
-    match sort {
-        "-next_due_at" => "next_due_at DESC",
-        "created_at" => "created_at ASC",
-        "-created_at" => "created_at DESC",
-        _ => "next_due_at ASC",
-    }
-}
+/// Allowed sort fields for schedules.
+const SCHEDULE_ALLOWED_SORT: sort::Allowed =
+    &[("next_due_at", "next_due_at"), ("created_at", "created_at")];
 
-fn event_order_by(sort: &str) -> &'static str {
-    match sort {
-        "performed_at" => "performed_at ASC",
-        _ => "performed_at DESC",
-    }
-}
+/// Allowed sort fields for events.
+const EVENT_ALLOWED_SORT: sort::Allowed = &[("performed_at", "performed_at")];
 
 // ---- equipment ----
 
@@ -137,7 +127,7 @@ pub async fn select_equipment(
     pool: &PgPool,
     tenant_id: Uuid,
     filter: &Filter,
-) -> Result<Page<Equipment>, sqlx::Error> {
+) -> Result<Page<Equipment>, ApiError> {
     let (page, page_size) = norm_page(filter.page, filter.page_size);
     let push_where = |qb: &mut QueryBuilder<Postgres>| {
         qb.push(" WHERE e.tenant_id = ").push_bind(tenant_id);
@@ -152,7 +142,12 @@ pub async fn select_equipment(
     push_where(&mut count_qb);
     let total: i64 = count_qb.build_query_scalar().fetch_one(pool).await?;
 
-    let order_by = equipment_order_by(&filter.sort);
+    let order_by = sort::parse_with(
+        &filter.sort,
+        EQUIPMENT_ALLOWED_SORT,
+        "-created_at",
+        sort::Nulls::Last,
+    )?;
     let mut qb = QueryBuilder::<Postgres>::new(format!(
         "SELECT {} FROM equipment e {}",
         equipment_cols(),
@@ -161,7 +156,8 @@ pub async fn select_equipment(
     push_where(&mut qb);
     qb.push(format!(" ORDER BY {order_by}"));
     qb.push(" LIMIT ").push_bind(page_size);
-    qb.push(" OFFSET ").push_bind((page - 1) * page_size);
+    qb.push(" OFFSET ")
+        .push_bind(pagination::offset(page, page_size));
     let items = qb.build_query_as::<Equipment>().fetch_all(pool).await?;
     Ok(Page::new(items, total, page, page_size))
 }
@@ -284,7 +280,7 @@ pub async fn select_schedules(
     tenant_id: Uuid,
     equipment_id: Uuid,
     filter: &ScheduleFilter,
-) -> Result<Page<MaintenanceSchedule>, sqlx::Error> {
+) -> Result<Page<MaintenanceSchedule>, ApiError> {
     let (page, page_size) = norm_page(filter.page, filter.page_size);
     let push_where = |qb: &mut QueryBuilder<Postgres>| {
         qb.push(" WHERE tenant_id = ").push_bind(tenant_id);
@@ -297,7 +293,7 @@ pub async fn select_schedules(
     push_where(&mut count_qb);
     let total: i64 = count_qb.build_query_scalar().fetch_one(pool).await?;
 
-    let order_by = schedule_order_by(&filter.sort);
+    let order_by = sort::parse(&filter.sort, SCHEDULE_ALLOWED_SORT, "next_due_at")?;
     let mut qb = QueryBuilder::<Postgres>::new(format!(
         "SELECT {} FROM maintenance_schedules",
         schedule_cols()
@@ -305,7 +301,8 @@ pub async fn select_schedules(
     push_where(&mut qb);
     qb.push(format!(" ORDER BY {order_by}"));
     qb.push(" LIMIT ").push_bind(page_size);
-    qb.push(" OFFSET ").push_bind((page - 1) * page_size);
+    qb.push(" OFFSET ")
+        .push_bind(pagination::offset(page, page_size));
     let items = qb
         .build_query_as::<MaintenanceSchedule>()
         .fetch_all(pool)
@@ -457,7 +454,7 @@ pub async fn select_events(
     tenant_id: Uuid,
     equipment_id: Uuid,
     filter: &EventFilter,
-) -> Result<Page<MaintenanceEvent>, sqlx::Error> {
+) -> Result<Page<MaintenanceEvent>, ApiError> {
     let (page, page_size) = norm_page(filter.page, filter.page_size);
     let push_where = |qb: &mut QueryBuilder<Postgres>| {
         qb.push(" WHERE tenant_id = ").push_bind(tenant_id);
@@ -473,13 +470,14 @@ pub async fn select_events(
     push_where(&mut count_qb);
     let total: i64 = count_qb.build_query_scalar().fetch_one(pool).await?;
 
-    let order_by = event_order_by(&filter.sort);
+    let order_by = sort::parse(&filter.sort, EVENT_ALLOWED_SORT, "-performed_at")?;
     let mut qb =
         QueryBuilder::<Postgres>::new(format!("SELECT {EVENT_COLS} FROM maintenance_events"));
     push_where(&mut qb);
     qb.push(format!(" ORDER BY {order_by}"));
     qb.push(" LIMIT ").push_bind(page_size);
-    qb.push(" OFFSET ").push_bind((page - 1) * page_size);
+    qb.push(" OFFSET ")
+        .push_bind(pagination::offset(page, page_size));
     let items = qb
         .build_query_as::<MaintenanceEvent>()
         .fetch_all(pool)
@@ -571,7 +569,8 @@ pub async fn select_maintenance_due(
     push_from_where(&mut qb);
     qb.push(" ORDER BY nd.next_due_at ASC");
     qb.push(" LIMIT ").push_bind(page_size);
-    qb.push(" OFFSET ").push_bind((page - 1) * page_size);
+    qb.push(" OFFSET ")
+        .push_bind(pagination::offset(page, page_size));
     let items = qb
         .build_query_as::<MaintenanceDueItem>()
         .fetch_all(pool)

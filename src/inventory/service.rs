@@ -12,7 +12,9 @@ use super::models::{
 };
 use super::repository::{self as repo, IngredientWrite, MovementWrite};
 use crate::pkg::allergen;
+use crate::platform::errors::is_unique_violation;
 use crate::platform::errors::ApiError;
+use crate::platform::sort;
 use crate::state::AppState;
 
 fn parse_bbd(s: &Option<String>) -> Result<Option<NaiveDate>, ApiError> {
@@ -83,11 +85,6 @@ fn write_from_ingredient(i: &Ingredient) -> Result<IngredientWrite, ApiError> {
     })
 }
 
-fn is_unique_violation(e: &sqlx::Error) -> bool {
-    e.as_database_error()
-        .is_some_and(|d| d.is_unique_violation())
-}
-
 /// Creates a lot and records the opening `stock_in` movement.
 pub async fn create(
     state: &AppState,
@@ -134,7 +131,7 @@ pub async fn list(
     tenant_id: Uuid,
     filter: ListFilter,
 ) -> Result<Page<Ingredient>, ApiError> {
-    let order_by = build_ing_sort(&filter.sort)?;
+    let order_by = sort::parse(&filter.sort, INGREDIENT_ALLOWED_SORT, "best_before_date")?;
     Ok(repo::select_list(&state.pool, tenant_id, &filter, &order_by).await?)
 }
 
@@ -441,6 +438,18 @@ fn insufficient_stock(requested: f64, available: f64, shortage: f64, unit: &str)
     )
 }
 
+/// Allowed sort fields for ingredient lists. PostgreSQL's default null ordering
+/// (DESC NULLS FIRST / ASC NULLS LAST) matches the old special-case for best_before_date.
+const INGREDIENT_ALLOWED_SORT: sort::Allowed = &[
+    ("best_before_date", "best_before_date"),
+    ("created_at", "created_at"),
+    ("name", "name"),
+    ("amount", "amount"),
+    ("type", "type"),
+    ("lot_number", "lot_number"),
+    ("supplier", "supplier"),
+];
+
 /// Aggregated inventory summary.
 pub async fn summary(
     state: &AppState,
@@ -462,44 +471,4 @@ pub async fn list_movements(
 /// Number of (type, name, unit) groups with total amount below 1.0.
 pub async fn count_low_stock(state: &AppState, tenant_id: Uuid) -> Result<i64, ApiError> {
     Ok(repo::count_low_stock(&state.pool, tenant_id).await?)
-}
-
-/// Builds a safe `ORDER BY` clause from a comma-separated sort spec.
-fn build_ing_sort(sort: &str) -> Result<String, ApiError> {
-    let spec = if sort.is_empty() {
-        "best_before_date"
-    } else {
-        sort
-    };
-    let mut parts = Vec::new();
-    for field in spec.split(',') {
-        let field = field.trim();
-        let desc = field.starts_with('-');
-        let name = field.trim_start_matches('-');
-        let col = match name {
-            "best_before_date" => "best_before_date",
-            "created_at" => "created_at",
-            "name" => "name",
-            "amount" => "amount",
-            "type" => "type",
-            "lot_number" => "lot_number",
-            "supplier" => "supplier",
-            _ => {
-                return Err(ApiError::validation(
-                    "sort",
-                    &format!("unknown sort field: {name}"),
-                ))
-            }
-        };
-        if col == "best_before_date" {
-            parts.push(if desc {
-                "best_before_date DESC NULLS FIRST".to_string()
-            } else {
-                "best_before_date ASC NULLS LAST".to_string()
-            });
-        } else {
-            parts.push(format!("{col} {}", if desc { "DESC" } else { "ASC" }));
-        }
-    }
-    Ok(parts.join(", "))
 }

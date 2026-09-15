@@ -18,7 +18,9 @@ use crate::calendar::models::EventWrite;
 use crate::calendar::service as calendar_svc;
 use crate::inventory::models::DeductRequest;
 use crate::inventory::service as inventory_svc;
+use crate::platform::errors::is_unique_violation;
 use crate::platform::errors::ApiError;
+use crate::platform::sort;
 use crate::recipe::service as recipe_svc;
 use crate::state::AppState;
 use crate::yeastkinetics::service as kinetics_svc;
@@ -52,11 +54,6 @@ fn parse_date(s: &Option<String>) -> Result<Option<NaiveDate>, ApiError> {
             .map(Some)
             .map_err(|_| ApiError::validation("brew_date", "invalid date format (YYYY-MM-DD)")),
     }
-}
-
-fn is_unique_violation(e: &sqlx::Error) -> bool {
-    e.as_database_error()
-        .is_some_and(|d| d.is_unique_violation())
 }
 
 /// Creates a batch, snapshots its recipe, and generates calendar events.
@@ -238,7 +235,7 @@ pub async fn list(
     tenant_id: Uuid,
     filter: ListFilter,
 ) -> Result<super::models::Page<Batch>, ApiError> {
-    let order_by = build_sort(&filter.sort);
+    let order_by = sort::parse(&filter.sort, BATCH_ALLOWED_SORT, "-created_at")?;
     Ok(repo::select_list(&state.pool, tenant_id, &filter, &order_by).await?)
 }
 
@@ -470,15 +467,10 @@ pub async fn status_breakdown(
     Ok(repo::count_by_status(&state.pool, tenant_id).await?)
 }
 
-fn build_sort(sort: &str) -> String {
-    let spec = if sort.is_empty() { "-created_at" } else { sort };
-    let desc = spec.starts_with('-');
-    let col = match spec.trim_start_matches('-') {
-        "brew_date" => "brew_date",
-        "batch_number" => "batch_number",
-        "name" => "name",
-        "status" => "status",
-        _ => "created_at",
-    };
-    format!("{col} {}", if desc { "DESC" } else { "ASC" })
-}
+const BATCH_ALLOWED_SORT: sort::Allowed = &[
+    ("brew_date", "brew_date"),
+    ("batch_number", "batch_number"),
+    ("name", "name"),
+    ("status", "status"),
+    ("created_at", "created_at"),
+];

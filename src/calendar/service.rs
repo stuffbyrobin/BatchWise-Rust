@@ -8,7 +8,16 @@ use uuid::Uuid;
 use super::models::{CreateRequest, Event, EventWrite, ListFilter, Page, UpdateRequest};
 use super::repository as repo;
 use crate::platform::errors::ApiError;
+use crate::platform::sort;
 use crate::state::AppState;
+
+/// Allow-list for calendar event sorting.
+const CALENDAR_ALLOWED_SORT: sort::Allowed = &[
+    ("start_time", "start_time"),
+    ("event_type", "event_type"),
+    ("title", "title"),
+    ("status", "status"),
+];
 
 fn write_from_create(req: &CreateRequest) -> EventWrite {
     EventWrite {
@@ -66,7 +75,7 @@ pub async fn list(
     tenant_id: Uuid,
     filter: ListFilter,
 ) -> Result<Page<Event>, ApiError> {
-    let order_by = build_sort(&filter.sort);
+    let order_by = sort::parse(&filter.sort, CALENDAR_ALLOWED_SORT, "start_time")?;
     Ok(repo::select_list(&state.pool, tenant_id, &filter, &order_by).await?)
 }
 
@@ -161,19 +170,4 @@ pub async fn count_upcoming_pending(
     to: DateTime<Utc>,
 ) -> Result<i64, ApiError> {
     Ok(repo::count_pending_for_range(&state.pool, tenant_id, from, to).await?)
-}
-
-/// Builds a safe `ORDER BY` from the sort spec (default `start_time`).
-fn build_sort(sort: &str) -> String {
-    let spec = if sort.is_empty() { "start_time" } else { sort };
-    let desc = spec.starts_with('-');
-    let col = spec.trim_start_matches('-');
-    let mapped = match col {
-        "start_time" => "start_time",
-        "event_type" => "event_type",
-        "title" => "title",
-        "status" => "status",
-        _ => "start_time",
-    };
-    format!("{mapped} {}", if desc { "DESC" } else { "ASC" })
 }

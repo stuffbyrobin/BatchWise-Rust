@@ -7,6 +7,7 @@ use sqlx::{PgConnection, PgExecutor, PgPool, Postgres, QueryBuilder};
 use uuid::Uuid;
 
 use super::models::{Asset, AssetFilter, Log, LogFilter, Page};
+use crate::platform::pagination;
 
 const ASSET_COLS: &str = "id, tenant_id, asset_number, container_type, \
     capacity_liters::float8 AS capacity_liters, deposit_pence, status, current_batch_id, \
@@ -16,18 +17,6 @@ const ASSET_COLS: &str = "id, tenant_id, asset_number, container_type, \
 const LOG_COLS: &str =
     "id, tenant_id, container_id, event_type, from_status, to_status, batch_id, \
     customer_name, notes, logged_by_user_id, created_at";
-
-fn clamp_page(page: i64, page_size: i64) -> (i64, i64) {
-    let page = if page < 1 { 1 } else { page };
-    let page_size = if page_size < 1 {
-        20
-    } else if page_size > 100 {
-        100
-    } else {
-        page_size
-    };
-    (page, page_size)
-}
 
 /// Inserts a new asset (status `empty`) and returns it.
 pub async fn insert_asset<'e, E: PgExecutor<'e>>(
@@ -123,7 +112,7 @@ pub async fn select_assets(
     filter: &AssetFilter,
     order_by: &str,
 ) -> Result<Page<Asset>, sqlx::Error> {
-    let (page, page_size) = clamp_page(filter.page, filter.page_size);
+    let (page, page_size) = pagination::clamp(filter.page, filter.page_size);
     let push_where = |qb: &mut QueryBuilder<Postgres>| {
         qb.push(" WHERE tenant_id = ").push_bind(tenant_id);
         if let Some(s) = &filter.status {
@@ -145,7 +134,8 @@ pub async fn select_assets(
     push_where(&mut qb);
     qb.push(format!(" ORDER BY {order_by} "));
     qb.push(" LIMIT ").push_bind(page_size);
-    qb.push(" OFFSET ").push_bind((page - 1) * page_size);
+    qb.push(" OFFSET ")
+        .push_bind(pagination::offset(page, page_size));
     let items = qb.build_query_as::<Asset>().fetch_all(pool).await?;
     Ok(Page::new(items, total, page, page_size))
 }
@@ -191,7 +181,7 @@ pub async fn select_logs(
     filter: &LogFilter,
     order_by: &str,
 ) -> Result<Page<Log>, sqlx::Error> {
-    let (page, page_size) = clamp_page(filter.page, filter.page_size);
+    let (page, page_size) = pagination::clamp(filter.page, filter.page_size);
     let push_where = |qb: &mut QueryBuilder<Postgres>| {
         qb.push(" WHERE tenant_id = ").push_bind(tenant_id);
         if let Some(c) = filter.container_id {
@@ -219,7 +209,8 @@ pub async fn select_logs(
     push_where(&mut qb);
     qb.push(format!(" ORDER BY {order_by} "));
     qb.push(" LIMIT ").push_bind(page_size);
-    qb.push(" OFFSET ").push_bind((page - 1) * page_size);
+    qb.push(" OFFSET ")
+        .push_bind(pagination::offset(page, page_size));
     let items = qb.build_query_as::<Log>().fetch_all(pool).await?;
     Ok(Page::new(items, total, page, page_size))
 }
