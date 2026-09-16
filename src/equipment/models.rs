@@ -33,7 +33,7 @@ pub struct Equipment {
     pub overdue_schedule_count: i32,
     pub next_maintenance_due_at: Option<DateTime<Utc>>,
     /// Populated on single-equipment reads only; omitted from list responses.
-    #[sqlx(skip)]
+    #[sqlx(default)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub lifetime_maintenance_cost_pence: Option<i64>,
     pub created_at: DateTime<Utc>,

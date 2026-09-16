@@ -12,6 +12,7 @@
 //! * fermentable `COLOR` is Lovibond and converted to EBC via `* 2.65 * 1.97`.
 
 use crate::recipe::models::{CreateRequest, FermentableInput, HopInput, MashStepInput, YeastInput};
+use base64::Engine;
 use serde::Deserialize;
 
 // ---- BeerXML element structs ----
@@ -136,9 +137,16 @@ struct BeerxmlMashStep {
 
 /// Decode a base64-encoded BeerXML 1.0 payload into a [`CreateRequest`].
 pub fn parse_beerxml(data: &str) -> Result<CreateRequest, String> {
-    let raw = base64_decode(data).map_err(|e| format!("beerxml: base64 decode: {e}"))?;
+    // STANDARD requires `=` padding and rejects non-alphabet bytes, like Go's
+    // base64.StdEncoding the original parser used.
+    let raw = base64::engine::general_purpose::STANDARD
+        .decode(data)
+        .map_err(|e| format!("beerxml: base64 decode: {e}"))?;
     let xml = String::from_utf8(raw).map_err(|e| format!("beerxml: utf8 decode: {e}"))?;
 
+    // quick-xml does not resolve external entities or DTDs, so a hostile
+    // <!ENTITY ... SYSTEM "file:///..."> cannot read files (XXE). Keep that
+    // property if the parser is ever swapped.
     let root: BeerxmlRecipes =
         quick_xml::de::from_str(&xml).map_err(|e| format!("beerxml: xml parse: {e}"))?;
 
@@ -324,58 +332,6 @@ fn beerxml_mash_step_type(t: &str) -> String {
         _ => "infusion",
     }
     .to_string()
-}
-
-/// Minimal standard (RFC 4648) base64 decoder. Mirrors Go's
-/// `base64.StdEncoding.DecodeString`: requires `=` padding and rejects any
-/// character outside the standard alphabet (whitespace included).
-fn base64_decode(input: &str) -> Result<Vec<u8>, String> {
-    fn val(c: u8) -> Result<u8, String> {
-        match c {
-            b'A'..=b'Z' => Ok(c - b'A'),
-            b'a'..=b'z' => Ok(c - b'a' + 26),
-            b'0'..=b'9' => Ok(c - b'0' + 52),
-            b'+' => Ok(62),
-            b'/' => Ok(63),
-            _ => Err(format!("illegal base64 character {c:#x}")),
-        }
-    }
-
-    let bytes = input.as_bytes();
-    if !bytes.len().is_multiple_of(4) {
-        return Err("invalid base64 length".to_string());
-    }
-    let mut out = Vec::with_capacity(bytes.len() / 4 * 3);
-    for chunk in bytes.chunks(4) {
-        let pad = chunk.iter().rev().take_while(|&&c| c == b'=').count();
-        if pad > 2 {
-            return Err("invalid base64 padding".to_string());
-        }
-        let b0 = val(chunk[0])?;
-        let b1 = val(chunk[1])?;
-        let n = (b0 as u32) << 18 | (b1 as u32) << 12;
-        match pad {
-            0 => {
-                let b2 = val(chunk[2])?;
-                let b3 = val(chunk[3])?;
-                let n = n | (b2 as u32) << 6 | b3 as u32;
-                out.push((n >> 16) as u8);
-                out.push((n >> 8) as u8);
-                out.push(n as u8);
-            }
-            1 => {
-                let b2 = val(chunk[2])?;
-                let n = n | (b2 as u32) << 6;
-                out.push((n >> 16) as u8);
-                out.push((n >> 8) as u8);
-            }
-            2 => {
-                out.push((n >> 16) as u8);
-            }
-            _ => unreachable!(),
-        }
-    }
-    Ok(out)
 }
 
 #[cfg(test)]

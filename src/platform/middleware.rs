@@ -58,14 +58,14 @@ pub async fn require_auth(
 /// the request context). Returns 403 with `{required_feature, current_tier}`
 /// when the tenant's `feature_flags` does not enable `key`. Port of the Go
 /// `FeatureGate` middleware.
+/// Flags come from [`AppState::features`](crate::state::AppState::features), so
+/// most requests skip the tenants query.
 pub async fn check_feature(
     state: &AppState,
     key: &str,
     req: Request,
     next: Next,
 ) -> Result<Response, ApiError> {
-    use std::collections::HashMap;
-
     let ctx = req
         .extensions()
         .get::<RequestContext>()
@@ -73,14 +73,8 @@ pub async fn check_feature(
         .unwrap_or_default();
     let tenant_id = ctx.tenant_id()?;
 
-    let row: Option<(String, sqlx::types::Json<HashMap<String, bool>>)> =
-        sqlx::query_as("SELECT tier, feature_flags FROM tenants WHERE id = $1")
-            .bind(tenant_id)
-            .fetch_optional(&state.pool)
-            .await?;
-
-    let (tier, flags) = row.ok_or_else(|| ApiError::unauthorized("missing tenant context"))?;
-    if flags.0.get(key).copied().unwrap_or(false) {
+    let (enabled, tier) = state.features.check(&state.pool, tenant_id, key).await?;
+    if enabled {
         Ok(next.run(req).await)
     } else {
         Err(ApiError::feature_disabled(key, &tier))

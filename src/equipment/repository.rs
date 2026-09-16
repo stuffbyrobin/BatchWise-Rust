@@ -170,30 +170,19 @@ pub async fn select_equipment_by_id(
     id: Uuid,
 ) -> Result<Option<Equipment>, sqlx::Error> {
     let sql = format!(
-        "SELECT {} FROM equipment e {} WHERE e.tenant_id = $1 AND e.id = $2",
+        "SELECT {}, \
+            (SELECT COALESCE(SUM(me.cost_pence), 0)::bigint FROM maintenance_events me \
+             WHERE me.equipment_id = e.id AND me.tenant_id = e.tenant_id) \
+            AS lifetime_maintenance_cost_pence \
+         FROM equipment e {} WHERE e.tenant_id = $1 AND e.id = $2",
         equipment_cols(),
         equipment_computed()
     );
-    let row = sqlx::query_as::<_, Equipment>(&sql)
+    sqlx::query_as::<_, Equipment>(&sql)
         .bind(tenant_id)
         .bind(id)
         .fetch_optional(pool)
-        .await?;
-    match row {
-        Some(mut e) => {
-            let cost: i64 = sqlx::query_scalar(
-                "SELECT COALESCE(SUM(cost_pence), 0)::bigint FROM maintenance_events \
-                 WHERE equipment_id = $1 AND tenant_id = $2",
-            )
-            .bind(id)
-            .bind(tenant_id)
-            .fetch_one(pool)
-            .await?;
-            e.lifetime_maintenance_cost_pence = Some(cost);
-            Ok(Some(e))
-        }
-        None => Ok(None),
-    }
+        .await
 }
 
 /// Updates a piece of equipment's mutable fields; returns true if a row changed.

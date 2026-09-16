@@ -394,3 +394,21 @@ pub async fn count_low_stock(pool: &PgPool, tenant_id: Uuid) -> Result<i64, sqlx
     .fetch_one(pool)
     .await
 }
+
+/// Counts in-stock lots whose best-before date falls within `days` days (the same
+/// rows `list` returns for `expiring_within_days`).
+pub async fn count_expiring_within(
+    pool: &PgPool,
+    tenant_id: Uuid,
+    days: i32,
+) -> Result<i64, sqlx::Error> {
+    sqlx::query_scalar::<_, i64>(
+        "SELECT COUNT(*) FROM ingredients WHERE tenant_id = $1 AND amount > 0 \
+         AND best_before_date IS NOT NULL \
+         AND best_before_date <= (now() + make_interval(days => $2))::date",
+    )
+    .bind(tenant_id)
+    .bind(days)
+    .fetch_one(pool)
+    .await
+}

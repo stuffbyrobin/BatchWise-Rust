@@ -193,5 +193,3 @@ pub struct FulfillOrderRequest {
 pub struct CancelOrderRequest {
     pub notes: Option<String>,
 }
-
-// ---- validators (unused for now; reserved for enum-style fields) ----

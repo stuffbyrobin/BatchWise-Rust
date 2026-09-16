@@ -94,15 +94,16 @@ fn bind_write<'q>(
         .bind(&w.notes)
 }
 
-/// Updates only the cached calculated values.
+/// Updates only the cached calculated values of a tenant's recipe.
 pub async fn update_calculations<'e, E: PgExecutor<'e>>(
     exec: E,
+    tenant_id: Uuid,
     id: Uuid,
     c: &CalculatedValues,
 ) -> Result<(), sqlx::Error> {
     sqlx::query(
         "UPDATE recipes SET calc_og=$1, calc_fg=$2, calc_abv_pct=$3, calc_ibu=$4, \
-         calc_color_ebc=$5, updated_at=now() WHERE id=$6",
+         calc_color_ebc=$5, updated_at=now() WHERE id=$6 AND tenant_id=$7",
     )
     .bind(c.calc_og)
     .bind(c.calc_fg)
@@ -110,9 +111,18 @@ pub async fn update_calculations<'e, E: PgExecutor<'e>>(
     .bind(c.calc_ibu)
     .bind(c.calc_color_ebc)
     .bind(id)
+    .bind(tenant_id)
     .execute(exec)
     .await
     .map(|_| ())
+}
+
+/// Counts a tenant's recipes.
+pub async fn count(pool: &PgPool, tenant_id: Uuid) -> Result<i64, sqlx::Error> {
+    sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM recipes WHERE tenant_id = $1")
+        .bind(tenant_id)
+        .fetch_one(pool)
+        .await
 }
 
 /// Fetches the recipe row (no children) by id, tenant-scoped.
@@ -211,117 +221,139 @@ pub async fn is_referenced_by_batch(pool: &PgPool, id: Uuid) -> Result<bool, sql
 
 // ---- child replacement (DELETE + INSERT inside the tx) ----
 
-/// Replaces all fermentables for a recipe.
+/// Deletes a recipe's rows from one child table, but only when the recipe belongs
+/// to `tenant_id` (child tables have no tenant column of their own). `table` is
+/// always a literal from this module.
+async fn delete_children(
+    conn: &mut PgConnection,
+    table: &'static str,
+    tenant_id: Uuid,
+    recipe_id: Uuid,
+) -> Result<(), sqlx::Error> {
+    let sql = format!(
+        "DELETE FROM {table} WHERE recipe_id = $1 \
+         AND EXISTS (SELECT 1 FROM recipes r WHERE r.id = $1 AND r.tenant_id = $2)"
+    );
+    sqlx::query(&sql)
+        .bind(recipe_id)
+        .bind(tenant_id)
+        .execute(&mut *conn)
+        .await?;
+    Ok(())
+}
+
+/// Replaces all fermentables for a recipe: one tenant-checked DELETE, then one
+/// multi-row INSERT.
 pub async fn replace_fermentables(
     conn: &mut PgConnection,
+    tenant_id: Uuid,
     recipe_id: Uuid,
     rows: &[Fermentable],
 ) -> Result<(), sqlx::Error> {
-    sqlx::query("DELETE FROM recipe_fermentables WHERE recipe_id=$1")
-        .bind(recipe_id)
-        .execute(&mut *conn)
-        .await?;
-    for f in rows {
-        sqlx::query(
-            "INSERT INTO recipe_fermentables (recipe_id, step_order, name, amount, unit, \
-             color_ebc, potential_ppg, type, addition) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)",
-        )
-        .bind(recipe_id)
-        .bind(f.step_order)
-        .bind(&f.name)
-        .bind(f.amount)
-        .bind(&f.unit)
-        .bind(f.color_ebc)
-        .bind(f.potential_ppg)
-        .bind(&f.r#type)
-        .bind(&f.addition)
-        .execute(&mut *conn)
-        .await?;
+    delete_children(conn, "recipe_fermentables", tenant_id, recipe_id).await?;
+    if rows.is_empty() {
+        return Ok(());
     }
+    let mut qb = QueryBuilder::<Postgres>::new(
+        "INSERT INTO recipe_fermentables (recipe_id, step_order, name, amount, unit, \
+         color_ebc, potential_ppg, type, addition) ",
+    );
+    qb.push_values(rows, |mut b, f| {
+        b.push_bind(recipe_id)
+            .push_bind(f.step_order)
+            .push_bind(&f.name)
+            .push_bind(f.amount)
+            .push_bind(&f.unit)
+            .push_bind(f.color_ebc)
+            .push_bind(f.potential_ppg)
+            .push_bind(&f.r#type)
+            .push_bind(&f.addition);
+    });
+    qb.build().execute(&mut *conn).await?;
     Ok(())
 }
 
-/// Replaces all hops for a recipe.
+/// Replaces all hops for a recipe: one tenant-checked DELETE, then one
+/// multi-row INSERT.
 pub async fn replace_hops(
     conn: &mut PgConnection,
+    tenant_id: Uuid,
     recipe_id: Uuid,
     rows: &[Hop],
 ) -> Result<(), sqlx::Error> {
-    sqlx::query("DELETE FROM recipe_hops WHERE recipe_id=$1")
-        .bind(recipe_id)
-        .execute(&mut *conn)
-        .await?;
-    for h in rows {
-        sqlx::query(
-            "INSERT INTO recipe_hops (recipe_id, step_order, name, amount, unit, alpha_acid_pct, \
-             boil_time_minutes, form, use) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)",
-        )
-        .bind(recipe_id)
-        .bind(h.step_order)
-        .bind(&h.name)
-        .bind(h.amount)
-        .bind(&h.unit)
-        .bind(h.alpha_acid_pct)
-        .bind(h.boil_time_minutes)
-        .bind(&h.form)
-        .bind(&h.r#use)
-        .execute(&mut *conn)
-        .await?;
+    delete_children(conn, "recipe_hops", tenant_id, recipe_id).await?;
+    if rows.is_empty() {
+        return Ok(());
     }
+    let mut qb = QueryBuilder::<Postgres>::new(
+        "INSERT INTO recipe_hops (recipe_id, step_order, name, amount, unit, alpha_acid_pct, \
+         boil_time_minutes, form, use) ",
+    );
+    qb.push_values(rows, |mut b, h| {
+        b.push_bind(recipe_id)
+            .push_bind(h.step_order)
+            .push_bind(&h.name)
+            .push_bind(h.amount)
+            .push_bind(&h.unit)
+            .push_bind(h.alpha_acid_pct)
+            .push_bind(h.boil_time_minutes)
+            .push_bind(&h.form)
+            .push_bind(&h.r#use);
+    });
+    qb.build().execute(&mut *conn).await?;
     Ok(())
 }
 
-/// Replaces all yeasts for a recipe.
+/// Replaces all yeasts for a recipe: one tenant-checked DELETE, then one
+/// multi-row INSERT.
 pub async fn replace_yeasts(
     conn: &mut PgConnection,
+    tenant_id: Uuid,
     recipe_id: Uuid,
     rows: &[Yeast],
 ) -> Result<(), sqlx::Error> {
-    sqlx::query("DELETE FROM recipe_yeasts WHERE recipe_id=$1")
-        .bind(recipe_id)
-        .execute(&mut *conn)
-        .await?;
-    for y in rows {
-        sqlx::query(
-            "INSERT INTO recipe_yeasts (recipe_id, yeast_id, name, amount, unit, attenuation_pct) \
-             VALUES ($1,$2,$3,$4,$5,$6)",
-        )
-        .bind(recipe_id)
-        .bind(y.yeast_id)
-        .bind(&y.name)
-        .bind(y.amount)
-        .bind(&y.unit)
-        .bind(y.attenuation_pct)
-        .execute(&mut *conn)
-        .await?;
+    delete_children(conn, "recipe_yeasts", tenant_id, recipe_id).await?;
+    if rows.is_empty() {
+        return Ok(());
     }
+    let mut qb = QueryBuilder::<Postgres>::new(
+        "INSERT INTO recipe_yeasts (recipe_id, yeast_id, name, amount, unit, attenuation_pct) ",
+    );
+    qb.push_values(rows, |mut b, y| {
+        b.push_bind(recipe_id)
+            .push_bind(y.yeast_id)
+            .push_bind(&y.name)
+            .push_bind(y.amount)
+            .push_bind(&y.unit)
+            .push_bind(y.attenuation_pct);
+    });
+    qb.build().execute(&mut *conn).await?;
     Ok(())
 }
 
-/// Replaces all mash steps for a recipe.
+/// Replaces all mash steps for a recipe: one tenant-checked DELETE, then one multi-row INSERT.
 pub async fn replace_mash_steps(
     conn: &mut PgConnection,
+    tenant_id: Uuid,
     recipe_id: Uuid,
     rows: &[MashStep],
 ) -> Result<(), sqlx::Error> {
-    sqlx::query("DELETE FROM recipe_mash_steps WHERE recipe_id=$1")
-        .bind(recipe_id)
-        .execute(&mut *conn)
-        .await?;
-    for ms in rows {
-        sqlx::query(
-            "INSERT INTO recipe_mash_steps (recipe_id, step_order, step_type, target_temp_c, \
-             hold_minutes, infusion_volume_liters) VALUES ($1,$2,$3,$4,$5,$6)",
-        )
-        .bind(recipe_id)
-        .bind(ms.step_order)
-        .bind(&ms.step_type)
-        .bind(ms.target_temp_c)
-        .bind(ms.hold_minutes)
-        .bind(ms.infusion_volume_liters)
-        .execute(&mut *conn)
-        .await?;
+    delete_children(conn, "recipe_mash_steps", tenant_id, recipe_id).await?;
+    if rows.is_empty() {
+        return Ok(());
     }
+    let mut qb = QueryBuilder::<Postgres>::new(
+        "INSERT INTO recipe_mash_steps (recipe_id, step_order, step_type, target_temp_c, hold_minutes, infusion_volume_liters) ",
+    );
+    qb.push_values(rows, |mut b, ms| {
+        b.push_bind(recipe_id)
+            .push_bind(ms.step_order)
+            .push_bind(&ms.step_type)
+            .push_bind(ms.target_temp_c)
+            .push_bind(ms.hold_minutes)
+            .push_bind(ms.infusion_volume_liters);
+    });
+    qb.build().execute(&mut *conn).await?;
     Ok(())
 }
 

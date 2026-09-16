@@ -4,8 +4,6 @@
 //! other modules' service functions (respecting module boundaries) rather than
 //! touching their tables directly.
 
-use std::collections::HashMap;
-
 use axum::extract::State;
 use axum::middleware::from_fn_with_state;
 use axum::response::{IntoResponse, Response};
@@ -68,50 +66,37 @@ pub async fn compute(state: &AppState, tenant_id: Uuid) -> Result<Stats, ApiErro
     use crate::{batch, calendar, inventory, recipe, reporting, tracking};
 
     let now = Utc::now();
-    let flags = feature_flags(state, tenant_id).await?;
 
-    let low_stock_count = inventory::service::count_low_stock(state, tenant_id).await?;
+    // Independent queries: run them concurrently on the pool.
+    let (
+        low_stock_count,
+        expiring_soon_count,
+        upcoming_events_count,
+        bd,
+        recipes_count,
+        (tracking_enabled, _),
+        (reporting_enabled, _),
+    ) = tokio::try_join!(
+        inventory::service::count_low_stock(state, tenant_id),
+        inventory::service::count_expiring_within(state, tenant_id, 30),
+        calendar::service::count_upcoming_pending(
+            state,
+            tenant_id,
+            now,
+            now + chrono::Duration::days(7),
+        ),
+        batch::service::status_breakdown(state, tenant_id),
+        recipe::service::count(state, tenant_id),
+        state.features.check(&state.pool, tenant_id, "tracking"),
+        state.features.check(&state.pool, tenant_id, "reporting"),
+    )?;
 
-    let expiring_soon_count = inventory::service::list(
-        state,
-        tenant_id,
-        inventory::models::ListFilter {
-            expiring_within_days: Some(30),
-            page: 1,
-            page_size: 1,
-            ..Default::default()
-        },
-    )
-    .await?
-    .total;
-
-    let upcoming_events_count = calendar::service::count_upcoming_pending(
-        state,
-        tenant_id,
-        now,
-        now + chrono::Duration::days(7),
-    )
-    .await?;
-
-    let bd = batch::service::status_breakdown(state, tenant_id).await?;
     let get = |k: &str| bd.get(k).copied().unwrap_or(0);
     let active_batches_count = get("planned")
         + get("brewing")
         + get("fermenting")
         + get("conditioning")
         + get("packaging");
-
-    let recipes_count = recipe::service::list(
-        state,
-        tenant_id,
-        recipe::models::ListFilter {
-            page: 1,
-            page_size: 1,
-            ..Default::default()
-        },
-    )
-    .await?
-    .total;
 
     let mut stats = Stats {
         low_stock_count,
@@ -134,22 +119,18 @@ pub async fn compute(state: &AppState, tenant_id: Uuid) -> Result<Stats, ApiErro
         last_30d_estimated_duty_pence: None,
     };
 
-    if flags.get("tracking").copied().unwrap_or(false) {
-        stats.containers_in_use_count = Some(
-            tracking::service::count_assets_by_statuses(
-                state,
-                tenant_id,
-                &["filled".to_string(), "delivered".to_string()],
-            )
-            .await?,
-        );
-        stats.containers_empty_count = Some(
-            tracking::service::count_assets_by_statuses(state, tenant_id, &["empty".to_string()])
-                .await?,
-        );
+    if tracking_enabled {
+        let in_use_statuses = ["filled".to_string(), "delivered".to_string()];
+        let empty_statuses = ["empty".to_string()];
+        let (in_use, empty) = tokio::try_join!(
+            tracking::service::count_assets_by_statuses(state, tenant_id, &in_use_statuses),
+            tracking::service::count_assets_by_statuses(state, tenant_id, &empty_statuses),
+        )?;
+        stats.containers_in_use_count = Some(in_use);
+        stats.containers_empty_count = Some(empty);
     }
 
-    if flags.get("reporting").copied().unwrap_or(false) {
+    if reporting_enabled {
         stats.last_30d_estimated_duty_pence = Some(
             reporting::service::sum_recent_duty_pence(
                 state,
@@ -161,16 +142,4 @@ pub async fn compute(state: &AppState, tenant_id: Uuid) -> Result<Stats, ApiErro
     }
 
     Ok(stats)
-}
-
-async fn feature_flags(
-    state: &AppState,
-    tenant_id: Uuid,
-) -> Result<HashMap<String, bool>, ApiError> {
-    let flags: Option<sqlx::types::Json<HashMap<String, bool>>> =
-        sqlx::query_scalar("SELECT feature_flags FROM tenants WHERE id = $1")
-            .bind(tenant_id)
-            .fetch_optional(&state.pool)
-            .await?;
-    Ok(flags.map(|j| j.0).unwrap_or_default())
 }
