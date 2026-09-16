@@ -42,5 +42,6 @@ async fn patch_current(
         return Err(ApiError::validation("body", "at least one field required"));
     }
     let tenant = service::update(&state.pool, ctx.user_id()?, ctx.tenant_id()?, req).await?;
+    state.features.invalidate(tenant.id);
     Ok(Json(TenantResponse::from(tenant)).into_response())
 }

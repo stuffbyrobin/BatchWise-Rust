@@ -6,6 +6,7 @@
 //! - [`context`] — request-scoped tenant / user / request-id values.
 //! - [`database`] — the `sqlx` Postgres pool and migration runner.
 //! - [`errors`] — the [`errors::ApiError`] type and its JSON rendering.
+//! - [`features`] — per-tenant feature-flag cache for the tier gate.
 //! - [`logger`] — `tracing` subscriber setup.
 //! - [`pagination`] — page/page-size clamping, saturating offsets, and the
 //!   shared [`pagination::Page`] envelope.
@@ -18,6 +19,7 @@ pub mod config;
 pub mod context;
 pub mod database;
 pub mod errors;
+pub mod features;
 pub mod logger;
 pub mod middleware;
 pub mod pagination;

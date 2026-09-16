@@ -132,15 +132,16 @@ Depends on Phase 2 (shared validator helper, 4xx error mapping).
 
 ## Phase 8 — Backend efficiency and docs · M
 
-- [ ] Recipe child rows: `QueryBuilder::push_values` (or `UNNEST`) instead of per-row INSERT in `recipe/repository.rs` (×4).
-- [ ] Dashboard: `tokio::try_join!` across the independent queries; add `count_*` repository functions instead of `list(page_size=1)`.
-- [ ] Feature flags: TTL cache in `check_feature` (or fold into JWT claims and re-issue on change); remove the duplicate tenant query in `dashboard.rs`.
-- [ ] Indexes migration: `(tenant_id, created_at DESC)` on `recipes` and `label_records`; `(tenant_id, name)` on `styles`, `equipment_profiles`, `mash_profiles`, `yeasts`; `pg_trgm` GIN on searched name columns (or switch to prefix match).
-- [ ] `equipment` get-by-id: fold the maintenance cost SUM into the main query.
-- [ ] Replace the hand-rolled base64 decoder in `import_beerxml.rs` with the `base64` crate.
-- [ ] Add a comment in `import_beerxml.rs` noting quick-xml does not resolve external entities (so a parser swap doesn't regress XXE).
-- [ ] Fix stale comments: `sales/models.rs:225`, config docs (done in Phase 4), batch service header (done in Phase 1).
-- [ ] CI: add `cargo audit` (or `cargo deny`) to `backend.yml`.
+- [x] Recipe child rows: `QueryBuilder::push_values` (or `UNNEST`) instead of per-row INSERT in `recipe/repository.rs` (×4). Also closes the Phase 5 leftover: the child DELETEs only match a recipe of the caller's tenant, and `update_calculations` filters on `tenant_id`.
+- [x] Dashboard: `tokio::try_join!` across the independent queries; add `count_*` repository functions instead of `list(page_size=1)`. (`inventory::count_expiring_within`, `recipe::count`.)
+- [x] Feature flags: TTL cache in `check_feature` (or fold into JWT claims and re-issue on change); remove the duplicate tenant query in `dashboard.rs`. `platform::features::FeatureCache` (60 s TTL): a cached "enabled" is trusted, a cached "disabled" is always re-read, so enabling a feature applies immediately and only revocation can lag. Invalidated on tenant update; the dashboard uses it too.
+- [x] Indexes migration: `(tenant_id, created_at DESC)` on `recipes` and `label_records`; `(tenant_id, name)` on `styles`, `equipment_profiles`, `mash_profiles`, `yeasts`; `pg_trgm` GIN on searched name columns (or switch to prefix match). `000029_list_and_search_indexes`: `yeasts` is already covered by its unique `(tenant_id, name, …)` index, `library_fermentables` added; trigram indexes are on the exact searched expressions (`lower(name)`, recipe `name`, yeast `manufacturer`).
+- [x] `equipment` get-by-id: fold the maintenance cost SUM into the main query.
+- [x] Replace the hand-rolled base64 decoder in `import_beerxml.rs` with the `base64` crate.
+- [x] Add a comment in `import_beerxml.rs` noting quick-xml does not resolve external entities (so a parser swap doesn't regress XXE).
+- [x] Fix stale comments: `sales/models.rs:225`, config docs (done in Phase 4), batch service header (done in Phase 1).
+- [x] CI: add `cargo audit` (or `cargo deny`) to `backend.yml`. It found 8 advisories: `quick-xml` 0.36 → 0.42 (two DoS issues reachable through BeerXML import), `h2`/`rustls` patch bumps; the other four are ignored in `.cargo/audit.toml`, each with its reason and exit (`lopdf` via printpdf and `idna` via validator need major upgrades, `rsa` is never compiled, `tokio-tar` is test-only).
+- [ ] Follow-up: upgrade `printpdf` to 0.8+ and `validator` to 0.20+, then drop their `.cargo/audit.toml` entries.
 
 ---
 

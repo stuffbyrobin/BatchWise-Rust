@@ -10,6 +10,7 @@ use sqlx::PgPool;
 
 use crate::auth::jwt::Jwt;
 use crate::platform::config::Config;
+use crate::platform::features::FeatureCache;
 use crate::platform::middleware::RateLimiter;
 
 /// Cloneable, shared-by-`Arc` application state.
@@ -21,6 +22,8 @@ pub struct AppState {
     /// Failed-login counter keyed by lower-cased email, so credential stuffing
     /// against one account is throttled even when it comes from many IPs.
     pub login_failures: Arc<RateLimiter>,
+    /// Cached tenant feature flags for the tier gate.
+    pub features: Arc<FeatureCache>,
 }
 
 impl AppState {
@@ -39,6 +42,7 @@ impl AppState {
             login_failures: Arc::new(RateLimiter::per_minute(
                 crate::auth::service::MAX_FAILED_LOGINS_PER_MINUTE,
             )),
+            features: Arc::new(FeatureCache::default()),
         }
     }
 }

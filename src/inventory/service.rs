@@ -472,3 +472,12 @@ pub async fn list_movements(
 pub async fn count_low_stock(state: &AppState, tenant_id: Uuid) -> Result<i64, ApiError> {
     Ok(repo::count_low_stock(&state.pool, tenant_id).await?)
 }
+
+/// Number of in-stock lots expiring within `days` days.
+pub async fn count_expiring_within(
+    state: &AppState,
+    tenant_id: Uuid,
+    days: i32,
+) -> Result<i64, ApiError> {
+    Ok(repo::count_expiring_within(&state.pool, tenant_id, days).await?)
+}

@@ -210,16 +210,21 @@ pub async fn create(
     let yeasts = yeasts_from_inputs(rec.id, &req);
     let steps = steps_from_inputs(rec.id, &req);
 
-    repo::replace_fermentables(&mut tx, rec.id, &ferms).await?;
-    repo::replace_hops(&mut tx, rec.id, &hops).await?;
-    repo::replace_yeasts(&mut tx, rec.id, &yeasts).await?;
-    repo::replace_mash_steps(&mut tx, rec.id, &steps).await?;
+    repo::replace_fermentables(&mut tx, tenant_id, rec.id, &ferms).await?;
+    repo::replace_hops(&mut tx, tenant_id, rec.id, &hops).await?;
+    repo::replace_yeasts(&mut tx, tenant_id, rec.id, &yeasts).await?;
+    repo::replace_mash_steps(&mut tx, tenant_id, rec.id, &steps).await?;
 
     let calcs = calc::compute_calcs(&rec, &ferms, &hops, &yeasts);
-    repo::update_calculations(&mut *tx, rec.id, &calcs).await?;
+    repo::update_calculations(&mut *tx, tenant_id, rec.id, &calcs).await?;
 
     tx.commit().await?;
     load(state, tenant_id, rec.id).await
+}
+
+/// Number of recipes the tenant owns.
+pub async fn count(state: &AppState, tenant_id: Uuid) -> Result<i64, ApiError> {
+    Ok(repo::count(&state.pool, tenant_id).await?)
 }
 
 /// Lists recipes.
@@ -303,13 +308,13 @@ pub async fn replace(
     let yeasts = yeasts_from_inputs(rec.id, &req);
     let steps = steps_from_inputs(rec.id, &req);
 
-    repo::replace_fermentables(&mut tx, rec.id, &ferms).await?;
-    repo::replace_hops(&mut tx, rec.id, &hops).await?;
-    repo::replace_yeasts(&mut tx, rec.id, &yeasts).await?;
-    repo::replace_mash_steps(&mut tx, rec.id, &steps).await?;
+    repo::replace_fermentables(&mut tx, tenant_id, rec.id, &ferms).await?;
+    repo::replace_hops(&mut tx, tenant_id, rec.id, &hops).await?;
+    repo::replace_yeasts(&mut tx, tenant_id, rec.id, &yeasts).await?;
+    repo::replace_mash_steps(&mut tx, tenant_id, rec.id, &steps).await?;
 
     let calcs = calc::compute_calcs(&rec, &ferms, &hops, &yeasts);
-    repo::update_calculations(&mut *tx, rec.id, &calcs).await?;
+    repo::update_calculations(&mut *tx, tenant_id, rec.id, &calcs).await?;
 
     tx.commit().await?;
     load(state, tenant_id, rec.id).await
@@ -413,23 +418,23 @@ pub async fn patch(
 
     if let Some(inputs) = req.fermentables {
         ferms = build_children(rec.id, inputs, child_ferm);
-        repo::replace_fermentables(&mut tx, rec.id, &ferms).await?;
+        repo::replace_fermentables(&mut tx, tenant_id, rec.id, &ferms).await?;
     }
     if let Some(inputs) = req.hops {
         hops = build_children(rec.id, inputs, child_hop);
-        repo::replace_hops(&mut tx, rec.id, &hops).await?;
+        repo::replace_hops(&mut tx, tenant_id, rec.id, &hops).await?;
     }
     if let Some(inputs) = req.yeasts {
         yeasts = build_children(rec.id, inputs, child_yeast);
-        repo::replace_yeasts(&mut tx, rec.id, &yeasts).await?;
+        repo::replace_yeasts(&mut tx, tenant_id, rec.id, &yeasts).await?;
     }
     if let Some(inputs) = req.mash_steps {
         let steps = build_children(rec.id, inputs, child_step);
-        repo::replace_mash_steps(&mut tx, rec.id, &steps).await?;
+        repo::replace_mash_steps(&mut tx, tenant_id, rec.id, &steps).await?;
     }
 
     let calcs = calc::compute_calcs(&rec, &ferms, &hops, &yeasts);
-    repo::update_calculations(&mut *tx, rec.id, &calcs).await?;
+    repo::update_calculations(&mut *tx, tenant_id, rec.id, &calcs).await?;
 
     tx.commit().await?;
     load(state, tenant_id, rec.id).await
