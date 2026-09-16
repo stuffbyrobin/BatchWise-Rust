@@ -19,6 +19,7 @@ use super::repository as repo;
 use crate::pkg::labelkit::{self, RenderBrand, RenderFields, RenderModel, RenderTasting};
 use crate::platform::errors::is_unique_violation;
 use crate::platform::errors::ApiError;
+use crate::platform::refs::{ensure_opt_ref, Ref};
 use crate::state::AppState;
 
 pub(crate) const MAX_ASSET_BYTES: usize = 2 * 1024 * 1024; // 2 MiB
@@ -203,6 +204,15 @@ pub async fn create_design(
 ) -> Result<LabelDesign, ApiError> {
     validate_kind_source(&req.kind, req.batch_id, req.recipe_id)?;
     validate_size_template(&req.kind, &req.size_key, &req.template_key)?;
+    ensure_opt_ref(&state.pool, tenant_id, Ref::Batch, req.batch_id, "batch_id").await?;
+    ensure_opt_ref(
+        &state.pool,
+        tenant_id,
+        Ref::Recipe,
+        req.recipe_id,
+        "recipe_id",
+    )
+    .await?;
 
     if let Some(profile_id) = req.brand_profile_id {
         if repo::select_profile_by_id(&state.pool, tenant_id, profile_id)

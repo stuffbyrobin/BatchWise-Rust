@@ -334,7 +334,7 @@ pub async fn deduct_in_tx(
         }
         let deduct_amt = remaining.min(lot.amount);
         let new_amount = lot.amount - deduct_amt;
-        repo::update_amount(&mut *conn, lot.id, new_amount).await?;
+        repo::update_amount(&mut *conn, tenant_id, lot.id, new_amount).await?;
         allocations.push(AllocationEntry {
             lot_id: lot.id,
             lot_number: lot.lot_number.clone(),
@@ -366,7 +366,7 @@ pub async fn deduct_in_tx(
         // Drive the oldest lot negative.
         let oldest = &lots[0];
         let new_amount = oldest.amount - remaining;
-        repo::update_amount(&mut *conn, oldest.id, new_amount).await?;
+        repo::update_amount(&mut *conn, tenant_id, oldest.id, new_amount).await?;
         allocations.push(AllocationEntry {
             lot_id: oldest.id,
             lot_number: oldest.lot_number.clone(),

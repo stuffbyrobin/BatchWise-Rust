@@ -8,6 +8,7 @@ use uuid::Uuid;
 use super::models::{CreateRequest, Event, EventWrite, ListFilter, Page, UpdateRequest};
 use super::repository as repo;
 use crate::platform::errors::ApiError;
+use crate::platform::refs::{ensure_opt_ref, Ref};
 use crate::platform::sort;
 use crate::state::AppState;
 
@@ -42,6 +43,7 @@ pub async fn create(
     tenant_id: Uuid,
     req: CreateRequest,
 ) -> Result<Event, ApiError> {
+    ensure_opt_ref(&state.pool, tenant_id, Ref::Batch, req.batch_id, "batch_id").await?;
     let w = write_from_create(&req);
     let mut tx = state.pool.begin().await?;
     let event = repo::insert(&mut *tx, tenant_id, &w).await?;
@@ -96,6 +98,8 @@ pub async fn update(
     let existing = repo::select_by_id(&state.pool, tenant_id, id)
         .await?
         .ok_or_else(|| ApiError::not_found("event"))?;
+
+    ensure_opt_ref(&state.pool, tenant_id, Ref::Batch, req.batch_id, "batch_id").await?;
 
     let mut w = EventWrite {
         batch_id: existing.batch_id,

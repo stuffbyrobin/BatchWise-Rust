@@ -15,6 +15,7 @@ use super::models::{
 };
 use super::repository as repo;
 use crate::platform::errors::ApiError;
+use crate::platform::refs::{ensure_opt_ref, Ref};
 use crate::state::AppState;
 
 // ---- yeast bank entries ----
@@ -24,6 +25,14 @@ pub async fn create_entry(
     tenant_id: Uuid,
     req: CreateYeastBankRequest,
 ) -> Result<YeastBankEntry, ApiError> {
+    ensure_opt_ref(
+        &state.pool,
+        tenant_id,
+        Ref::LibraryYeast,
+        req.library_yeast_id,
+        "library_yeast_id",
+    )
+    .await?;
     let generation = req.generation.unwrap_or(1);
     let mut entry = repo::insert_entry(
         &state.pool,
@@ -75,6 +84,14 @@ pub async fn patch_entry(
     req: PatchYeastBankRequest,
 ) -> Result<YeastBankEntry, ApiError> {
     let mut entry = get_entry(state, tenant_id, id).await?;
+    ensure_opt_ref(
+        &state.pool,
+        tenant_id,
+        Ref::LibraryYeast,
+        req.library_yeast_id,
+        "library_yeast_id",
+    )
+    .await?;
 
     if let Some(status) = req.status {
         if entry.status == "discarded" {
@@ -197,6 +214,8 @@ pub async fn create_propagation(
         .await?
         .ok_or_else(|| ApiError::not_found("yeast_bank_entry"))?;
 
+    ensure_opt_ref(&state.pool, tenant_id, Ref::Batch, req.batch_id, "batch_id").await?;
+
     let started_at = req.started_at.unwrap_or_else(Utc::now);
     Ok(repo::insert_propagation(
         &state.pool,
@@ -237,6 +256,7 @@ pub async fn patch_propagation(
     let mut prop = repo::select_propagation_by_id(&state.pool, tenant_id, bank_id, prop_id)
         .await?
         .ok_or_else(|| ApiError::not_found("propagation"))?;
+    ensure_opt_ref(&state.pool, tenant_id, Ref::Batch, req.batch_id, "batch_id").await?;
 
     if let Some(v) = req.started_at {
         prop.started_at = v;

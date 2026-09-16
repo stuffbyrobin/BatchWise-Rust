@@ -361,6 +361,8 @@ pub async fn patch_line(
 
     repo::update_line(
         &state.pool,
+        tenant_id,
+        po_id,
         line_id,
         &line.ingredient_type,
         &line.ingredient_name,
@@ -394,7 +396,7 @@ pub async fn delete_line(
     repo::select_line_by_id(&state.pool, po_id, line_id)
         .await?
         .ok_or_else(|| ApiError::not_found("purchase_order_line"))?;
-    repo::delete_line(&state.pool, line_id).await?;
+    repo::delete_line(&state.pool, tenant_id, po_id, line_id).await?;
     Ok(())
 }
 
@@ -431,7 +433,14 @@ pub async fn receive_po(
                 "cannot exceed the ordered quantity",
             ));
         }
-        repo::update_line_received_qty(&mut *tx, rl.line_id, rl.received_quantity).await?;
+        repo::update_line_received_qty(
+            &mut *tx,
+            tenant_id,
+            po_id,
+            rl.line_id,
+            rl.received_quantity,
+        )
+        .await?;
         line.received_quantity = Some(rl.received_quantity);
     }
 

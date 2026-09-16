@@ -393,6 +393,8 @@ pub async fn select_lines_by_po(
 #[allow(clippy::too_many_arguments)]
 pub async fn update_line(
     pool: &PgPool,
+    tenant_id: Uuid,
+    po_id: Uuid,
     line_id: Uuid,
     ingredient_type: &str,
     ingredient_name: &str,
@@ -403,7 +405,9 @@ pub async fn update_line(
 ) -> Result<bool, sqlx::Error> {
     let r = sqlx::query(
         "UPDATE purchase_order_lines SET ingredient_type=$2, ingredient_name=$3, quantity=$4, \
-         unit=$5, unit_cost_pence=$6, unit_cost_currency=$7, updated_at=now() WHERE id=$1",
+         unit=$5, unit_cost_pence=$6, unit_cost_currency=$7, updated_at=now() \
+         WHERE id=$1 AND purchase_order_id=$8 \
+           AND EXISTS (SELECT 1 FROM purchase_orders po WHERE po.id=$8 AND po.tenant_id=$9)",
     )
     .bind(line_id)
     .bind(ingredient_type)
@@ -412,31 +416,49 @@ pub async fn update_line(
     .bind(unit)
     .bind(unit_cost_pence)
     .bind(unit_cost_currency)
+    .bind(po_id)
+    .bind(tenant_id)
     .execute(pool)
     .await?;
     Ok(r.rows_affected() > 0)
 }
 
-/// Deletes a line by id.
-pub async fn delete_line(pool: &PgPool, line_id: Uuid) -> Result<(), sqlx::Error> {
-    sqlx::query("DELETE FROM purchase_order_lines WHERE id=$1")
-        .bind(line_id)
-        .execute(pool)
-        .await?;
+/// Deletes a line of a tenant's purchase order.
+pub async fn delete_line(
+    pool: &PgPool,
+    tenant_id: Uuid,
+    po_id: Uuid,
+    line_id: Uuid,
+) -> Result<(), sqlx::Error> {
+    sqlx::query(
+        "DELETE FROM purchase_order_lines WHERE id=$1 AND purchase_order_id=$2 \
+         AND EXISTS (SELECT 1 FROM purchase_orders po WHERE po.id=$2 AND po.tenant_id=$3)",
+    )
+    .bind(line_id)
+    .bind(po_id)
+    .bind(tenant_id)
+    .execute(pool)
+    .await?;
     Ok(())
 }
 
 /// Updates a line's received quantity.
 pub async fn update_line_received_qty<'e, E: PgExecutor<'e>>(
     exec: E,
+    tenant_id: Uuid,
+    po_id: Uuid,
     line_id: Uuid,
     qty: f64,
 ) -> Result<(), sqlx::Error> {
     sqlx::query(
-        "UPDATE purchase_order_lines SET received_quantity=$2, updated_at=now() WHERE id=$1",
+        "UPDATE purchase_order_lines SET received_quantity=$2, updated_at=now() \
+         WHERE id=$1 AND purchase_order_id=$3 \
+           AND EXISTS (SELECT 1 FROM purchase_orders po WHERE po.id=$3 AND po.tenant_id=$4)",
     )
     .bind(line_id)
     .bind(qty)
+    .bind(po_id)
+    .bind(tenant_id)
     .execute(exec)
     .await?;
     Ok(())

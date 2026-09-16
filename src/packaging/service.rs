@@ -18,6 +18,7 @@ use super::repository as repo;
 use crate::audit;
 use crate::platform::errors::is_unique_violation;
 use crate::platform::errors::ApiError;
+use crate::platform::refs::{ensure_ref, Ref};
 use crate::state::AppState;
 
 // ---- packaging runs ----
@@ -29,6 +30,7 @@ pub async fn create_run(
     actor_id: Option<Uuid>,
     req: CreatePackagingRunRequest,
 ) -> Result<PackagingRun, ApiError> {
+    ensure_ref(&state.pool, tenant_id, Ref::Batch, req.batch_id, "batch_id").await?;
     let run = match repo::insert_run(
         &state.pool,
         tenant_id,

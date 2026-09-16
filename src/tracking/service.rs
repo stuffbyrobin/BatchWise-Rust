@@ -15,6 +15,7 @@ use super::qr;
 use super::repository as repo;
 use crate::platform::errors::is_unique_violation;
 use crate::platform::errors::ApiError;
+use crate::platform::refs::{ensure_opt_ref, Ref};
 use crate::platform::sort;
 use crate::state::AppState;
 
@@ -203,6 +204,7 @@ pub async fn fill(
     req: FillRequest,
 ) -> Result<Asset, ApiError> {
     let batch_id = req.batch_id;
+    ensure_opt_ref(&state.pool, tenant_id, Ref::Batch, batch_id, "batch_id").await?;
     lifecycle(
         state,
         tenant_id,
