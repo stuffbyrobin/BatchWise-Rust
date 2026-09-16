@@ -2,10 +2,9 @@ import React, { useState } from 'react';
 import { APIError } from '../../api/error';
 import { useCostRatesList, useCreateCostRate, usePatchCostRate, useDeleteCostRate, RATE_TYPES } from './hooks/useCostRates';
 import type { components } from '../../api/generated';
+import { fmtPence } from '../../utils/format';
 
 type CostRate = components['schemas']['CostRate'];
-
-const formatPence = (p: number | null | undefined): string => p == null ? '-' : '£' + (p / 100).toFixed(2);
 
 const CostRateRow: React.FC<{ item: CostRate; onEditStart: (id: string) => void; onEditCancel: () => void; editingId: string | null }> = ({ item, onEditStart, onEditCancel, editingId }) => {
   const [editForm, setEditForm] = useState({
@@ -88,7 +87,7 @@ const CostRateRow: React.FC<{ item: CostRate; onEditStart: (id: string) => void;
       <td className="py-2">{item.rate_name}</td>
       <td className="py-2">{item.rate_type}</td>
       <td className="py-2">{item.unit}</td>
-      <td className="py-2">{formatPence(item.rate_value)}</td>
+      <td className="py-2">{fmtPence(item.rate_value)}</td>
       <td className="py-2">{item.currency}</td>
       <td className="py-2">{item.effective_from}</td>
       <td className="py-2">{item.effective_to}</td>

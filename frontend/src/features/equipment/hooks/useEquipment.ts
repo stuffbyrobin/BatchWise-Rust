@@ -1,6 +1,8 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { apiClient } from '../../../api/client'
+import { createCrudHooks } from '../../../api/crud'
 import type { components } from '../../../api/generated'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { apiClient } from '../../../api/client'
+import { qs } from '../../../api/qs'
 
 type Equipment = components['schemas']['Equipment']
 type EquipmentList = components['schemas']['EquipmentList']
@@ -15,52 +17,18 @@ type EventList = components['schemas']['EventList']
 type CreateEventRequest = components['schemas']['CreateEventRequest']
 type MaintenanceDueList = components['schemas']['MaintenanceDueList']
 
-function qs(params: Record<string, unknown>): string {
-  const q = Object.entries(params)
-    .filter(([, v]) => v !== undefined && v !== null && v !== '')
-    .map(([k, v]) => `${k}=${encodeURIComponent(String(v))}`)
-    .join('&')
-  return q ? `?${q}` : ''
-}
-
 // ——— Equipment ———————————————————————————————————————————————————————————————
 
-export function useEquipmentList(params: { status?: string; equipment_type?: string; sort?: string; page?: number; page_size?: number } = {}) {
-  return useQuery<EquipmentList>({
-    queryKey: ['equipment', params],
-    queryFn: ({ signal }) => apiClient.get<EquipmentList>(`/api/v1/equipment${qs(params as Record<string, unknown>)}`, { signal }),
-  })
-}
-
-export function useCreateEquipment() {
-  const qc = useQueryClient()
-  return useMutation<Equipment, Error, CreateEquipmentRequest>({
-    mutationFn: (body) => apiClient.post<Equipment>('/api/v1/equipment', body),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['equipment'] }),
-  })
-}
-
-export function usePatchEquipment(id: string) {
-  const qc = useQueryClient()
-  return useMutation<Equipment, Error, PatchEquipmentRequest>({
-    mutationFn: (body) => apiClient.patch<Equipment>(`/api/v1/equipment/${id}`, body),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['equipment'] })
-      qc.invalidateQueries({ queryKey: ['maintenance-due'] })
-    },
-  })
-}
-
-export function useDeleteEquipment() {
-  const qc = useQueryClient()
-  return useMutation<void, Error, string>({
-    mutationFn: (id) => apiClient.delete<void>(`/api/v1/equipment/${id}`),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['equipment'] })
-      qc.invalidateQueries({ queryKey: ['maintenance-due'] })
-    },
-  })
-}
+// Changing equipment also changes the maintenance-due view.
+const equipment = createCrudHooks<Equipment, CreateEquipmentRequest, PatchEquipmentRequest, { status?: string; equipment_type?: string; sort?: string; page?: number; page_size?: number }, EquipmentList>({
+  path: '/api/v1/equipment',
+  queryKey: ['equipment'],
+  alsoInvalidate: [['maintenance-due']],
+})
+export const useEquipmentList = equipment.useList
+export const useCreateEquipment = equipment.useCreate
+export const usePatchEquipment = equipment.useUpdate
+export const useDeleteEquipment = equipment.useDelete
 
 // ——— Maintenance schedules ———————————————————————————————————————————————————
 

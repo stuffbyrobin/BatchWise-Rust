@@ -1,11 +1,7 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
 import { useMaintenanceDue } from './hooks/useEquipment'
-
-function fmtDate(s: string | null | undefined): string {
-  if (!s) return '—'
-  return String(s).slice(0, 10)
-}
+import { fmtDate } from '../../utils/format'
 
 export default function MaintenanceDuePage() {
   const [windowDays, setWindowDays] = React.useState(30)

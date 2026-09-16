@@ -1,19 +1,12 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '../../../api/client'
 import type { components } from '../../../api/generated'
+import { qs } from '../../../api/qs'
 
 type CalendarEvent = components['schemas']['CalendarEvent']
 type CreateCalendarEventRequest = components['schemas']['CreateCalendarEventRequest']
 type UpdateCalendarEventRequest = components['schemas']['UpdateCalendarEventRequest']
 type PaginatedCalendarEvents = components['schemas']['PaginatedCalendarEvents']
-
-function toQueryString(params: Record<string, unknown>): string {
-  const q = Object.entries(params)
-    .filter(([, v]) => v !== undefined && v !== null && v !== '')
-    .map(([k, v]) => `${k}=${encodeURIComponent(String(v))}`)
-    .join('&')
-  return q ? `?${q}` : ''
-}
 
 interface CalendarListParams {
   batch_id?: string
@@ -29,7 +22,7 @@ export function useCalendarEvents(params: CalendarListParams = {}) {
   return useQuery<PaginatedCalendarEvents>({
     queryKey: ['calendar-events', params],
     queryFn: ({ signal }) => apiClient.get<PaginatedCalendarEvents>(
-        `/api/v1/calendar-events${toQueryString(params as Record<string, unknown>)}`, { signal },
+        `/api/v1/calendar-events${qs(params as Record<string, unknown>)}`, { signal },
       ),
   })
 }

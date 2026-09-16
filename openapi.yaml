@@ -866,10 +866,10 @@ components:
         calc_abv_pct: { type: ['number', 'null'] }
         calc_ibu: { type: ['number', 'null'] }
         calc_color_ebc: { type: ['number', 'null'] }
-        fermentables: { type: array, items: { type: object } }
-        hops: { type: array, items: { type: object } }
-        yeasts: { type: array, items: { type: object } }
-        mash_steps: { type: array, items: { type: object } }
+        fermentables: { type: array, items: { $ref: "#/components/schemas/RecipeFermentable" } }
+        hops: { type: array, items: { $ref: "#/components/schemas/RecipeHop" } }
+        yeasts: { type: array, items: { $ref: "#/components/schemas/RecipeYeast" } }
+        mash_steps: { type: array, items: { $ref: "#/components/schemas/RecipeMashStep" } }
     CreateBatchRequest:
       type: object
       required: [recipe_id, batch_number, name]
@@ -902,9 +902,9 @@ components:
     PatchIngredientsRequest:
       type: object
       properties:
-        fermentables: { type: array, items: { type: object } }
-        hops: { type: array, items: { type: object } }
-        yeasts: { type: array, items: { type: object } }
+        fermentables: { type: array, items: { $ref: "#/components/schemas/RecipeFermentable" } }
+        hops: { type: array, items: { $ref: "#/components/schemas/RecipeHop" } }
+        yeasts: { type: array, items: { $ref: "#/components/schemas/RecipeYeast" } }
     CreateBatchResponse:
       type: object
       properties:

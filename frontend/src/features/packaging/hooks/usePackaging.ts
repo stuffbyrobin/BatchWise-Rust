@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '../../../api/client'
 import type { components } from '../../../api/generated'
+import { qs } from '../../../api/qs'
 
 type PackagingRun = components['schemas']['PackagingRun']
 type PackagingRunList = components['schemas']['PackagingRunList']
@@ -9,14 +10,6 @@ type PatchPackagingRunRequest = components['schemas']['PatchPackagingRunRequest'
 type DistributionMovement = components['schemas']['DistributionMovement']
 type DistributionMovementList = components['schemas']['DistributionMovementList']
 type CreateDistributionMovementRequest = components['schemas']['CreateDistributionMovementRequest']
-
-function qs(params: Record<string, unknown>): string {
-  const q = Object.entries(params)
-    .filter(([, v]) => v !== undefined && v !== null && v !== '')
-    .map(([k, v]) => `${k}=${encodeURIComponent(String(v))}`)
-    .join('&')
-  return q ? `?${q}` : ''
-}
 
 export function usePackagingRuns(params: { batch_id?: string; format?: string; sort?: string; page?: number; page_size?: number } = {}) {
   return useQuery<PackagingRunList>({

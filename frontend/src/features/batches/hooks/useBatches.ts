@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '../../../api/client'
 import type { components } from '../../../api/generated'
+import { qs } from '../../../api/qs'
 
 type Batch = components['schemas']['Batch']
 type CreateBatchRequest = components['schemas']['CreateBatchRequest']
@@ -11,14 +12,6 @@ type CreateBatchResponse = components['schemas']['CreateBatchResponse']
 type PaginatedBatches = components['schemas']['PaginatedBatches']
 
 export type { Batch, PatchIngredientsRequest }
-
-function toQueryString(params: Record<string, unknown>): string {
-  const q = Object.entries(params)
-    .filter(([, v]) => v !== undefined && v !== null && v !== '')
-    .map(([k, v]) => `${k}=${encodeURIComponent(String(v))}`)
-    .join('&')
-  return q ? `?${q}` : ''
-}
 
 interface BatchListParams {
   status?: string
@@ -33,7 +26,7 @@ interface BatchListParams {
 export function useBatchesList(params: BatchListParams = {}) {
   return useQuery<PaginatedBatches>({
     queryKey: ['batches', params],
-    queryFn: ({ signal }) => apiClient.get<PaginatedBatches>(`/api/v1/batches${toQueryString(params as Record<string, unknown>)}`, { signal }),
+    queryFn: ({ signal }) => apiClient.get<PaginatedBatches>(`/api/v1/batches${qs(params as Record<string, unknown>)}`, { signal }),
   })
 }
 

@@ -2,10 +2,9 @@ import React, { useState } from 'react';
 import { APIError } from '../../api/error';
 import { useCostReportsList, useGenerateCostReport, useDeleteCostReport, REPORT_TYPES } from './hooks/useCostReports';
 import type { components } from '../../api/generated';
+import { fmtPence } from '../../utils/format';
 
 type CostReport = components['schemas']['CostReport'];
-
-const formatPence = (p: number | null | undefined): string => p == null ? '-' : '£' + (p / 100).toFixed(2);
 
 const CostReportRow: React.FC<{
   item: CostReport;
@@ -82,7 +81,7 @@ const CostReportRow: React.FC<{
                   key={key}
                   style={{ width: `${width}%` }}
                   className={`${colors[key]} h-full flex items-center justify-center text-white text-xs font-medium`}
-                  title={`${labels[key]}: ${formatPence(value)} (${width.toFixed(1)}%)`}
+                  title={`${labels[key]}: ${fmtPence(value)} (${width.toFixed(1)}%)`}
                 >
                   {showLabel && `${labels[key]} ${width.toFixed(0)}%`}
                 </div>
@@ -93,7 +92,7 @@ const CostReportRow: React.FC<{
             {validFields.map(([key, value]) => (
               <div key={key} className="flex items-center gap-2">
                 <span className={`w-3 h-3 rounded-full ${colors[key]}`} />
-                <span className="text-[var(--color-muted)]">{labels[key]}: {formatPence(value)} ({((value! / total) * 100).toFixed(1)}%)</span>
+                <span className="text-[var(--color-muted)]">{labels[key]}: {fmtPence(value)} ({((value! / total) * 100).toFixed(1)}%)</span>
               </div>
             ))}
           </div>

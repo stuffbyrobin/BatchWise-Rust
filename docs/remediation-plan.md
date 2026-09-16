@@ -178,13 +178,13 @@ Do **before** the large refactors so they run under lint.
 Depends on Phase 10 (lint) and precedes Phase 12 (the editor split should use
 these).
 
-- [ ] `src/api/qs.ts` (or `apiClient.get(path, { params })`); delete the 21 copies.
-- [ ] `src/api/types.ts`: one `Page<T>` type; delete per-file redeclarations.
-- [ ] `src/utils/format.ts`: `fmtDate`, `fmtPence`; replace 8 + 7 copies.
-- [ ] `src/components/ui/Skeleton.tsx` and one shared `inputCls` (or an `<Input>` component).
-- [ ] `createCrudHooks<T>(path, queryKey)` factory; collapse `useLibrary.ts`, `useProcurement.ts`, `useEquipment.ts`, `useContainerAssets.ts`.
-- [ ] Remove `any` in the three reporting pages and `BatchDetailPage` using `components['schemas']` types.
-- [ ] Unit tests for the pure helpers (`format`, `qs`, `ibu`, `ebc`, `SortableHeader.parseSort/nextSort`, `mineralForms`).
+- [x] `src/api/qs.ts` (or `apiClient.get(path, { params })`); delete the 21 copies. (Also encodes keys.)
+- [x] `src/api/types.ts`: one `Page<T>` type; delete per-file redeclarations.
+- [x] `src/utils/format.ts`: `fmtDate`, `fmtPence`; replace 8 + 7 copies. Plus `fmtDateTime`; the one locale-date formatter (DistributionMovements) is a different format and stays. Pence placeholder unified to `—`.
+- [x] `src/components/ui/Skeleton.tsx` and one shared `inputCls` (or an `<Input>` component). `inputCls` replaces 45 identical class strings; the four deliberately different local variants stay. Six loading blocks now use `<Skeleton>`; four of them used the invalid class `bg-[var(--color-border)/20]` and rendered nothing.
+- [x] `createCrudHooks<T>(path, queryKey)` factory; collapse `useLibrary.ts`, `useProcurement.ts`, `useEquipment.ts`, `useContainerAssets.ts`. (`src/api/crud.ts`; `updateMethod` for the library's PUT endpoints, `alsoInvalidate` for equipment → maintenance-due; exported hook names unchanged.)
+- [x] Remove `any` in the three reporting pages and `BatchDetailPage` using `components['schemas']` types. Reporting pages done in Phase 10. `BatchDetailPage` needed a contract fix: `BatchRecipeSnapshot` and `PatchIngredientsRequest` declared their ingredient arrays as untyped objects; they now reference the recipe row schemas.
+- [x] Unit tests for the pure helpers (`format`, `qs`, `ibu`, `ebc`, `SortableHeader.parseSort/nextSort`, `mineralForms`). The IBU tests, pinned to the backend's formula, found that `calcHopIBU` was 100× too small (multiplied by 10 instead of 1000 after converting alpha acid to a fraction), so the per-hop IBU column in the recipe and batch editors showed e.g. 0.3 instead of 32.3. Fixed. Remaining difference: the frontend ignores hop form factor and whirlpool/dry-hop handling that the backend applies.
 
 ---
 

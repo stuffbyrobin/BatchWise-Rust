@@ -1,6 +1,7 @@
 import { useParams, Link } from 'react-router-dom'
 import { useContainerQR } from './hooks/useContainerAssets'
 import { APIError } from '../../api/error'
+import { Skeleton } from '../../components/ui/Skeleton'
 
 export function ContainerAssetQRPage() {
   const { id } = useParams<{ id: string }>()
@@ -49,11 +50,7 @@ export function ContainerAssetQRPage() {
         &lt;- Back to asset
       </Link>
 
-      {(isLoadingA || isLoadingB) && (
-        <div className="space-y-2 animate-pulse">
-          <div className="h-64 rounded bg-[var(--color-border)/20]" />
-        </div>
-      )}
+      {(isLoadingA || isLoadingB) && <Skeleton rows={1} rowClassName="h-64" />}
 
       {!isLoadingA && !isLoadingB && (
         <div className="flex gap-8">

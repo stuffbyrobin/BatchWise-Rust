@@ -2,6 +2,7 @@ import React from 'react'
 import type { UseMutationResult, UseQueryResult } from '@tanstack/react-query'
 import { APIError } from '../../api/error'
 import { SortableHeader } from '../../components/ui/SortableHeader'
+import { Skeleton } from '../../components/ui/Skeleton'
 
 export interface FieldDef {
   key: string
@@ -182,13 +183,7 @@ export function LibraryCRUD<T extends Record<string, unknown>>({
         </div>
       )}
 
-      {isLoading && (
-        <div className="space-y-2">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="h-10 rounded animate-pulse" style={{ background: 'var(--color-border)' }} />
-          ))}
-        </div>
-      )}
+      {isLoading && <Skeleton rows={4} />}
 
       {isError && (
         <div className="p-4 rounded border border-[var(--color-danger)] text-[var(--color-danger)]">

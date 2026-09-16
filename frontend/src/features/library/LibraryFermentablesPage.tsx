@@ -2,6 +2,7 @@ import React from 'react'
 import type { components } from '../../api/generated'
 import { APIError } from '../../api/error'
 import { SortableHeader } from '../../components/ui/SortableHeader'
+import { Skeleton } from '../../components/ui/Skeleton'
 import {
   useFermentables,
   useCreateFermentable,
@@ -332,13 +333,7 @@ export function LibraryFermentablesPage() {
         </div>
       )}
 
-      {isLoading && (
-        <div className="space-y-2">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="h-10 rounded animate-pulse" style={{ background: 'var(--color-border)' }} />
-          ))}
-        </div>
-      )}
+      {isLoading && <Skeleton rows={6} />}
 
       {isError && (
         <div className="p-4 rounded border border-[var(--color-danger)] text-[var(--color-danger)]">

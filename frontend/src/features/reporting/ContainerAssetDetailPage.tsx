@@ -10,6 +10,7 @@ import {
   CONTAINER_TYPES,
 } from './hooks/useContainerAssets'
 import { APIError } from '../../api/error'
+import { Skeleton } from '../../components/ui/Skeleton'
 
 type ContainerType = typeof CONTAINER_TYPES[number]
 
@@ -96,14 +97,7 @@ export function ContainerAssetDetailPage() {
   }
 
   if (isLoading) {
-    return (
-      <div className="p-6 space-y-2 animate-pulse">
-        <div className="h-8 rounded bg-[var(--color-border)/20] w-64" />
-        {[...Array(3)].map((_, i) => (
-          <div key={i} className="h-12 rounded bg-[var(--color-border)/20]" />
-        ))}
-      </div>
-    )
+    return <Skeleton rows={4} className="p-6" />
   }
 
   if (isError) {
@@ -351,13 +345,7 @@ export function ContainerAssetDetailPage() {
 
       <div className="pt-4 border-t border-[var(--color-border)]">
         <h2 className="text-xl font-semibold text-[var(--color-fg)] mb-4">Activity Log</h2>
-        {isLoadingLogs && (
-          <div className="space-y-2 animate-pulse">
-            {[...Array(5)].map((_, i) => (
-              <div key={i} className="h-12 rounded bg-[var(--color-border)/20]" />
-            ))}
-          </div>
-        )}
+        {isLoadingLogs && <Skeleton rows={5} rowClassName="h-12" />}
         {!isLoadingLogs && logsData && (logsData.items ?? []).length > 0 && (
           <>
             <div className="overflow-x-auto">

@@ -2,8 +2,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { APIError } from '../../api/error';
 import { useBatchCostsList, useComputeBatchCost } from './hooks/useBatchCosts';
-
-const formatPence = (p: number | null | undefined): string => p == null ? '-' : '£' + (p / 100).toFixed(2);
+import { fmtPence } from '../../utils/format';
 
 export const BatchCostsPage: React.FC = () => {
   const [page, setPage] = useState(1);
@@ -163,15 +162,15 @@ export const BatchCostsPage: React.FC = () => {
                       {item.batch_id?.substring(0, 8)}
                     </Link>
                   </td>
-                  <td className="py-2">{formatPence(item.ingredient_cost_pence)}</td>
-                  <td className="py-2">{formatPence(item.energy_cost_pence)}</td>
-                  <td className="py-2">{formatPence(item.labor_cost_pence)}</td>
-                  <td className="py-2">{formatPence(item.water_cost_pence)}</td>
-                  <td className="py-2">{formatPence(item.overhead_cost_pence)}</td>
-                  <td className="py-2">{formatPence(item.estimated_duty_pence)}</td>
-                  <td className="py-2">{formatPence(item.total_cost_pence)}</td>
-                  <td className="py-2">{formatPence(item.cost_per_liter_pence)}</td>
-                  <td className="py-2">{formatPence(item.cost_per_unit_pence)}</td>
+                  <td className="py-2">{fmtPence(item.ingredient_cost_pence)}</td>
+                  <td className="py-2">{fmtPence(item.energy_cost_pence)}</td>
+                  <td className="py-2">{fmtPence(item.labor_cost_pence)}</td>
+                  <td className="py-2">{fmtPence(item.water_cost_pence)}</td>
+                  <td className="py-2">{fmtPence(item.overhead_cost_pence)}</td>
+                  <td className="py-2">{fmtPence(item.estimated_duty_pence)}</td>
+                  <td className="py-2">{fmtPence(item.total_cost_pence)}</td>
+                  <td className="py-2">{fmtPence(item.cost_per_liter_pence)}</td>
+                  <td className="py-2">{fmtPence(item.cost_per_unit_pence)}</td>
                   <td className="py-2">{item.computed_at ? new Date(item.computed_at).toLocaleString() : '-'}</td>
                 </tr>
               ))}

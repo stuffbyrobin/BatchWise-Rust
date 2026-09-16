@@ -2,18 +2,9 @@ import React from 'react'
 import { APIError } from '../../api/error'
 import { useDutyReturns, useCompileDutyReturn, usePatchDutyReturn } from './hooks/useDuty'
 import type { components } from '../../api/generated'
+import { fmtDate, fmtPence } from '../../utils/format'
 
 type DutyReturn = components['schemas']['DutyReturn']
-
-function fmtPence(p: number | null | undefined): string {
-  if (p == null) return '—'
-  return '£' + (p / 100).toFixed(2)
-}
-
-function fmtDate(s: string | undefined): string {
-  if (!s) return '—'
-  return s.slice(0, 10)
-}
 
 function prevMonthRange(): { start: string; end: string } {
   const now = new Date()

@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '../../../api/client'
 import type { components } from '../../../api/generated'
+import { qs } from '../../../api/qs'
 
 type YeastBankEntry = components['schemas']['YeastBankEntry']
 type YeastBankList = components['schemas']['YeastBankList']
@@ -11,14 +12,6 @@ type Propagation = components['schemas']['Propagation']
 type PropagationList = components['schemas']['PropagationList']
 type CreatePropagationRequest = components['schemas']['CreatePropagationRequest']
 type PatchPropagationRequest = components['schemas']['PatchPropagationRequest']
-
-function qs(params: Record<string, unknown>): string {
-  const q = Object.entries(params)
-    .filter(([, v]) => v !== undefined && v !== null && v !== '')
-    .map(([k, v]) => `${k}=${encodeURIComponent(String(v))}`)
-    .join('&')
-  return q ? `?${q}` : ''
-}
 
 // ——— Yeast Bank Entries ——————————————————————————————————————————————————————
 

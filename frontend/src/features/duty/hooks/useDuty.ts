@@ -1,19 +1,12 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '../../../api/client'
 import type { components } from '../../../api/generated'
+import { qs } from '../../../api/qs'
 
 type DutyReturn = components['schemas']['DutyReturn']
 type DutyReturnList = components['schemas']['DutyReturnList']
 type DutyCompileRequest = components['schemas']['DutyCompileRequest']
 type DutyPatchRequest = components['schemas']['DutyPatchRequest']
-
-function qs(params: Record<string, unknown>): string {
-  const q = Object.entries(params)
-    .filter(([, v]) => v !== undefined && v !== null && v !== '')
-    .map(([k, v]) => `${k}=${encodeURIComponent(String(v))}`)
-    .join('&')
-  return q ? `?${q}` : ''
-}
 
 export function useDutyReturns(params: { status?: string; page?: number; page_size?: number } = {}) {
   return useQuery<DutyReturnList>({
