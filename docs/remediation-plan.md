@@ -81,13 +81,13 @@ All in `src/auth` and `src/platform/config.rs`; one PR, one test file.
 Single file. Do after Phase 3 so the global rate limiter reuses the fixed
 limiter.
 
-- [ ] `CorsLayer` from `cfg.cors_origin` (allow credentials off, explicit methods/headers).
-- [ ] `SetResponseHeaderLayer` for `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy`, and HSTS when `app_env != development`.
-- [ ] `TimeoutLayer` (e.g. 30s) and an explicit `DefaultBodyLimit`.
-- [ ] Global rate limit from `rate_limit_default_per_minute` on `/api/v1`.
-- [ ] `TraceLayer` for request logging.
-- [ ] Swagger UI: pin `swagger-ui-dist` version and add `integrity` hashes, or serve `/docs` only when `app_env == development`.
-- [ ] Update the config doc comments so they describe what is now actually applied.
+- [x] `CorsLayer` from `cfg.cors_origin` (allow credentials off, explicit methods/headers). `CORS_ORIGIN` is now a comma-separated list, validated at startup.
+- [x] `SetResponseHeaderLayer` for `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`, and HSTS when `app_env != development` (same fail-closed `Config::is_development()` as the config checks).
+- [x] `TimeoutLayer` (30s, 503) and an explicit `DefaultBodyLimit` (2 MiB; brand-asset upload gets file limit + 64 KiB framing). Over-limit bodies now return 413 `payload_too_large` instead of a 400.
+- [x] Global rate limit from `rate_limit_default_per_minute` on `/api/v1` (shared `platform::middleware::rate_limit`, also used by the auth routes).
+- [x] `TraceLayer` for request logging (INFO; method, path without query string, request id).
+- [x] Swagger UI: pinned `swagger-ui-dist@5.32.15` with SRI `integrity` hashes (docs stay public).
+- [x] Update the config doc comments so they describe what is now actually applied.
 
 ---
 

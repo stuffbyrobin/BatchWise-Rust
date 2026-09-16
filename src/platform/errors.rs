@@ -102,6 +102,15 @@ impl ApiError {
         )
     }
 
+    /// 413 — the request body exceeds the route's size limit.
+    pub fn payload_too_large() -> Self {
+        Self::base(
+            "payload_too_large",
+            "request body too large",
+            StatusCode::PAYLOAD_TOO_LARGE,
+        )
+    }
+
     /// 429 — rate limit exceeded; sets a `Retry-After` header.
     pub fn rate_limited(retry_after_seconds: u64) -> Self {
         let mut e = Self::base(

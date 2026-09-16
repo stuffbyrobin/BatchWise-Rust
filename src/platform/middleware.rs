@@ -7,7 +7,7 @@ use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::sync::{
     atomic::{AtomicUsize, Ordering},
-    Mutex,
+    Arc, Mutex,
 };
 use std::time::{Duration, Instant};
 
@@ -190,6 +190,37 @@ pub fn client_ip(req: &Request, trust_proxy_headers: bool) -> String {
         return addr.ip().to_string();
     }
     "unknown".to_string()
+}
+
+/// State for [`rate_limit`]: a shared limiter plus whether to key on `X-Forwarded-For`.
+#[derive(Clone)]
+pub struct RateLimit {
+    pub limiter: Arc<RateLimiter>,
+    pub trust_proxy_headers: bool,
+}
+
+impl RateLimit {
+    /// A fresh per-minute limiter.
+    pub fn per_minute(limit: u32, trust_proxy_headers: bool) -> Self {
+        Self {
+            limiter: Arc::new(RateLimiter::per_minute(limit)),
+            trust_proxy_headers,
+        }
+    }
+}
+
+/// Per-client-IP rate limit. Install with
+/// `axum::middleware::from_fn_with_state(RateLimit::per_minute(n, trust), rate_limit)`.
+/// Over the limit, returns 429 `rate_limited` with `Retry-After`.
+pub async fn rate_limit(
+    State(rl): State<RateLimit>,
+    req: Request,
+    next: Next,
+) -> Result<Response, ApiError> {
+    match rl.limiter.check(&client_ip(&req, rl.trust_proxy_headers)) {
+        Ok(()) => Ok(next.run(req).await),
+        Err(retry) => Err(ApiError::rate_limited(retry)),
+    }
 }
 
 #[cfg(test)]

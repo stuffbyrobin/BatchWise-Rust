@@ -6,7 +6,7 @@
 //! fetch and `render.pdf` return binary bodies.
 
 use axum::body::Body;
-use axum::extract::{Multipart, Path, Query, State};
+use axum::extract::{DefaultBodyLimit, Multipart, Path, Query, State};
 use axum::http::{header, StatusCode};
 use axum::middleware::from_fn_with_state;
 use axum::response::{IntoResponse, Response};
@@ -26,11 +26,21 @@ use crate::platform::middleware::{check_feature, require_auth};
 use crate::platform::web::ValidatedJson;
 use crate::state::AppState;
 
+/// Multipart boundary and part headers on top of the file bytes.
+const UPLOAD_OVERHEAD_BYTES: usize = 64 * 1024;
+
 /// Builds the label-design routers (brand-assets, brand-profiles, label-designs),
 /// gated by auth + the `label_design` feature flag.
 pub fn routes(state: AppState) -> Router {
     let assets = Router::new()
-        .route("/", post(upload_asset))
+        // Room for a full-size file plus multipart framing; the service
+        // still enforces MAX_ASSET_BYTES on the file itself.
+        .route(
+            "/",
+            post(upload_asset).layer(DefaultBodyLimit::max(
+                service::MAX_ASSET_BYTES + UPLOAD_OVERHEAD_BYTES,
+            )),
+        )
         .route("/{id}", get(get_asset).delete(delete_asset));
     let profiles = Router::new()
         .route("/", post(create_profile).get(list_profiles))
@@ -96,7 +106,13 @@ async fn upload_asset(
         let data = field
             .bytes()
             .await
-            .map_err(|_| ApiError::validation("file", "invalid multipart form"))?
+            .map_err(|e| {
+                if e.status() == StatusCode::PAYLOAD_TOO_LARGE {
+                    ApiError::payload_too_large()
+                } else {
+                    ApiError::validation("file", "invalid multipart form")
+                }
+            })?
             .to_vec();
         found = Some((filename, content_type, data));
         break;

@@ -9,7 +9,7 @@
 //! DTOs with `#[serde(deny_unknown_fields)]`.
 
 use axum::extract::{FromRequest, Request};
-use axum::http::header;
+use axum::http::{header, StatusCode};
 use serde::de::DeserializeOwned;
 use validator::Validate;
 
@@ -38,7 +38,13 @@ where
 
         let bytes = axum::body::Bytes::from_request(req, state)
             .await
-            .map_err(|_| ApiError::validation("body", "could not read request body"))?;
+            .map_err(|rej| {
+                if rej.status() == StatusCode::PAYLOAD_TOO_LARGE {
+                    ApiError::payload_too_large()
+                } else {
+                    ApiError::validation("body", "could not read request body")
+                }
+            })?;
         if bytes.is_empty() {
             return Err(ApiError::validation("body", "request body is required"));
         }
