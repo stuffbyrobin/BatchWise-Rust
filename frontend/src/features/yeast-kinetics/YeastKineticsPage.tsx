@@ -13,10 +13,10 @@ export function YeastKineticsPage() {
   return (
     <LibraryCRUD<YeastKinetics>
       title="Yeast Kinetics"
-      useList={() => useYeastKineticsList()}
-      useCreate={() => useCreateYeastKinetics()}
-      useUpdate={(id) => useUpdateYeastKinetics(id)}
-      useDelete={() => useDeleteYeastKinetics()}
+      useList={useYeastKineticsList}
+      useCreate={useCreateYeastKinetics}
+      useUpdate={useUpdateYeastKinetics}
+      useDelete={useDeleteYeastKinetics}
       fields={[
         { key: 'yeast_id', label: 'Yeast ID', type: 'text', required: true },
         { key: 'fermentation_temp_c', label: 'Fermentation Temp (°C)', type: 'number', required: true },

@@ -24,7 +24,8 @@ export default defineConfig({
   globalSetup: './tests/e2e/helpers/setup.ts',
   globalTeardown: './tests/e2e/helpers/teardown.ts',
   webServer: {
-    command: 'pnpm run dev -- --port 5174',
+    // Call vite directly: `pnpm run dev -- --port` forwards a literal `--` on newer pnpm.
+    command: 'pnpm exec vite --port 5174 --strictPort',
     url: 'http://localhost:5174',
     reuseExistingServer: true,
     timeout: 120_000,

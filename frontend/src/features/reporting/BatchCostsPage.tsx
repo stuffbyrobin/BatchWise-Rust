@@ -156,23 +156,23 @@ export const BatchCostsPage: React.FC = () => {
               </tr>
             </thead>
             <tbody>
-              {(data.items ?? []).map((item: any) => (
+              {(data.items ?? []).map((item) => (
                 <tr key={item.id} className="border-b">
                   <td className="py-2">
                     <Link to={`/batches/${item.batch_id}`} className="text-[var(--color-accent)] hover:underline">
                       {item.batch_id?.substring(0, 8)}
                     </Link>
                   </td>
-                  <td className="py-2">{formatPence(item.ingredients_pence)}</td>
-                  <td className="py-2">{formatPence(item.energy_pence)}</td>
-                  <td className="py-2">{formatPence(item.labor_pence)}</td>
-                  <td className="py-2">{formatPence(item.water_pence)}</td>
-                  <td className="py-2">{formatPence(item.overhead_pence)}</td>
-                  <td className="py-2">{formatPence(item.duty_pence)}</td>
-                  <td className="py-2">{formatPence(item.total_pence)}</td>
-                  <td className="py-2">{formatPence(item.per_liter_pence)}</td>
-                  <td className="py-2">{formatPence(item.per_unit_pence)}</td>
-                  <td className="py-2">{new Date(item.computed_at).toLocaleString()}</td>
+                  <td className="py-2">{formatPence(item.ingredient_cost_pence)}</td>
+                  <td className="py-2">{formatPence(item.energy_cost_pence)}</td>
+                  <td className="py-2">{formatPence(item.labor_cost_pence)}</td>
+                  <td className="py-2">{formatPence(item.water_cost_pence)}</td>
+                  <td className="py-2">{formatPence(item.overhead_cost_pence)}</td>
+                  <td className="py-2">{formatPence(item.estimated_duty_pence)}</td>
+                  <td className="py-2">{formatPence(item.total_cost_pence)}</td>
+                  <td className="py-2">{formatPence(item.cost_per_liter_pence)}</td>
+                  <td className="py-2">{formatPence(item.cost_per_unit_pence)}</td>
+                  <td className="py-2">{item.computed_at ? new Date(item.computed_at).toLocaleString() : '-'}</td>
                 </tr>
               ))}
             </tbody>

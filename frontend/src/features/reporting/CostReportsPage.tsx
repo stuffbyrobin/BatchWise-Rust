@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
 import { APIError } from '../../api/error';
 import { useCostReportsList, useGenerateCostReport, useDeleteCostReport, REPORT_TYPES } from './hooks/useCostReports';
+import type { components } from '../../api/generated';
+
+type CostReport = components['schemas']['CostReport'];
 
 const formatPence = (p: number | null | undefined): string => p == null ? '-' : '£' + (p / 100).toFixed(2);
 
 const CostReportRow: React.FC<{
-  item: any;
+  item: CostReport;
   viewingId: string | null;
   onToggleView: (id: string | null) => void;
   onRefetch: () => void;
@@ -18,7 +21,7 @@ const CostReportRow: React.FC<{
   const reportData = item.report_data || {};
 
   const handleViewToggle = () => {
-    onToggleView(isViewing ? null : item.id);
+    onToggleView(isViewing ? null : (item.id ?? null));
   };
 
   const handleDelete = () => {
@@ -111,7 +114,7 @@ const CostReportRow: React.FC<{
         <td className="py-2">{item.report_type}</td>
         <td className="py-2">{item.period_start || '-'}</td>
         <td className="py-2">{item.period_end || '-'}</td>
-        <td className="py-2">{new Date(item.generated_at).toLocaleString()}</td>
+        <td className="py-2">{item.generated_at ? new Date(item.generated_at).toLocaleString() : '-'}</td>
         <td className="py-2 space-x-2">
           <button onClick={handleViewToggle} className="px-4 py-2 rounded text-sm bg-[var(--color-accent)] text-white hover:opacity-90">
             {isViewing ? 'Hide' : 'View'}
@@ -265,7 +268,7 @@ export const CostReportsPage: React.FC = () => {
               </tr>
             </thead>
             <tbody>
-              {(data.items ?? []).map((item: any) => (
+              {(data.items ?? []).map((item) => (
                 <CostReportRow
                   key={item.id}
                   item={item}

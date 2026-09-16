@@ -17,17 +17,23 @@ export default async function globalTeardown() {
   if (state.backendPid) {
     try {
       process.kill(state.backendPid, 'SIGTERM')
-    } catch {}
+    } catch {
+      // Best-effort: nothing to clean up, or already gone.
+    }
   }
 
   // Remove the postgres container we started
   if (state.startedPg) {
     try {
       execSync('podman rm -f batchwise-e2e-pg', { stdio: 'ignore' })
-    } catch {}
+    } catch {
+      // Best-effort: nothing to clean up, or already gone.
+    }
   }
 
   try {
     unlinkSync(STATE_FILE)
-  } catch {}
+  } catch {
+    // Best-effort: nothing to clean up, or already gone.
+  }
 }

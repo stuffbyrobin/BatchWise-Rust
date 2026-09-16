@@ -21,6 +21,7 @@ interface YKListParams {
   yeast_id?: string
   page?: number
   page_size?: number
+  sort?: string
 }
 
 export function useYeastKineticsList(params: YKListParams = {}) {

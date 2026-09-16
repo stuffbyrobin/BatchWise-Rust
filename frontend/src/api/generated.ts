@@ -2689,6 +2689,8 @@ export interface components {
             best_before_date?: string;
             amount_deducted?: number;
             remaining_in_lot?: number;
+            /** @description Cost attributed to this allocation: the lot's per-unit cost_pence multiplied by amount_deducted, rounded to the nearest penny. */
+            cost_pence?: number;
         };
         DeductResult: {
             requested_amount?: number;
