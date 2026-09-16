@@ -21,15 +21,14 @@ function toQueryString(params: Record<string, unknown>): string {
 export function useContainerAssetsList(params: { container_type?: string; page?: number; page_size?: number } = {}) {
   return useQuery<ContainerAssetPage>({
     queryKey: ['container-assets', params],
-    queryFn: () =>
-      apiClient.get<ContainerAssetPage>(`/api/v1/container-assets${toQueryString(params as Record<string, unknown>)}`),
+    queryFn: ({ signal }) => apiClient.get<ContainerAssetPage>(`/api/v1/container-assets${toQueryString(params as Record<string, unknown>)}`, { signal }),
   })
 }
 
 export function useContainerAsset(id: string) {
   return useQuery<ContainerAsset>({
     queryKey: ['container-assets', id],
-    queryFn: () => apiClient.get<ContainerAsset>(`/api/v1/container-assets/${id}`),
+    queryFn: ({ signal }) => apiClient.get<ContainerAsset>(`/api/v1/container-assets/${id}`, { signal }),
     enabled: !!id,
   })
 }
@@ -96,15 +95,14 @@ export function useSetContainerStatus(id: string) {
 export function useContainerLogs(containerId: string, params: { page?: number; page_size?: number } = {}) {
   return useQuery<ContainerLogPage>({
     queryKey: ['container-logs', containerId, params],
-    queryFn: () =>
-      apiClient.get<ContainerLogPage>(`/api/v1/container-logs?container_id=${containerId}${toQueryString(params as Record<string, unknown>)}`),
+    queryFn: ({ signal }) => apiClient.get<ContainerLogPage>(`/api/v1/container-logs?container_id=${containerId}${toQueryString(params as Record<string, unknown>)}`, { signal }),
   })
 }
 
 export function useContainerQR(containerId: string, variant: string) {
   return useQuery<QRResult>({
     queryKey: ['qr', containerId, variant],
-    queryFn: () => apiClient.get<QRResult>(`/api/v1/qr-codes/${containerId}/${variant}`),
+    queryFn: ({ signal }) => apiClient.get<QRResult>(`/api/v1/qr-codes/${containerId}/${variant}`, { signal }),
     enabled: !!containerId,
   })
 }

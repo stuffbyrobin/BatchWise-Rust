@@ -6,8 +6,12 @@ export function TopBar() {
   const navigate = useNavigate()
 
   const handleLogout = async () => {
-    await logout()
-    navigate('/login')
+    try {
+      await logout()
+    } finally {
+      // logout() always clears the local session, so leave even if the server call failed.
+      navigate('/login')
+    }
   }
 
   return (

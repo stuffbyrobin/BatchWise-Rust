@@ -26,9 +26,8 @@ interface YKListParams {
 export function useYeastKineticsList(params: YKListParams = {}) {
   return useQuery<Page<YeastKinetics>>({
     queryKey: ['yeast-kinetics', params],
-    queryFn: () =>
-      apiClient.get<Page<YeastKinetics>>(
-        `/api/v1/yeast-kinetics${toQueryString(params as Record<string, unknown>)}`,
+    queryFn: ({ signal }) => apiClient.get<Page<YeastKinetics>>(
+        `/api/v1/yeast-kinetics${toQueryString(params as Record<string, unknown>)}`, { signal },
       ),
   })
 }
@@ -36,7 +35,7 @@ export function useYeastKineticsList(params: YKListParams = {}) {
 export function useYeastKinetics(id: string) {
   return useQuery<YeastKinetics>({
     queryKey: ['yeast-kinetics', id],
-    queryFn: () => apiClient.get<YeastKinetics>(`/api/v1/yeast-kinetics/${id}`),
+    queryFn: ({ signal }) => apiClient.get<YeastKinetics>(`/api/v1/yeast-kinetics/${id}`, { signal }),
     enabled: !!id,
   })
 }

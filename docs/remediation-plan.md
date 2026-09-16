@@ -149,16 +149,16 @@ Depends on Phase 2 (shared validator helper, 4xx error mapping).
 
 One PR touching `src/api/client.ts`, `src/auth/*`, `LoginPage`, `RegisterPage`.
 
-- [ ] Logout: `apiClient.post('/api/v1/auth/logout', { refresh_token })` in `try/finally` so `tokenStore.clear()` and `setUser(null)` always run; make `TopBar.handleLogout` navigate in `finally`.
-- [ ] Single-flight refresh: module-level `refreshPromise`; all 401 handlers await it and re-read the token.
-- [ ] Remove `window.location.href = '/login'` from the client; clear the store and let `ProtectedRoute` redirect (preserving `?from=`, including `location.search`).
-- [ ] `ProtectedRoute`/`LoginPage`: allowlist `from` to same-origin paths (`startsWith('/') && !startsWith('//')`).
-- [ ] Query defaults: `retry` only on 5xx/network; `refetchOnWindowFocus: false` for editor queries.
-- [ ] Pass TanStack's `signal` through `apiClient` (`...init` already spreads it).
-- [ ] Keep the access token in memory only; persist just the refresh token (or move refresh to an httpOnly cookie if backend work is in scope).
-- [ ] Guard the test-mode hook with `import.meta.env.DEV`.
-- [ ] Make Login/Register real `<form onSubmit>` elements.
-- [ ] Tests: logout clears store even when the request fails; three parallel 401s trigger one refresh.
+- [x] Logout: `apiClient.post('/api/v1/auth/logout', { refresh_token })` in `try/finally` so `tokenStore.clear()` and `setUser(null)` always run; make `TopBar.handleLogout` navigate in `finally`. (Logout previously sent no `refresh_token`, so the backend's 400 left the user signed in.)
+- [x] Single-flight refresh: module-level `refreshPromise`; all 401 handlers await it and re-read the token. Auth endpoints (login/register/refresh/logout) never trigger a refresh, so a wrong password shows the server's message instead of "Session expired".
+- [x] Remove `window.location.href = '/login'` from the client; clear the store and let `ProtectedRoute` redirect (preserving `?from=`, including `location.search`). `AuthProvider` subscribes to the store and drops the user when tokens are cleared.
+- [x] `ProtectedRoute`/`LoginPage`: allowlist `from` to same-origin paths (`startsWith('/') && !startsWith('//')`). `auth/redirect.ts` `safeRedirectPath` (also rejects `/\`).
+- [x] Query defaults: `retry` only on 5xx/network; `refetchOnWindowFocus: false` for editor queries (`useRecipe`, `useLabelDesign`, `useBatch`, `useWaterAdjustments`).
+- [x] Pass TanStack's `signal` through `apiClient` (`...init` already spreads it). All 61 `queryFn`s, via a codemod that only rewrote the exact `() => apiClient.get(url)` shape.
+- [x] Keep the access token in memory only; persist just the refresh token (or move refresh to an httpOnly cookie if backend work is in scope). Zustand `partialize`; on reload `AuthProvider` loads `/me`, whose 401 refreshes first.
+- [x] Guard the test-mode hook with `import.meta.env.DEV`. Verified absent from `pnpm build` output even with `VITE_TEST_MODE=true`.
+- [x] Make Login/Register real `<form onSubmit>` elements (with `autoComplete` and `required`).
+- [x] Tests: logout clears store even when the request fails; three parallel 401s trigger one refresh. Also: failed refresh clears without navigating, login 401 is not refreshed, the abort signal reaches fetch, only the refresh token is persisted, a cleared store drops the user, and `safeRedirectPath` cases (26 frontend tests, up from 10).
 
 ---
 

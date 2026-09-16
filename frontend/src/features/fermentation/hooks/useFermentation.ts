@@ -18,9 +18,8 @@ function qs(params: Record<string, unknown>): string {
 export function useReadings(batchId: string, params: { stage?: string; page?: number; page_size?: number } = {}) {
   return useQuery<FermentationReadingList>({
     queryKey: ['fermentation', batchId, params],
-    queryFn: () =>
-      apiClient.get<FermentationReadingList>(
-        `/api/v1/batches/${batchId}/fermentation${qs(params as Record<string, unknown>)}`,
+    queryFn: ({ signal }) => apiClient.get<FermentationReadingList>(
+        `/api/v1/batches/${batchId}/fermentation${qs(params as Record<string, unknown>)}`, { signal },
       ),
     enabled: !!batchId,
   })

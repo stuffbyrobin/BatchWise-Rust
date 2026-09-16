@@ -18,9 +18,8 @@ function qs(params: Record<string, unknown>): string {
 export function useDutyReturns(params: { status?: string; page?: number; page_size?: number } = {}) {
   return useQuery<DutyReturnList>({
     queryKey: ['duty-returns', params],
-    queryFn: () =>
-      apiClient.get<DutyReturnList>(
-        `/api/v1/duty-returns${qs(params as Record<string, unknown>)}`,
+    queryFn: ({ signal }) => apiClient.get<DutyReturnList>(
+        `/api/v1/duty-returns${qs(params as Record<string, unknown>)}`, { signal },
       ),
   })
 }

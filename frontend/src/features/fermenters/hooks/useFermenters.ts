@@ -43,7 +43,7 @@ function qs(params: Record<string, unknown>): string {
 export function useFermenters(params: ListParams = {}) {
   return useQuery<PaginatedFermenters>({
     queryKey: ['fermenters', params],
-    queryFn: () => apiClient.get<PaginatedFermenters>(`/api/v1/fermenters${qs(params as Record<string, unknown>)}`),
+    queryFn: ({ signal }) => apiClient.get<PaginatedFermenters>(`/api/v1/fermenters${qs(params as Record<string, unknown>)}`, { signal }),
   })
 }
 

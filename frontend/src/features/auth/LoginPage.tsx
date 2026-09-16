@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, type FormEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../auth/useAuth';
+import { safeRedirectPath } from '../../auth/redirect';
 import { APIError } from '../../api/error';
 
 export function LoginPage() {
@@ -12,12 +13,13 @@ export function LoginPage() {
   const [searchParams] = useSearchParams();
   const auth = useAuth();
 
-  const handleLogin = async () => {
+  const handleLogin = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
     setLoading(true);
     setError(null);
     try {
       await auth.login(email, password);
-      navigate(searchParams.get('from') || '/app');
+      navigate(safeRedirectPath(searchParams.get('from')));
     } catch (err) {
       setError(err instanceof APIError ? err.message : 'Login failed');
     } finally {
@@ -31,7 +33,7 @@ export function LoginPage() {
       {error && (
         <div className="bg-red-100 text-red-700 p-3 rounded mb-4">{error}</div>
       )}
-      <div className="space-y-4">
+      <form className="space-y-4" onSubmit={handleLogin}>
         <div>
           <label htmlFor="login-email" className="block text-sm font-medium mb-1">Email</label>
           <input
@@ -40,6 +42,7 @@ export function LoginPage() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             className="w-full p-2 border rounded"
+            autoComplete="email" required
           />
         </div>
         <div>
@@ -50,16 +53,17 @@ export function LoginPage() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className="w-full p-2 border rounded"
+            autoComplete="current-password" required
           />
         </div>
         <button
-          onClick={handleLogin}
+          type="submit"
           disabled={loading}
           className="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700 disabled:opacity-50"
         >
           {loading ? 'Signing in...' : 'Sign in'}
         </button>
-      </div>
+      </form>
       <div className="mt-4 text-center">
         <Link to="/register" className="text-blue-600 hover:underline">
           Create an account

@@ -8,7 +8,7 @@ type UpdateTenantRequest = components['schemas']['UpdateTenantRequest']
 export function useTenant() {
   return useQuery<Tenant>({
     queryKey: ['tenant', 'current'],
-    queryFn: () => apiClient.get<Tenant>('/api/v1/tenants/current'),
+    queryFn: ({ signal }) => apiClient.get<Tenant>('/api/v1/tenants/current', { signal }),
   })
 }
 

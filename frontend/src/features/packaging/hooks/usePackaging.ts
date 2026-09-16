@@ -21,14 +21,14 @@ function qs(params: Record<string, unknown>): string {
 export function usePackagingRuns(params: { batch_id?: string; format?: string; sort?: string; page?: number; page_size?: number } = {}) {
   return useQuery<PackagingRunList>({
     queryKey: ['packaging-runs', params],
-    queryFn: () => apiClient.get<PackagingRunList>(`/api/v1/packaging-runs${qs(params as Record<string, unknown>)}`),
+    queryFn: ({ signal }) => apiClient.get<PackagingRunList>(`/api/v1/packaging-runs${qs(params as Record<string, unknown>)}`, { signal }),
   })
 }
 
 export function usePackagingRun(id: string) {
   return useQuery<PackagingRun>({
     queryKey: ['packaging-runs', id],
-    queryFn: () => apiClient.get<PackagingRun>(`/api/v1/packaging-runs/${id}`),
+    queryFn: ({ signal }) => apiClient.get<PackagingRun>(`/api/v1/packaging-runs/${id}`, { signal }),
     enabled: !!id,
   })
 }
@@ -60,7 +60,7 @@ export function useDeletePackagingRun() {
 export function useDistributionMovements(params: { packaging_run_id?: string; order_id?: string; movement_type?: string; sort?: string; page?: number; page_size?: number } = {}) {
   return useQuery<DistributionMovementList>({
     queryKey: ['distribution-movements', params],
-    queryFn: () => apiClient.get<DistributionMovementList>(`/api/v1/distribution-movements${qs(params as Record<string, unknown>)}`),
+    queryFn: ({ signal }) => apiClient.get<DistributionMovementList>(`/api/v1/distribution-movements${qs(params as Record<string, unknown>)}`, { signal }),
   })
 }
 

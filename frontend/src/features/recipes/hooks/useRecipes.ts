@@ -35,16 +35,17 @@ function toQueryString(params: Record<string, unknown>): string {
 export function useRecipesList(params: ListParams = {}) {
   return useQuery<RecipePage>({
     queryKey: ['recipes', 'list', params],
-    queryFn: () =>
-      apiClient.get<RecipePage>(`/api/v1/recipes${toQueryString(params as Record<string, unknown>)}`),
+    queryFn: ({ signal }) => apiClient.get<RecipePage>(`/api/v1/recipes${toQueryString(params as Record<string, unknown>)}`, { signal }),
   })
 }
 
 export function useRecipe(id: string) {
   return useQuery<RecipeWithIngredients>({
     queryKey: ['recipes', id],
-    queryFn: () => apiClient.get<RecipeWithIngredients>(`/api/v1/recipes/${id}`),
+    queryFn: ({ signal }) => apiClient.get<RecipeWithIngredients>(`/api/v1/recipes/${id}`, { signal }),
     enabled: !!id,
+    // Hydrates an editor; a focus refetch would overwrite unsaved edits.
+    refetchOnWindowFocus: false,
   })
 }
 

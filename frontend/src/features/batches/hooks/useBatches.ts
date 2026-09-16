@@ -33,16 +33,17 @@ interface BatchListParams {
 export function useBatchesList(params: BatchListParams = {}) {
   return useQuery<PaginatedBatches>({
     queryKey: ['batches', params],
-    queryFn: () =>
-      apiClient.get<PaginatedBatches>(`/api/v1/batches${toQueryString(params as Record<string, unknown>)}`),
+    queryFn: ({ signal }) => apiClient.get<PaginatedBatches>(`/api/v1/batches${toQueryString(params as Record<string, unknown>)}`, { signal }),
   })
 }
 
 export function useBatch(id: string) {
   return useQuery<Batch>({
     queryKey: ['batches', id],
-    queryFn: () => apiClient.get<Batch>(`/api/v1/batches/${id}`),
+    queryFn: ({ signal }) => apiClient.get<Batch>(`/api/v1/batches/${id}`, { signal }),
     enabled: !!id,
+    // Hydrates an editor; a focus refetch would overwrite unsaved edits.
+    refetchOnWindowFocus: false,
   })
 }
 

@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { apiClient, _initTokenStore } from '../api/client';
-import { tokenStore } from './tokenStore';
+import { tokenStore, useTokenStore } from './tokenStore';
 import { AuthContext } from './useAuth';
 import type { components } from '../api/generated';
 
@@ -10,22 +10,22 @@ interface AuthProviderProps {
   children: React.ReactNode;
 }
 
+// Wire the API client to the token store before any component renders.
+_initTokenStore(
+  tokenStore.getAccessToken,
+  tokenStore.getRefreshToken,
+  tokenStore.setTokens,
+  tokenStore.clear,
+);
+
 export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<MeResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Initialize token store on mount
+  // Load the current user. After a reload only the refresh token is present;
+  // the /me call's 401 makes the API client refresh the access token first.
   useEffect(() => {
-    _initTokenStore(
-      tokenStore.getAccessToken,
-      tokenStore.getRefreshToken,
-      tokenStore.setTokens,
-      tokenStore.clear,
-    );
-
-    // Check if we have a token and fetch user
-    const accessToken = tokenStore.getAccessToken();
-    if (accessToken) {
+    if (tokenStore.getRefreshToken() || tokenStore.getAccessToken()) {
       apiClient
         .get<MeResponse>('/api/v1/auth/me')
         .then((data) => setUser(data))
@@ -35,6 +35,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setIsLoading(false);
     }
   }, []);
+
+  // When the API client clears the tokens (failed refresh), drop the user so
+  // ProtectedRoute redirects to /login.
+  useEffect(
+    () =>
+      useTokenStore.subscribe((state) => {
+        if (!state.accessToken && !state.refreshToken) setUser(null);
+      }),
+    [],
+  );
 
   const login = useCallback(
     async (email: string, password: string) => {
@@ -69,10 +79,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
     [],
   );
 
+  // Always clears the local session, even when the server call fails (offline,
+  // token already expired): logging out must never leave the user signed in.
   const logout = useCallback(async () => {
-    await apiClient.post('/api/v1/auth/logout');
-    tokenStore.clear();
-    setUser(null);
+    const refreshToken = tokenStore.getRefreshToken();
+    try {
+      if (refreshToken) {
+        await apiClient.post('/api/v1/auth/logout', { refresh_token: refreshToken });
+      }
+    } finally {
+      tokenStore.clear();
+      setUser(null);
+    }
   }, []);
 
   const updateMe = useCallback(async (payload: { display_name?: string; current_password?: string; new_password?: string }) => {

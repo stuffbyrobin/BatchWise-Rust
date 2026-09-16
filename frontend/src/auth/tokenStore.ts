@@ -23,6 +23,9 @@ export const useTokenStore = create<TokenState>()(
     {
       name: 'batchwise-auth',
       storage: createJSONStorage(() => sessionStorage),
+      // Only the refresh token survives a reload; the access token lives in
+      // memory and is re-issued from the refresh token when needed.
+      partialize: (state) => ({ refreshToken: state.refreshToken }),
     },
   ),
 );
@@ -35,8 +38,8 @@ export const tokenStore = {
   clear: () => useTokenStore.getState().clear(),
 };
 
-// Expose test helpers on window when running under Playwright
-if (import.meta.env.VITE_TEST_MODE === 'true') {
+// Expose test helpers on window for Playwright (dev server only, never in a build)
+if (import.meta.env.DEV && import.meta.env.VITE_TEST_MODE === 'true') {
   (window as unknown as Record<string, unknown>).__batchwise = {
     getToken: () => useTokenStore.getState().accessToken,
     setToken: (token: string) => {
