@@ -154,7 +154,7 @@ async fn tier_gate_blocks_home_tenant() {
     assert_eq!(body["details"]["required_feature"], json!("tracking"));
     assert_eq!(body["details"]["current_tier"], json!("home"));
 
-    let resp = app.get("/api/v1/reporting/cost-rates", &token).await;
+    let resp = app.get("/api/v1/cost-rates", &token).await;
     assert_eq!(resp.status(), 403);
     assert_eq!(
         resp.json::<Value>().await.unwrap()["details"]["required_feature"],
@@ -286,7 +286,7 @@ async fn reporting_cost_rate_crud() {
     app.enable_pro(tid).await;
 
     let resp = app
-        .post("/api/v1/reporting/cost-rates", &token, json!({"rate_type": "energy", "rate_name": "Electricity", "unit": "pence_per_kwh", "rate_value": 30.0, "effective_from": "2026-01-01"}))
+        .post("/api/v1/cost-rates", &token, json!({"rate_type": "energy", "rate_name": "Electricity", "unit": "pence_per_kwh", "rate_value": 30.0, "effective_from": "2026-01-01"}))
         .await;
     assert_eq!(resp.status(), 201, "create rate");
     let rate: Value = resp.json().await.unwrap();
@@ -294,13 +294,13 @@ async fn reporting_cost_rate_crud() {
     assert_eq!(rate["rate_type"], json!("energy"));
 
     assert_eq!(
-        app.get(&format!("/api/v1/reporting/cost-rates/{id}"), &token)
+        app.get(&format!("/api/v1/cost-rates/{id}"), &token)
             .await
             .status(),
         200
     );
     let page: Value = app
-        .get("/api/v1/reporting/cost-rates", &token)
+        .get("/api/v1/cost-rates", &token)
         .await
         .json()
         .await

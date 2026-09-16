@@ -710,22 +710,19 @@ async fn pro_resources_are_isolated() {
     // Reporting: cost rate, batch cost, cost report.
     let rate_body = json!({"rate_type": "energy", "rate_name": "Electricity", "unit": "pence_per_kwh", "rate_value": 30.0, "effective_from": "2026-01-01"});
     let rate = id(&app
-        .create(&a, "/api/v1/reporting/cost-rates", rate_body.clone())
+        .create(&a, "/api/v1/cost-rates", rate_body.clone())
         .await);
-    probes.extend(crud(
-        &format!("/api/v1/reporting/cost-rates/{rate}"),
-        json!({}),
-    ));
+    probes.extend(crud(&format!("/api/v1/cost-rates/{rate}"), json!({})));
     probes.push(probe(
         M::PUT,
-        format!("/api/v1/reporting/cost-rates/{rate}"),
+        format!("/api/v1/cost-rates/{rate}"),
         Some(rate_body),
     ));
     let resp = app
         .send(
             &a,
             M::POST,
-            "/api/v1/reporting/batch-costs/compute",
+            "/api/v1/batch-costs/compute",
             Some(&json!({"batch_id": batch})),
         )
         .await;
@@ -734,36 +731,32 @@ async fn pro_resources_are_isolated() {
         "compute batch cost: {}",
         resp.status()
     );
-    probes.push(probe(
-        M::GET,
-        format!("/api/v1/reporting/batch-costs/{batch}"),
-        None,
-    ));
+    probes.push(probe(M::GET, format!("/api/v1/batch-costs/{batch}"), None));
     probes.push(probe(
         M::POST,
-        "/api/v1/reporting/batch-costs/compute",
+        "/api/v1/batch-costs/compute",
         Some(json!({"batch_id": batch})),
     ));
     let report = id(&app
         .create(
             &a,
-            "/api/v1/reporting/cost-reports/generate",
+            "/api/v1/cost-reports/generate",
             json!({"report_type": "batch", "batch_id": batch}),
         )
         .await);
     probes.push(probe(
         M::GET,
-        format!("/api/v1/reporting/cost-reports/{report}"),
+        format!("/api/v1/cost-reports/{report}"),
         None,
     ));
     probes.push(probe(
         M::DELETE,
-        format!("/api/v1/reporting/cost-reports/{report}"),
+        format!("/api/v1/cost-reports/{report}"),
         None,
     ));
     probes.push(probe(
         M::POST,
-        "/api/v1/reporting/cost-reports/generate",
+        "/api/v1/cost-reports/generate",
         Some(json!({"report_type": "batch", "batch_id": batch})),
     ));
 
@@ -1359,21 +1352,21 @@ async fn foreign_references_are_rejected() {
         ref_case(
             "batch cost.batch_id",
             M::POST,
-            "/api/v1/reporting/batch-costs/compute",
+            "/api/v1/batch-costs/compute",
             json!({"batch_id": a_batch}),
             &a_batch,
         ),
         ref_case(
             "cost report.batch_id",
             M::POST,
-            "/api/v1/reporting/cost-reports/generate",
+            "/api/v1/cost-reports/generate",
             json!({"report_type": "batch", "batch_id": a_batch}),
             &a_batch,
         ),
         ref_case(
             "cost report.recipe_id",
             M::POST,
-            "/api/v1/reporting/cost-reports/generate",
+            "/api/v1/cost-reports/generate",
             json!({"report_type": "recipe", "recipe_id": a_recipe}),
             &a_recipe,
         ),
