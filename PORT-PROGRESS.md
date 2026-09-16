@@ -34,7 +34,7 @@ Legend: `[x]` done · `[~]` in progress · `[ ]` not started
 | Auth (JWT parse) → RequestContext middleware | [x] |
 | RateLimit middleware (per-IP sliding window) | [x] |
 | Request-id + error-body stamping | [x] |
-| CORS / SecurityHeaders | [ ] |
+| CORS / SecurityHeaders | [x] |
 | FeatureGate / TierGate | [x] feature-flag gate (403 with required_feature/current_tier) |
 
 ## Domain modules (mirrors original phases)

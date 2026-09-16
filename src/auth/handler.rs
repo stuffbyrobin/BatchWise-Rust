@@ -4,11 +4,9 @@
 //! [`ValidatedJson`], call the service, and render. Rate limits apply per-IP to
 //! register/login/refresh; `/me` routes require a valid JWT.
 
-use std::sync::Arc;
-
-use axum::extract::{Request, State};
+use axum::extract::State;
 use axum::http::{header, StatusCode};
-use axum::middleware::{from_fn, from_fn_with_state, Next};
+use axum::middleware::from_fn_with_state;
 use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post};
 use axum::{Json, Router};
@@ -19,7 +17,7 @@ use super::models::{
 use super::service;
 use crate::platform::context::RequestContext;
 use crate::platform::errors::ApiError;
-use crate::platform::middleware::{client_ip, require_auth, RateLimiter};
+use crate::platform::middleware::{rate_limit, require_auth, RateLimit};
 use crate::platform::web::ValidatedJson;
 use crate::state::AppState;
 
@@ -60,16 +58,10 @@ fn rate_limited(
     limit: u32,
     trust_proxy_headers: bool,
 ) -> Router<AppState> {
-    let limiter = Arc::new(RateLimiter::per_minute(limit));
-    let layer = from_fn(move |req: Request, next: Next| {
-        let limiter = limiter.clone();
-        async move {
-            match limiter.check(&client_ip(&req, trust_proxy_headers)) {
-                Ok(()) => Ok(next.run(req).await),
-                Err(retry) => Err(ApiError::rate_limited(retry)),
-            }
-        }
-    });
+    let layer = from_fn_with_state(
+        RateLimit::per_minute(limit, trust_proxy_headers),
+        rate_limit,
+    );
     Router::new().route(path, handler).route_layer(layer)
 }
 

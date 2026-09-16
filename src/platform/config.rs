@@ -8,6 +8,8 @@ use std::env;
 /// All application settings.
 #[derive(Clone)]
 pub struct Config {
+    /// `development`/`dev`/`test` relax the production checks; any other value
+    /// (or unset) enables them, plus the HSTS header.
     pub app_env: String,
     pub app_base_url: String,
     pub http_port: u16,
@@ -17,12 +19,19 @@ pub struct Config {
     pub jwt_audience: String,
     pub jwt_expiry_minutes: i64,
     pub refresh_token_expiry_days: i64,
+    /// Comma-separated browser origins allowed by the CORS layer on every route.
+    /// `*` allows any origin and is rejected outside development. Credentials
+    /// are never allowed.
     pub cors_origin: String,
     pub allow_overdraft: bool,
     pub bootstrap_registration_enabled: bool,
+    /// Per-IP limit on `POST /api/v1/auth/register`, applied in addition to the global limit.
     pub rate_limit_register_per_minute: u32,
+    /// Per-IP limit on `POST /api/v1/auth/login`, applied in addition to the global limit.
     pub rate_limit_login_per_minute: u32,
+    /// Per-IP limit on `POST /api/v1/auth/refresh`, applied in addition to the global limit.
     pub rate_limit_refresh_per_minute: u32,
+    /// Per-IP limit applied to every `/api/v1` route (not `/healthz`).
     pub rate_limit_default_per_minute: u32,
     /// Trust `X-Forwarded-For` for rate-limit keying (only behind a trusted proxy).
     pub trust_proxy_headers: bool,
@@ -85,6 +94,21 @@ pub enum ConfigError {
 }
 
 impl Config {
+    /// True for the explicit local-development environment names (`development`, `dev`, `test`).
+    /// Anything else, including an unset or misspelt `APP_ENV`, is treated as production.
+    pub fn is_development(&self) -> bool {
+        matches!(self.app_env.as_str(), "development" | "dev" | "test")
+    }
+
+    /// `CORS_ORIGIN` split on commas, trimmed, with empty entries dropped.
+    pub fn cors_origins(&self) -> Vec<&str> {
+        self.cors_origin
+            .split(',')
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .collect()
+    }
+
     /// Parses environment variables into [`Config`] and validates production constraints.
     pub fn load() -> Result<Self, ConfigError> {
         let cfg = Config {
@@ -119,7 +143,21 @@ impl Config {
                 "JWT_SECRET must be at least 32 characters".into(),
             ));
         }
-        if !matches!(cfg.app_env.as_str(), "development" | "dev" | "test") {
+        for entry in cfg.cors_origins() {
+            if entry != "*" && !entry.starts_with("http://") && !entry.starts_with("https://") {
+                return Err(ConfigError::Invalid(
+                    "CORS_ORIGIN",
+                    format!("invalid origin '{entry}'"),
+                ));
+            }
+            if entry.parse::<http::HeaderValue>().is_err() {
+                return Err(ConfigError::Invalid(
+                    "CORS_ORIGIN",
+                    format!("invalid origin '{entry}'"),
+                ));
+            }
+        }
+        if !cfg.is_development() {
             cfg.validate_production()?;
         }
         Ok(cfg)
@@ -289,6 +327,43 @@ mod tests {
         assert!(!debug_output.contains("postgres://localhost:5432/db"));
         assert!(!debug_output
             .contains("my-very-long-secret-key-that-is-definitely-more-than-32-characters"));
+        clear();
+    }
+
+    #[test]
+    fn cors_origins_splits_and_trims() {
+        let _g = LOCK.lock().unwrap();
+        clear();
+        env::set_var("APP_ENV", "development");
+        env::set_var("DATABASE_URL", "postgres://localhost:5432/db");
+        env::set_var(
+            "JWT_SECRET",
+            "my-very-long-secret-key-that-is-definitely-more-than-32-characters",
+        );
+        env::set_var("CORS_ORIGIN", "https://a.example, https://b.example,,");
+        let cfg = Config::load().unwrap();
+        assert_eq!(
+            cfg.cors_origins(),
+            vec!["https://a.example", "https://b.example"]
+        );
+        clear();
+    }
+
+    #[test]
+    fn rejects_malformed_cors_origin() {
+        let _g = LOCK.lock().unwrap();
+        clear();
+        env::set_var("APP_ENV", "development");
+        env::set_var("DATABASE_URL", "postgres://localhost:5432/db");
+        env::set_var(
+            "JWT_SECRET",
+            "my-very-long-secret-key-that-is-definitely-more-than-32-characters",
+        );
+        env::set_var("CORS_ORIGIN", "not-a-url");
+        assert!(matches!(
+            Config::load(),
+            Err(ConfigError::Invalid("CORS_ORIGIN", _))
+        ));
         clear();
     }
 }

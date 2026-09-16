@@ -21,7 +21,7 @@ use crate::platform::errors::is_unique_violation;
 use crate::platform::errors::ApiError;
 use crate::state::AppState;
 
-const MAX_ASSET_BYTES: usize = 2 * 1024 * 1024; // 2 MiB
+pub(crate) const MAX_ASSET_BYTES: usize = 2 * 1024 * 1024; // 2 MiB
 
 /// True if the error is a unique-constraint violation./// `""` → `None`, matching the Go `strPtr` helper.
 fn str_ptr(s: String) -> Option<String> {
