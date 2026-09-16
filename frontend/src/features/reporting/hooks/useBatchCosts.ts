@@ -14,15 +14,14 @@ function toQueryString(params: Record<string, unknown>): string {
 export function useBatchCostsList(params: { page?: number; page_size?: number } = {}) {
   return useQuery<BatchCostPage>({
     queryKey: ['batch-costs', params],
-    queryFn: () =>
-      apiClient.get<BatchCostPage>(`/api/v1/batch-costs${toQueryString(params as Record<string, unknown>)}`),
+    queryFn: ({ signal }) => apiClient.get<BatchCostPage>(`/api/v1/batch-costs${toQueryString(params as Record<string, unknown>)}`, { signal }),
   })
 }
 
 export function useBatchCost(batchId: string) {
   return useQuery<BatchCost>({
     queryKey: ['batch-costs', batchId],
-    queryFn: () => apiClient.get<BatchCost>(`/api/v1/batch-costs/${batchId}`),
+    queryFn: ({ signal }) => apiClient.get<BatchCost>(`/api/v1/batch-costs/${batchId}`, { signal }),
     enabled: !!batchId,
   })
 }

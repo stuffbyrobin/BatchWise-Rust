@@ -28,9 +28,8 @@ interface CalendarListParams {
 export function useCalendarEvents(params: CalendarListParams = {}) {
   return useQuery<PaginatedCalendarEvents>({
     queryKey: ['calendar-events', params],
-    queryFn: () =>
-      apiClient.get<PaginatedCalendarEvents>(
-        `/api/v1/calendar-events${toQueryString(params as Record<string, unknown>)}`,
+    queryFn: ({ signal }) => apiClient.get<PaginatedCalendarEvents>(
+        `/api/v1/calendar-events${toQueryString(params as Record<string, unknown>)}`, { signal },
       ),
   })
 }
@@ -38,7 +37,7 @@ export function useCalendarEvents(params: CalendarListParams = {}) {
 export function useCalendarEvent(id: string) {
   return useQuery<CalendarEvent>({
     queryKey: ['calendar-events', id],
-    queryFn: () => apiClient.get<CalendarEvent>(`/api/v1/calendar-events/${id}`),
+    queryFn: ({ signal }) => apiClient.get<CalendarEvent>(`/api/v1/calendar-events/${id}`, { signal }),
     enabled: !!id,
   })
 }

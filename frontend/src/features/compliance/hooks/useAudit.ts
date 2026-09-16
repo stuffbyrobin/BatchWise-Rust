@@ -27,15 +27,14 @@ function qs(params: Record<string, unknown>): string {
 export function useAuditEvents(params: AuditParams = {}) {
   return useQuery<AuditEventList>({
     queryKey: ['compliance-audit', params],
-    queryFn: () =>
-      apiClient.get<AuditEventList>(`/api/v1/compliance-audit${qs(params as Record<string, unknown>)}`),
+    queryFn: ({ signal }) => apiClient.get<AuditEventList>(`/api/v1/compliance-audit${qs(params as Record<string, unknown>)}`, { signal }),
   })
 }
 
 export function useAuditEvent(id: string) {
   return useQuery<AuditEvent>({
     queryKey: ['compliance-audit', id],
-    queryFn: () => apiClient.get<AuditEvent>(`/api/v1/compliance-audit/${id}`),
+    queryFn: ({ signal }) => apiClient.get<AuditEvent>(`/api/v1/compliance-audit/${id}`, { signal }),
     enabled: !!id,
   })
 }

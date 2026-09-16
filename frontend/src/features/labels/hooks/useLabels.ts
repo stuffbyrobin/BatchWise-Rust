@@ -18,9 +18,8 @@ function qs(params: Record<string, unknown>): string {
 export function useLabelRecords(params: { batch_id?: string; status?: string; page?: number; page_size?: number } = {}) {
   return useQuery<LabelRecordList>({
     queryKey: ['label-records', params],
-    queryFn: () =>
-      apiClient.get<LabelRecordList>(
-        `/api/v1/label-records${qs(params as Record<string, unknown>)}`,
+    queryFn: ({ signal }) => apiClient.get<LabelRecordList>(
+        `/api/v1/label-records${qs(params as Record<string, unknown>)}`, { signal },
       ),
   })
 }

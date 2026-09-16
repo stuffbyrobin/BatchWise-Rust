@@ -25,7 +25,7 @@ function qs(params: Record<string, unknown>): string {
 export function useYeastBank(params: { status?: string; sort?: string; page?: number; page_size?: number } = {}) {
   return useQuery<YeastBankList>({
     queryKey: ['yeast-bank', params],
-    queryFn: () => apiClient.get<YeastBankList>(`/api/v1/yeast-bank${qs(params as Record<string, unknown>)}`),
+    queryFn: ({ signal }) => apiClient.get<YeastBankList>(`/api/v1/yeast-bank${qs(params as Record<string, unknown>)}`, { signal }),
   })
 }
 
@@ -66,7 +66,7 @@ export function useHarvestYeast(id: string) {
 export function usePropagations(bankID: string, params: { page?: number; page_size?: number } = {}) {
   return useQuery<PropagationList>({
     queryKey: ['propagations', bankID, params],
-    queryFn: () => apiClient.get<PropagationList>(`/api/v1/yeast-bank/${bankID}/propagations${qs(params as Record<string, unknown>)}`),
+    queryFn: ({ signal }) => apiClient.get<PropagationList>(`/api/v1/yeast-bank/${bankID}/propagations${qs(params as Record<string, unknown>)}`, { signal }),
     enabled: !!bankID,
   })
 }

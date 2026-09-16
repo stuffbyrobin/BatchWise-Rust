@@ -8,6 +8,6 @@ export function useRecipeAllergens(recipeId: string | undefined) {
   return useQuery<AllergenResult>({
     queryKey: ['recipe-allergens', recipeId],
     enabled: !!recipeId,
-    queryFn: () => apiClient.get<AllergenResult>(`/api/v1/recipes/${recipeId}/allergens`),
+    queryFn: ({ signal }) => apiClient.get<AllergenResult>(`/api/v1/recipes/${recipeId}/allergens`, { signal }),
   })
 }

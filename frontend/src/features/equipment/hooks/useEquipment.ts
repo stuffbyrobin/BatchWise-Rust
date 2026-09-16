@@ -28,7 +28,7 @@ function qs(params: Record<string, unknown>): string {
 export function useEquipmentList(params: { status?: string; equipment_type?: string; sort?: string; page?: number; page_size?: number } = {}) {
   return useQuery<EquipmentList>({
     queryKey: ['equipment', params],
-    queryFn: () => apiClient.get<EquipmentList>(`/api/v1/equipment${qs(params as Record<string, unknown>)}`),
+    queryFn: ({ signal }) => apiClient.get<EquipmentList>(`/api/v1/equipment${qs(params as Record<string, unknown>)}`, { signal }),
   })
 }
 
@@ -67,7 +67,7 @@ export function useDeleteEquipment() {
 export function useSchedules(equipmentID: string, params: { active?: boolean; sort?: string } = {}) {
   return useQuery<ScheduleList>({
     queryKey: ['schedules', equipmentID, params],
-    queryFn: () => apiClient.get<ScheduleList>(`/api/v1/equipment/${equipmentID}/schedules${qs(params as Record<string, unknown>)}`),
+    queryFn: ({ signal }) => apiClient.get<ScheduleList>(`/api/v1/equipment/${equipmentID}/schedules${qs(params as Record<string, unknown>)}`, { signal }),
     enabled: !!equipmentID,
   })
 }
@@ -113,7 +113,7 @@ export function useDeleteSchedule(equipmentID: string) {
 export function useEvents(equipmentID: string, params: { event_type?: string; sort?: string } = {}) {
   return useQuery<EventList>({
     queryKey: ['events', equipmentID, params],
-    queryFn: () => apiClient.get<EventList>(`/api/v1/equipment/${equipmentID}/events${qs(params as Record<string, unknown>)}`),
+    queryFn: ({ signal }) => apiClient.get<EventList>(`/api/v1/equipment/${equipmentID}/events${qs(params as Record<string, unknown>)}`, { signal }),
     enabled: !!equipmentID,
   })
 }
@@ -147,6 +147,6 @@ export function useDeleteEvent(equipmentID: string) {
 export function useMaintenanceDue(params: { window_days?: number; overdue_only?: boolean; page?: number; page_size?: number } = {}) {
   return useQuery<MaintenanceDueList>({
     queryKey: ['maintenance-due', params],
-    queryFn: () => apiClient.get<MaintenanceDueList>(`/api/v1/maintenance-due${qs(params as Record<string, unknown>)}`),
+    queryFn: ({ signal }) => apiClient.get<MaintenanceDueList>(`/api/v1/maintenance-due${qs(params as Record<string, unknown>)}`, { signal }),
   })
 }

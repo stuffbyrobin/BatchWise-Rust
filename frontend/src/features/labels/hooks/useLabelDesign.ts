@@ -26,7 +26,7 @@ function qs(params: Record<string, unknown>): string {
 export function useBrandProfiles() {
   return useQuery<BrandProfileList>({
     queryKey: ['brand-profiles'],
-    queryFn: () => apiClient.get<BrandProfileList>('/api/v1/brand-profiles'),
+    queryFn: ({ signal }) => apiClient.get<BrandProfileList>('/api/v1/brand-profiles', { signal }),
   })
 }
 
@@ -73,15 +73,17 @@ export function useLabelDesigns(
 ) {
   return useQuery<LabelDesignList>({
     queryKey: ['label-designs', params],
-    queryFn: () => apiClient.get<LabelDesignList>(`/api/v1/label-designs${qs(params as Record<string, unknown>)}`),
+    queryFn: ({ signal }) => apiClient.get<LabelDesignList>(`/api/v1/label-designs${qs(params as Record<string, unknown>)}`, { signal }),
   })
 }
 
 export function useLabelDesign(id: string | undefined) {
   return useQuery<LabelDesign>({
     queryKey: ['label-design', id],
-    queryFn: () => apiClient.get<LabelDesign>(`/api/v1/label-designs/${id}`),
+    queryFn: ({ signal }) => apiClient.get<LabelDesign>(`/api/v1/label-designs/${id}`, { signal }),
     enabled: !!id,
+    // Hydrates an editor; a focus refetch would overwrite unsaved edits.
+    refetchOnWindowFocus: false,
   })
 }
 
@@ -118,7 +120,7 @@ export function useDeleteLabelDesign() {
 export function useRenderModel(id: string | undefined) {
   return useQuery<RenderModel>({
     queryKey: ['render-model', id],
-    queryFn: () => apiClient.get<RenderModel>(`/api/v1/label-designs/${id}/render`),
+    queryFn: ({ signal }) => apiClient.get<RenderModel>(`/api/v1/label-designs/${id}/render`, { signal }),
     enabled: !!id,
     retry: false,
   })

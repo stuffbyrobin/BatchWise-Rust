@@ -27,9 +27,8 @@ function qs(params: Record<string, unknown>): string {
 export function useWaterProfiles(params: { page?: number; page_size?: number; sort?: string } = {}) {
   return useQuery<Page<WaterProfile>>({
     queryKey: ['water-profiles', params],
-    queryFn: () =>
-      apiClient.get<Page<WaterProfile>>(
-        `/api/v1/water-profiles${qs(params as Record<string, unknown>)}`,
+    queryFn: ({ signal }) => apiClient.get<Page<WaterProfile>>(
+        `/api/v1/water-profiles${qs(params as Record<string, unknown>)}`, { signal },
       ),
   })
 }
@@ -65,10 +64,11 @@ export function useWaterAdjustments(
 ) {
   return useQuery<Page<WaterAdjustment>>({
     queryKey: ['water-adjustments', params],
-    queryFn: () =>
-      apiClient.get<Page<WaterAdjustment>>(
-        `/api/v1/water-adjustments${qs(params as Record<string, unknown>)}`,
+    queryFn: ({ signal }) => apiClient.get<Page<WaterAdjustment>>(
+        `/api/v1/water-adjustments${qs(params as Record<string, unknown>)}`, { signal },
       ),
+    // Hydrates an editor; a focus refetch would overwrite unsaved edits.
+    refetchOnWindowFocus: false,
   })
 }
 

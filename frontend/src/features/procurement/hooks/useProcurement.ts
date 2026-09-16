@@ -28,7 +28,7 @@ function qs(params: Record<string, unknown>): string {
 export function useSuppliers(params: { search?: string; sort?: string; page?: number; page_size?: number } = {}) {
   return useQuery<SupplierList>({
     queryKey: ['suppliers', params],
-    queryFn: () => apiClient.get<SupplierList>(`/api/v1/suppliers${qs(params as Record<string, unknown>)}`),
+    queryFn: ({ signal }) => apiClient.get<SupplierList>(`/api/v1/suppliers${qs(params as Record<string, unknown>)}`, { signal }),
   })
 }
 
@@ -61,14 +61,14 @@ export function useDeleteSupplier() {
 export function usePurchaseOrders(params: { supplier_id?: string; status?: string; sort?: string; page?: number; page_size?: number } = {}) {
   return useQuery<PurchaseOrderList>({
     queryKey: ['purchase-orders', params],
-    queryFn: () => apiClient.get<PurchaseOrderList>(`/api/v1/purchase-orders${qs(params as Record<string, unknown>)}`),
+    queryFn: ({ signal }) => apiClient.get<PurchaseOrderList>(`/api/v1/purchase-orders${qs(params as Record<string, unknown>)}`, { signal }),
   })
 }
 
 export function usePurchaseOrder(id: string) {
   return useQuery<PurchaseOrder>({
     queryKey: ['purchase-orders', id],
-    queryFn: () => apiClient.get<PurchaseOrder>(`/api/v1/purchase-orders/${id}`),
+    queryFn: ({ signal }) => apiClient.get<PurchaseOrder>(`/api/v1/purchase-orders/${id}`, { signal }),
     enabled: !!id,
   })
 }

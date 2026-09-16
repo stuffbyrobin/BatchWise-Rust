@@ -9,7 +9,7 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   if (!user)
     return (
       <Navigate
-        to={'/login?from=' + encodeURIComponent(location.pathname)}
+        to={'/login?from=' + encodeURIComponent(location.pathname + location.search)}
         replace
       />
     );

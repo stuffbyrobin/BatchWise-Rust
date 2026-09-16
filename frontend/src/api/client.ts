@@ -17,6 +17,45 @@ export function _initTokenStore(
   _clear = clear
 }
 
+// Auth endpoints answer 401 for bad credentials or a bad refresh token; those
+// are real errors, not an expired access token, so they never trigger a refresh.
+const NO_REFRESH_PATHS = [
+  '/api/v1/auth/login',
+  '/api/v1/auth/register',
+  '/api/v1/auth/refresh',
+  '/api/v1/auth/logout',
+]
+
+// Single-flight refresh: concurrent 401s share one refresh call. The backend
+// rotates refresh tokens and revokes the whole family if a used one is replayed,
+// so parallel refreshes with the same token would log the user out.
+let refreshPromise: Promise<boolean> | null = null
+
+function refreshAccessToken(): Promise<boolean> {
+  if (!refreshPromise) {
+    refreshPromise = (async () => {
+      const refreshToken = _getRefresh()
+      if (!refreshToken) return false
+      try {
+        const res = await fetch('/api/v1/auth/refresh', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ refresh_token: refreshToken }),
+        })
+        if (!res.ok) return false
+        const data = (await res.json()) as { access_token: string; refresh_token: string }
+        _setTokens(data.access_token, data.refresh_token)
+        return true
+      } catch {
+        return false
+      }
+    })().finally(() => {
+      refreshPromise = null
+    })
+  }
+  return refreshPromise
+}
+
 async function request<T>(
   method: string,
   path: string,
@@ -45,22 +84,14 @@ async function request<T>(
     return res.json() as Promise<T>
   }
 
-  if (res.status === 401 && !_isRetry) {
-    const refreshToken = _getRefresh()
-    if (refreshToken) {
-      const refreshRes = await fetch('/api/v1/auth/refresh', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ refresh_token: refreshToken }),
-      })
-      if (refreshRes.ok) {
-        const data = (await refreshRes.json()) as { access_token: string; refresh_token: string }
-        _setTokens(data.access_token, data.refresh_token)
-        return request<T>(method, path, body, init, true)
-      }
+  if (res.status === 401 && !_isRetry && !NO_REFRESH_PATHS.includes(path)) {
+    if (await refreshAccessToken()) {
+      // Re-reads the token that the (possibly shared) refresh just stored.
+      return request<T>(method, path, body, init, true)
     }
+    // Clearing the store is enough: AuthProvider drops the user and
+    // ProtectedRoute redirects to /login with the current location as `from`.
     _clear()
-    window.location.href = '/login'
     throw new APIError(401, 'unauthorized', 'Session expired. Please log in again.', '')
   }
 

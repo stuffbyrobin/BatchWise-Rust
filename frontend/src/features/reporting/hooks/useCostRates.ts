@@ -15,15 +15,14 @@ function toQueryString(params: Record<string, unknown>): string {
 export function useCostRatesList(params: { rate_type?: string; page?: number; page_size?: number } = {}) {
   return useQuery<CostRatePage>({
     queryKey: ['cost-rates', params],
-    queryFn: () =>
-      apiClient.get<CostRatePage>(`/api/v1/cost-rates${toQueryString(params as Record<string, unknown>)}`),
+    queryFn: ({ signal }) => apiClient.get<CostRatePage>(`/api/v1/cost-rates${toQueryString(params as Record<string, unknown>)}`, { signal }),
   })
 }
 
 export function useCostRate(id: string) {
   return useQuery<CostRate>({
     queryKey: ['cost-rates', id],
-    queryFn: () => apiClient.get<CostRate>(`/api/v1/cost-rates/${id}`),
+    queryFn: ({ signal }) => apiClient.get<CostRate>(`/api/v1/cost-rates/${id}`, { signal }),
     enabled: !!id,
   })
 }

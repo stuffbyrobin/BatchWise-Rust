@@ -31,15 +31,14 @@ type ListParams = { page?: number; page_size?: number; sort?: string }
 export function useStyles(params: ListParams = {}) {
   return useQuery<Page<BeerStyle>>({
     queryKey: ['library', 'styles', params],
-    queryFn: () =>
-      apiClient.get<Page<BeerStyle>>(`/api/v1/library/styles${toQueryString(params as Record<string, unknown>)}`),
+    queryFn: ({ signal }) => apiClient.get<Page<BeerStyle>>(`/api/v1/library/styles${toQueryString(params as Record<string, unknown>)}`, { signal }),
   })
 }
 
 export function useStyle(id: string) {
   return useQuery<BeerStyle>({
     queryKey: ['library', 'styles', id],
-    queryFn: () => apiClient.get<BeerStyle>(`/api/v1/library/styles/${id}`),
+    queryFn: ({ signal }) => apiClient.get<BeerStyle>(`/api/v1/library/styles/${id}`, { signal }),
     enabled: !!id,
   })
 }
@@ -73,9 +72,8 @@ export function useDeleteStyle() {
 export function useEquipmentProfiles(params: ListParams = {}) {
   return useQuery<Page<EquipmentProfile>>({
     queryKey: ['library', 'equipment-profiles', params],
-    queryFn: () =>
-      apiClient.get<Page<EquipmentProfile>>(
-        `/api/v1/library/equipment-profiles${toQueryString(params as Record<string, unknown>)}`,
+    queryFn: ({ signal }) => apiClient.get<Page<EquipmentProfile>>(
+        `/api/v1/library/equipment-profiles${toQueryString(params as Record<string, unknown>)}`, { signal },
       ),
   })
 }
@@ -83,7 +81,7 @@ export function useEquipmentProfiles(params: ListParams = {}) {
 export function useEquipmentProfile(id: string) {
   return useQuery<EquipmentProfile>({
     queryKey: ['library', 'equipment-profiles', id],
-    queryFn: () => apiClient.get<EquipmentProfile>(`/api/v1/library/equipment-profiles/${id}`),
+    queryFn: ({ signal }) => apiClient.get<EquipmentProfile>(`/api/v1/library/equipment-profiles/${id}`, { signal }),
     enabled: !!id,
   })
 }
@@ -117,9 +115,8 @@ export function useDeleteEquipmentProfile() {
 export function useMashProfiles(params: ListParams = {}) {
   return useQuery<Page<MashProfile>>({
     queryKey: ['library', 'mash-profiles', params],
-    queryFn: () =>
-      apiClient.get<Page<MashProfile>>(
-        `/api/v1/library/mash-profiles${toQueryString(params as Record<string, unknown>)}`,
+    queryFn: ({ signal }) => apiClient.get<Page<MashProfile>>(
+        `/api/v1/library/mash-profiles${toQueryString(params as Record<string, unknown>)}`, { signal },
       ),
   })
 }
@@ -127,7 +124,7 @@ export function useMashProfiles(params: ListParams = {}) {
 export function useMashProfile(id: string) {
   return useQuery<MashProfile>({
     queryKey: ['library', 'mash-profiles', id],
-    queryFn: () => apiClient.get<MashProfile>(`/api/v1/library/mash-profiles/${id}`),
+    queryFn: ({ signal }) => apiClient.get<MashProfile>(`/api/v1/library/mash-profiles/${id}`, { signal }),
     enabled: !!id,
   })
 }
@@ -161,15 +158,14 @@ export function useDeleteMashProfile() {
 export function useYeasts(params: ListParams = {}) {
   return useQuery<Page<Yeast>>({
     queryKey: ['library', 'yeasts', params],
-    queryFn: () =>
-      apiClient.get<Page<Yeast>>(`/api/v1/library/yeasts${toQueryString(params as Record<string, unknown>)}`),
+    queryFn: ({ signal }) => apiClient.get<Page<Yeast>>(`/api/v1/library/yeasts${toQueryString(params as Record<string, unknown>)}`, { signal }),
   })
 }
 
 export function useYeast(id: string) {
   return useQuery<Yeast>({
     queryKey: ['library', 'yeasts', id],
-    queryFn: () => apiClient.get<Yeast>(`/api/v1/library/yeasts/${id}`),
+    queryFn: ({ signal }) => apiClient.get<Yeast>(`/api/v1/library/yeasts/${id}`, { signal }),
     enabled: !!id,
   })
 }
@@ -203,9 +199,8 @@ export function useDeleteYeast() {
 export function useFermentables(params: ListParams & { name?: string; supplier?: string; type?: string } = {}) {
   return useQuery<Page<Fermentable>>({
     queryKey: ['library', 'fermentables', params],
-    queryFn: () =>
-      apiClient.get<Page<Fermentable>>(
-        `/api/v1/library/fermentables${toQueryString(params as Record<string, unknown>)}`,
+    queryFn: ({ signal }) => apiClient.get<Page<Fermentable>>(
+        `/api/v1/library/fermentables${toQueryString(params as Record<string, unknown>)}`, { signal },
       ),
   })
 }

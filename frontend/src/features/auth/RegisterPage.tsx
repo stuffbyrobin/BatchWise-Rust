@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/useAuth';
 import { APIError } from '../../api/error';
@@ -13,7 +13,8 @@ export function RegisterPage() {
   const navigate = useNavigate();
   const auth = useAuth();
 
-  const handleRegister = async () => {
+  const handleRegister = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
     setLoading(true);
     setError(null);
     try {
@@ -32,7 +33,7 @@ export function RegisterPage() {
       {error && (
         <div className="bg-red-100 text-red-700 p-3 rounded mb-4">{error}</div>
       )}
-      <div className="space-y-4">
+      <form className="space-y-4" onSubmit={handleRegister}>
         <div>
           <label htmlFor="reg-email" className="block text-sm font-medium mb-1">Email</label>
           <input
@@ -41,6 +42,7 @@ export function RegisterPage() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             className="w-full p-2 border rounded"
+            autoComplete="email" required
           />
         </div>
         <div>
@@ -51,6 +53,7 @@ export function RegisterPage() {
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
             className="w-full p-2 border rounded"
+            autoComplete="name" required
           />
         </div>
         <div>
@@ -61,6 +64,7 @@ export function RegisterPage() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className="w-full p-2 border rounded"
+            autoComplete="new-password" required
           />
         </div>
         <div>
@@ -71,16 +75,17 @@ export function RegisterPage() {
             value={tenantName}
             onChange={(e) => setTenantName(e.target.value)}
             className="w-full p-2 border rounded"
+            autoComplete="organization" required
           />
         </div>
         <button
-          onClick={handleRegister}
+          type="submit"
           disabled={loading}
           className="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700 disabled:opacity-50"
         >
           {loading ? 'Creating account...' : 'Create account'}
         </button>
-      </div>
+      </form>
       <div className="mt-4 text-center">
         <Link to="/login" className="text-blue-600 hover:underline">
           Already have an account? Sign in

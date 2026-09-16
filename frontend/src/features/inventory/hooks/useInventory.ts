@@ -57,15 +57,14 @@ function toQueryString(params: Record<string, unknown>): string {
 export function useInventoryList(params: ListParams = {}) {
   return useQuery<PaginatedIngredients>({
     queryKey: ['inventory', 'list', params],
-    queryFn: () =>
-      apiClient.get<PaginatedIngredients>(`/api/v1/inventory${toQueryString(params as Record<string, unknown>)}`),
+    queryFn: ({ signal }) => apiClient.get<PaginatedIngredients>(`/api/v1/inventory${toQueryString(params as Record<string, unknown>)}`, { signal }),
   })
 }
 
 export function useInventoryItem(id: string) {
   return useQuery<Ingredient>({
     queryKey: ['inventory', id],
-    queryFn: () => apiClient.get<Ingredient>(`/api/v1/inventory/${id}`),
+    queryFn: ({ signal }) => apiClient.get<Ingredient>(`/api/v1/inventory/${id}`, { signal }),
     enabled: !!id,
   })
 }
@@ -113,8 +112,7 @@ export function useDeduct() {
 export function useInventorySummary(params: { type?: string; page?: number; page_size?: number } = {}) {
   return useQuery<SummaryPage>({
     queryKey: ['inventory', 'summary', params],
-    queryFn: () =>
-      apiClient.get<SummaryPage>(`/api/v1/inventory/summary${toQueryString(params as Record<string, unknown>)}`),
+    queryFn: ({ signal }) => apiClient.get<SummaryPage>(`/api/v1/inventory/summary${toQueryString(params as Record<string, unknown>)}`, { signal }),
   })
 }
 
@@ -123,9 +121,8 @@ export function useStockMovements(
 ) {
   return useQuery<PaginatedMovements>({
     queryKey: ['inventory', 'movements', params],
-    queryFn: () =>
-      apiClient.get<PaginatedMovements>(
-        `/api/v1/inventory/stock-movements${toQueryString(params as Record<string, unknown>)}`,
+    queryFn: ({ signal }) => apiClient.get<PaginatedMovements>(
+        `/api/v1/inventory/stock-movements${toQueryString(params as Record<string, unknown>)}`, { signal },
       ),
   })
 }
