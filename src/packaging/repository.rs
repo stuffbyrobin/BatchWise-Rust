@@ -6,7 +6,7 @@
 //! reduce stock, `return` adds it back).
 
 use chrono::{DateTime, Utc};
-use sqlx::{PgPool, Postgres, QueryBuilder};
+use sqlx::{PgExecutor, PgPool, Postgres, QueryBuilder};
 use uuid::Uuid;
 
 use super::models::{
@@ -38,8 +38,8 @@ const MOV_COLS: &str = "dm.id, dm.tenant_id, dm.packaging_run_id, dm.movement_ty
 
 /// Inserts a packaging run and returns it (a fresh run has `stock_remaining = quantity`).
 #[allow(clippy::too_many_arguments)]
-pub async fn insert_run(
-    pool: &PgPool,
+pub async fn insert_run<'e, E: PgExecutor<'e>>(
+    exec: E,
     tenant_id: Uuid,
     batch_id: Uuid,
     format: &str,
@@ -67,7 +67,7 @@ pub async fn insert_run(
         .bind(packaged_at)
         .bind(best_before_date)
         .bind(notes)
-        .fetch_one(pool)
+        .fetch_one(exec)
         .await
 }
 
@@ -122,18 +122,22 @@ pub async fn update_run(
 }
 
 /// Deletes a packaging run; returns true if a row was removed.
-pub async fn delete_run(pool: &PgPool, tenant_id: Uuid, id: Uuid) -> Result<bool, sqlx::Error> {
+pub async fn delete_run<'e, E: PgExecutor<'e>>(
+    exec: E,
+    tenant_id: Uuid,
+    id: Uuid,
+) -> Result<bool, sqlx::Error> {
     let r = sqlx::query("DELETE FROM packaging_runs WHERE id = $1 AND tenant_id = $2")
         .bind(id)
         .bind(tenant_id)
-        .execute(pool)
+        .execute(exec)
         .await?;
     Ok(r.rows_affected() > 0)
 }
 
 /// True if the packaging run has any distribution movements.
-pub async fn has_movements(
-    pool: &PgPool,
+pub async fn has_movements<'e, E: PgExecutor<'e>>(
+    exec: E,
     tenant_id: Uuid,
     packaging_run_id: Uuid,
 ) -> Result<bool, sqlx::Error> {
@@ -143,13 +147,32 @@ pub async fn has_movements(
     )
     .bind(packaging_run_id)
     .bind(tenant_id)
-    .fetch_one(pool)
+    .fetch_one(exec)
     .await
 }
 
+/// Locks a tenant's packaging run row for the rest of the transaction; `false`
+/// when it does not exist. Stock checks and movement inserts for the same run
+/// then run one at a time. (The stock query aggregates, so it cannot take the
+/// lock itself.)
+pub async fn lock_run<'e, E: PgExecutor<'e>>(
+    exec: E,
+    tenant_id: Uuid,
+    id: Uuid,
+) -> Result<bool, sqlx::Error> {
+    let row: Option<Uuid> = sqlx::query_scalar(
+        "SELECT id FROM packaging_runs WHERE id = $1 AND tenant_id = $2 FOR UPDATE",
+    )
+    .bind(id)
+    .bind(tenant_id)
+    .fetch_optional(exec)
+    .await?;
+    Ok(row.is_some())
+}
+
 /// Returns remaining stock for a run, or `None` if the run does not exist.
-pub async fn stock_remaining(
-    pool: &PgPool,
+pub async fn stock_remaining<'e, E: PgExecutor<'e>>(
+    exec: E,
     tenant_id: Uuid,
     packaging_run_id: Uuid,
 ) -> Result<Option<i64>, sqlx::Error> {
@@ -165,7 +188,7 @@ pub async fn stock_remaining(
     )
     .bind(packaging_run_id)
     .bind(tenant_id)
-    .fetch_optional(pool)
+    .fetch_optional(exec)
     .await
 }
 
@@ -226,8 +249,8 @@ pub async fn select_runs(
 
 /// Inserts a distribution movement and returns it.
 #[allow(clippy::too_many_arguments)]
-pub async fn insert_movement(
-    pool: &PgPool,
+pub async fn insert_movement<'e, E: PgExecutor<'e>>(
+    exec: E,
     tenant_id: Uuid,
     packaging_run_id: Uuid,
     movement_type: &str,
@@ -255,7 +278,7 @@ pub async fn insert_movement(
         .bind(reference)
         .bind(notes)
         .bind(moved_at)
-        .fetch_one(pool)
+        .fetch_one(exec)
         .await
 }
 
@@ -276,15 +299,15 @@ pub async fn select_movement_by_id(
 }
 
 /// Deletes a movement; returns true if a row was removed.
-pub async fn delete_movement(
-    pool: &PgPool,
+pub async fn delete_movement<'e, E: PgExecutor<'e>>(
+    exec: E,
     tenant_id: Uuid,
     id: Uuid,
 ) -> Result<bool, sqlx::Error> {
     let r = sqlx::query("DELETE FROM distribution_movements WHERE id = $1 AND tenant_id = $2")
         .bind(id)
         .bind(tenant_id)
-        .execute(pool)
+        .execute(exec)
         .await?;
     Ok(r.rows_affected() > 0)
 }

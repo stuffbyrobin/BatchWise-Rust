@@ -110,9 +110,13 @@ pub async fn create(
         .unwrap_or_else(|| "planned".to_string());
     let brew_date = parse_date(&req.brew_date)?;
 
+    let mut tx = state.pool.begin().await?;
+
     // Replace an existing *planned* batch with the same number; else conflict.
+    // One locked read inside the transaction, so the row cannot change status
+    // between the check and the delete.
     if let Some(existing) =
-        repo::select_by_batch_number(&state.pool, tenant_id, &req.batch_number).await?
+        repo::select_by_batch_number_for_update(&mut *tx, tenant_id, &req.batch_number).await?
     {
         if existing.status != "planned" {
             return Err(ApiError::conflict(
@@ -120,16 +124,7 @@ pub async fn create(
                 "batch_number already exists for this tenant",
             ));
         }
-    }
-
-    let mut tx = state.pool.begin().await?;
-
-    if let Some(existing) =
-        repo::select_by_batch_number(&state.pool, tenant_id, &req.batch_number).await?
-    {
-        if existing.status == "planned" {
-            repo::delete_by_id(&mut *tx, tenant_id, existing.id).await?;
-        }
+        repo::delete_by_id(&mut *tx, tenant_id, existing.id).await?;
     }
 
     let new_batch = NewBatch {

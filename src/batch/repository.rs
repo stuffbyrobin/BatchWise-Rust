@@ -89,17 +89,18 @@ pub async fn select_by_id(
         .await
 }
 
-/// Fetches a batch by batch_number, tenant-scoped.
-pub async fn select_by_batch_number(
-    pool: &PgPool,
+/// Fetches a batch by number `FOR UPDATE`, within the caller's transaction.
+pub async fn select_by_batch_number_for_update<'e, E: PgExecutor<'e>>(
+    exec: E,
     tenant_id: Uuid,
     batch_number: &str,
 ) -> Result<Option<Batch>, sqlx::Error> {
-    let sql = format!("SELECT {BAT_COLS} FROM batches WHERE tenant_id=$1 AND batch_number=$2");
+    let sql =
+        format!("SELECT {BAT_COLS} FROM batches WHERE tenant_id=$1 AND batch_number=$2 FOR UPDATE");
     sqlx::query_as::<_, Batch>(&sql)
         .bind(tenant_id)
         .bind(batch_number)
-        .fetch_optional(pool)
+        .fetch_optional(exec)
         .await
 }
 

@@ -6,19 +6,23 @@
 //! triggered it.
 
 use chrono::Utc;
-use sqlx::PgPool;
+use sqlx::{PgExecutor, PgPool};
 use uuid::Uuid;
 
 use super::models::{AuditEvent, AuditEventList, ListFilter, WriteRequest};
 use super::repository as repo;
 use crate::platform::errors::ApiError;
 
-/// Records an audit event. Errors are logged and swallowed — never returned.
-pub async fn write(pool: &PgPool, req: WriteRequest) {
-    let id = Uuid::new_v4();
-    if let Err(e) = repo::insert(
-        pool,
-        id,
+/// Records an audit event on the caller's executor and returns any error.
+///
+/// Pass the transaction that makes the audited change, so the change and its
+/// audit row commit together and a failed insert rolls the change back: the
+/// compliance log must not silently miss events. Read-only operations (such as a
+/// recall query) may pass the pool.
+pub async fn write<'e, E: PgExecutor<'e>>(exec: E, req: WriteRequest) -> Result<(), ApiError> {
+    repo::insert(
+        exec,
+        Uuid::new_v4(),
         req.tenant_id,
         req.event_type,
         req.entity_type,
@@ -27,10 +31,8 @@ pub async fn write(pool: &PgPool, req: WriteRequest) {
         &req.event_data,
         Utc::now(),
     )
-    .await
-    {
-        tracing::error!(event_type = req.event_type, error = %e, "audit: insert failed");
-    }
+    .await?;
+    Ok(())
 }
 
 /// Lists audit events matching the filter.

@@ -5,7 +5,7 @@
 //! Every query is tenant-scoped.
 
 use chrono::{DateTime, Utc};
-use sqlx::{PgPool, Postgres, QueryBuilder};
+use sqlx::{PgExecutor, PgPool, Postgres, QueryBuilder};
 use uuid::Uuid;
 
 use super::models::{AuditEvent, AuditEventList, ListFilter};
@@ -25,8 +25,8 @@ const AUDIT_ALLOWED_SORT: sort::Allowed = &[
 
 /// Inserts an audit event.
 #[allow(clippy::too_many_arguments)]
-pub async fn insert(
-    pool: &PgPool,
+pub async fn insert<'e, E: PgExecutor<'e>>(
+    exec: E,
     id: Uuid,
     tenant_id: Uuid,
     event_type: &str,
@@ -49,7 +49,7 @@ pub async fn insert(
     .bind(actor_user_id)
     .bind(sqlx::types::Json(event_data))
     .bind(created_at)
-    .execute(pool)
+    .execute(exec)
     .await?;
     Ok(())
 }
