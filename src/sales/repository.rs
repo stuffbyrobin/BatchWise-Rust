@@ -387,6 +387,40 @@ pub async fn delete_item(
 
 // ---- duty events ----
 
+/// Locks the order row for the rest of the transaction and returns its status.
+/// Concurrent fulfilments queue on this lock, and each re-checks the status.
+pub async fn lock_order_status(
+    conn: &mut PgConnection,
+    tenant_id: Uuid,
+    id: Uuid,
+) -> Result<Option<String>, sqlx::Error> {
+    sqlx::query_scalar("SELECT status FROM orders WHERE id = $1 AND tenant_id = $2 FOR UPDATE")
+        .bind(id)
+        .bind(tenant_id)
+        .fetch_optional(conn)
+        .await
+}
+
+/// Actual OG/FG for the given batches, keyed by batch id, in one query.
+pub async fn select_batch_gravities(
+    pool: &PgPool,
+    tenant_id: Uuid,
+    batch_ids: &[Uuid],
+) -> Result<std::collections::HashMap<Uuid, (Option<f64>, Option<f64>)>, sqlx::Error> {
+    let rows: Vec<(Uuid, Option<f64>, Option<f64>)> = sqlx::query_as(
+        "SELECT id, actual_og::float8, actual_fg::float8 FROM batches \
+         WHERE tenant_id = $1 AND id = ANY($2)",
+    )
+    .bind(tenant_id)
+    .bind(batch_ids)
+    .fetch_all(pool)
+    .await?;
+    Ok(rows
+        .into_iter()
+        .map(|(id, og, fg)| (id, (og, fg)))
+        .collect())
+}
+
 /// Inserts a duty event within a transaction.
 pub async fn insert_duty_event(conn: &mut PgConnection, e: &DutyEvent) -> Result<(), sqlx::Error> {
     sqlx::query(

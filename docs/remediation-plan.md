@@ -122,11 +122,11 @@ Depends on Phase 2 (shared validator helper, 4xx error mapping).
 
 ## Phase 7 — Transactions and concurrency · M
 
-- [ ] `sales::fulfil`: `SELECT … FOR UPDATE` on the order inside the transaction; preload batches with one `= ANY($1)` query before opening the tx.
-- [ ] `batch::create`: one `select_by_batch_number … FOR UPDATE` on `&mut *tx`, remove the duplicate pool read.
-- [ ] `packaging` stock check: read `stock_remaining` and insert the movement in one transaction with a row lock on the packaging run.
-- [ ] Audit writes: pass the caller's transaction so a dropped audit row fails the operation (or document why fire-and-forget is acceptable).
-- [ ] Tests: double `POST /orders/{id}/fulfill` produces one duty event; concurrent packaging sales cannot oversell.
+- [x] `sales::fulfil`: `SELECT … FOR UPDATE` on the order inside the transaction; preload batches with one `= ANY($1)` query before opening the tx. (Before: 8 concurrent fulfils all succeeded and crystallised duty 8 times.)
+- [x] `batch::create`: one `select_by_batch_number … FOR UPDATE` on `&mut *tx`, remove the duplicate pool read.
+- [x] `packaging` stock check: read `stock_remaining` and insert the movement in one transaction with a row lock on the packaging run. The stock query aggregates, so the lock is a separate `lock_run`; `delete_run` takes it too before its has-movements check. (Before: 20 concurrent sales of 1 unit all succeeded against a run of 10.)
+- [x] Audit writes: pass the caller's transaction so a dropped audit row fails the operation (or document why fire-and-forget is acceptable). `audit::service::write` now takes any executor and returns errors. Duty compile/submit, label create/patch/delete and packaging run/movement create/delete write the change and its audit row in one transaction; the read-only allergen computation and recall query write on the pool but no longer ignore failures.
+- [x] Tests: double `POST /orders/{id}/fulfill` produces one duty event; concurrent packaging sales cannot oversell. `tests/concurrency.rs` (also: concurrent batch creates with one number leave exactly one batch). Stable across repeated runs.
 
 ---
 

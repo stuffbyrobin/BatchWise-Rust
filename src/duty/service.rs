@@ -82,10 +82,11 @@ pub async fn compile_return(
         net_duty_pence: summary.gross_duty_pence - relief_pence,
     };
 
-    let ret = repo::upsert_return(&state.pool, tenant_id, &w).await?;
+    let mut tx = state.pool.begin().await?;
+    let ret = repo::upsert_return(&mut *tx, tenant_id, &w).await?;
 
     audit::service::write(
-        &state.pool,
+        &mut *tx,
         audit::models::WriteRequest {
             tenant_id,
             event_type: audit::models::EVENT_DUTY_COMPILED,
@@ -100,7 +101,8 @@ pub async fn compile_return(
             }),
         },
     )
-    .await;
+    .await?;
+    tx.commit().await?;
     Ok(ret)
 }
 
@@ -155,14 +157,11 @@ pub async fn patch_return(
     }
 
     let now = Utc::now();
-    repo::update_return_status(&state.pool, tenant_id, id, "submitted", Some(now)).await?;
-
-    let updated = repo::select_return_by_id(&state.pool, tenant_id, id)
-        .await?
-        .ok_or_else(|| ApiError::not_found("duty_return"))?;
+    let mut tx = state.pool.begin().await?;
+    repo::update_return_status(&mut *tx, tenant_id, id, "submitted", Some(now)).await?;
 
     audit::service::write(
-        &state.pool,
+        &mut *tx,
         audit::models::WriteRequest {
             tenant_id,
             event_type: audit::models::EVENT_DUTY_SUBMITTED,
@@ -170,12 +169,19 @@ pub async fn patch_return(
             entity_id: Some(id),
             actor_user_id: actor_id,
             event_data: json!({
-                "period_start": updated.period_start,
-                "period_end": updated.period_end,
-                "net_duty_pence": updated.net_duty_pence,
+                // Submitting only changes the status, so the row read before
+                // the update carries the audited values.
+                "period_start": ret.period_start,
+                "period_end": ret.period_end,
+                "net_duty_pence": ret.net_duty_pence,
             }),
         },
     )
-    .await;
+    .await?;
+    tx.commit().await?;
+
+    let updated = repo::select_return_by_id(&state.pool, tenant_id, id)
+        .await?
+        .ok_or_else(|| ApiError::not_found("duty_return"))?;
     Ok(updated)
 }

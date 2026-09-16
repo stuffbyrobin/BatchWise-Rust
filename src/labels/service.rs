@@ -83,10 +83,11 @@ pub async fn create(
         serving_volume_ml: req.serving_volume_ml,
     };
 
-    let rec = repo::insert(&state.pool, tenant_id, &ins).await?;
+    let mut tx = state.pool.begin().await?;
+    let rec = repo::insert(&mut *tx, tenant_id, &ins).await?;
 
     audit::service::write(
-        &state.pool,
+        &mut *tx,
         audit::models::WriteRequest {
             tenant_id,
             event_type: audit::models::EVENT_LABEL_CREATED,
@@ -103,7 +104,8 @@ pub async fn create(
             }),
         },
     )
-    .await;
+    .await?;
+    tx.commit().await?;
     Ok(rec)
 }
 
@@ -212,7 +214,8 @@ pub async fn patch(
         rec.status = status;
     }
 
-    repo::update_full(&state.pool, tenant_id, &rec).await?;
+    let mut tx = state.pool.begin().await?;
+    repo::update_full(&mut *tx, tenant_id, &rec).await?;
 
     let (event_type, event_data) = if approving {
         (
@@ -232,7 +235,7 @@ pub async fn patch(
         )
     };
     audit::service::write(
-        &state.pool,
+        &mut *tx,
         audit::models::WriteRequest {
             tenant_id,
             event_type,
@@ -242,7 +245,8 @@ pub async fn patch(
             event_data,
         },
     )
-    .await;
+    .await?;
+    tx.commit().await?;
 
     repo::select_by_id(&state.pool, tenant_id, id)
         .await?
@@ -268,12 +272,13 @@ pub async fn delete(
         ));
     }
 
-    if !repo::delete_by_id(&state.pool, tenant_id, id).await? {
+    let mut tx = state.pool.begin().await?;
+    if !repo::delete_by_id(&mut *tx, tenant_id, id).await? {
         return Err(ApiError::not_found("label_record"));
     }
 
     audit::service::write(
-        &state.pool,
+        &mut *tx,
         audit::models::WriteRequest {
             tenant_id,
             event_type: audit::models::EVENT_LABEL_DELETED,
@@ -287,7 +292,8 @@ pub async fn delete(
             }),
         },
     )
-    .await;
+    .await?;
+    tx.commit().await?;
     Ok(())
 }
 

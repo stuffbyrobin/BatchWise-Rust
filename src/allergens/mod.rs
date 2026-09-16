@@ -106,7 +106,7 @@ pub async fn compute_for_recipe(
             }),
         },
     )
-    .await;
+    .await?;
 
     Ok(result)
 }

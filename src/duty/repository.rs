@@ -109,8 +109,8 @@ pub struct ReturnWrite {
 
 /// Inserts or updates (on `(tenant_id, period_start)`) a duty return and returns
 /// the persisted row.
-pub async fn upsert_return(
-    pool: &PgPool,
+pub async fn upsert_return<'e, E: PgExecutor<'e>>(
+    exec: E,
     tenant_id: Uuid,
     w: &ReturnWrite,
 ) -> Result<Return, sqlx::Error> {
@@ -143,7 +143,7 @@ pub async fn upsert_return(
         .bind(w.sbr_relief_rate_pct)
         .bind(w.sbr_relief_pence)
         .bind(w.net_duty_pence)
-        .fetch_one(pool)
+        .fetch_one(exec)
         .await
 }
 

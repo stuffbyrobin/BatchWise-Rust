@@ -31,8 +31,9 @@ pub async fn create_run(
     req: CreatePackagingRunRequest,
 ) -> Result<PackagingRun, ApiError> {
     ensure_ref(&state.pool, tenant_id, Ref::Batch, req.batch_id, "batch_id").await?;
+    let mut tx = state.pool.begin().await?;
     let run = match repo::insert_run(
-        &state.pool,
+        &mut *tx,
         tenant_id,
         req.batch_id,
         &req.format,
@@ -53,7 +54,7 @@ pub async fn create_run(
     };
 
     audit::service::write(
-        &state.pool,
+        &mut *tx,
         audit::models::WriteRequest {
             tenant_id,
             event_type: audit::models::EVENT_PACKAGING_RUN_CREATED,
@@ -70,7 +71,8 @@ pub async fn create_run(
             }),
         },
     )
-    .await;
+    .await?;
+    tx.commit().await?;
     Ok(run)
 }
 
@@ -126,17 +128,20 @@ pub async fn delete_run(
     actor_id: Option<Uuid>,
     id: Uuid,
 ) -> Result<(), ApiError> {
-    if repo::has_movements(&state.pool, tenant_id, id).await? {
+    let run = get_run(state, tenant_id, id).await?;
+    let mut tx = state.pool.begin().await?;
+    if !repo::lock_run(&mut *tx, tenant_id, id).await? {
+        return Err(ApiError::not_found("packaging_run"));
+    }
+    if repo::has_movements(&mut *tx, tenant_id, id).await? {
         return Err(ApiError::conflict("packaging_run", "has_movements"));
     }
-    // Ensure the run exists (and is tenant-owned) before deleting.
-    let run = get_run(state, tenant_id, id).await?;
-    if !repo::delete_run(&state.pool, tenant_id, id).await? {
+    if !repo::delete_run(&mut *tx, tenant_id, id).await? {
         return Err(ApiError::not_found("packaging_run"));
     }
 
     audit::service::write(
-        &state.pool,
+        &mut *tx,
         audit::models::WriteRequest {
             tenant_id,
             event_type: audit::models::EVENT_PACKAGING_RUN_DELETED,
@@ -151,7 +156,8 @@ pub async fn delete_run(
             }),
         },
     )
-    .await;
+    .await?;
+    tx.commit().await?;
     Ok(())
 }
 
@@ -171,8 +177,14 @@ pub async fn create_movement(
         ));
     }
 
+    let mut tx = state.pool.begin().await?;
+    // Serialise stock checks per run: without the lock, concurrent sales each
+    // see the same stock and together oversell it.
+    if !repo::lock_run(&mut *tx, tenant_id, req.packaging_run_id).await? {
+        return Err(ApiError::not_found("packaging_run"));
+    }
     if OUTBOUND_MOVEMENTS.contains(&req.movement_type.as_str()) {
-        let stock = repo::stock_remaining(&state.pool, tenant_id, req.packaging_run_id)
+        let stock = repo::stock_remaining(&mut *tx, tenant_id, req.packaging_run_id)
             .await?
             .ok_or_else(|| ApiError::not_found("packaging_run"))?;
         if i64::from(req.quantity) > stock {
@@ -194,7 +206,7 @@ pub async fn create_movement(
     let moved_at = req.moved_at.unwrap_or_else(Utc::now);
 
     let created = repo::insert_movement(
-        &state.pool,
+        &mut *tx,
         tenant_id,
         req.packaging_run_id,
         &req.movement_type,
@@ -209,7 +221,7 @@ pub async fn create_movement(
     .await?;
 
     audit::service::write(
-        &state.pool,
+        &mut *tx,
         audit::models::WriteRequest {
             tenant_id,
             event_type: audit::models::EVENT_MOVEMENT_CREATED,
@@ -225,7 +237,8 @@ pub async fn create_movement(
             }),
         },
     )
-    .await;
+    .await?;
+    tx.commit().await?;
     Ok(created)
 }
 
@@ -255,12 +268,13 @@ pub async fn delete_movement(
 ) -> Result<(), ApiError> {
     // Ensure the movement exists (and is tenant-owned) before deleting.
     let m = get_movement(state, tenant_id, id).await?;
-    if !repo::delete_movement(&state.pool, tenant_id, id).await? {
+    let mut tx = state.pool.begin().await?;
+    if !repo::delete_movement(&mut *tx, tenant_id, id).await? {
         return Err(ApiError::not_found("distribution_movement"));
     }
 
     audit::service::write(
-        &state.pool,
+        &mut *tx,
         audit::models::WriteRequest {
             tenant_id,
             event_type: audit::models::EVENT_MOVEMENT_DELETED,
@@ -275,6 +289,7 @@ pub async fn delete_movement(
             }),
         },
     )
-    .await;
+    .await?;
+    tx.commit().await?;
     Ok(())
 }

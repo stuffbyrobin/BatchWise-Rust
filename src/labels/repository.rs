@@ -8,7 +8,7 @@
 //! domain queries are tenant-scoped; missing/cross-tenant rows become 404 and
 //! the unique `(tenant_id, batch_id)` violation becomes 409.
 
-use sqlx::{PgPool, Postgres, QueryBuilder};
+use sqlx::{PgExecutor, PgPool, Postgres, QueryBuilder};
 use uuid::Uuid;
 
 use super::models::{LabelRecord, ListFilter, Page};
@@ -83,8 +83,8 @@ pub struct LabelInsert {
 
 /// Inserts a label record and returns the persisted row. A duplicate
 /// `(tenant_id, batch_id)` becomes a 409 conflict.
-pub async fn insert(
-    pool: &PgPool,
+pub async fn insert<'e, E: PgExecutor<'e>>(
+    exec: E,
     tenant_id: Uuid,
     rec: &LabelInsert,
 ) -> Result<LabelRecord, ApiError> {
@@ -115,7 +115,7 @@ pub async fn insert(
         .bind(rec.energy_kcal_per_100ml)
         .bind(rec.alcohol_units_per_serving)
         .bind(rec.serving_volume_ml)
-        .fetch_one(pool)
+        .fetch_one(exec)
         .await
         .map_err(|e| {
             if let sqlx::Error::Database(db) = &e {
@@ -216,8 +216,8 @@ pub async fn select_list(
 }
 
 /// Replaces the full mutable column set of a label record, tenant-scoped.
-pub async fn update_full(
-    pool: &PgPool,
+pub async fn update_full<'e, E: PgExecutor<'e>>(
+    exec: E,
     tenant_id: Uuid,
     rec: &LabelRecord,
 ) -> Result<bool, sqlx::Error> {
@@ -247,17 +247,21 @@ pub async fn update_full(
     .bind(rec.serving_volume_ml)
     .bind(tenant_id)
     .bind(rec.id)
-    .execute(pool)
+    .execute(exec)
     .await?;
     Ok(r.rows_affected() > 0)
 }
 
 /// Deletes a label record by id, tenant-scoped. Returns whether a row was removed.
-pub async fn delete_by_id(pool: &PgPool, tenant_id: Uuid, id: Uuid) -> Result<bool, sqlx::Error> {
+pub async fn delete_by_id<'e, E: PgExecutor<'e>>(
+    exec: E,
+    tenant_id: Uuid,
+    id: Uuid,
+) -> Result<bool, sqlx::Error> {
     let r = sqlx::query("DELETE FROM label_records WHERE tenant_id=$1 AND id=$2")
         .bind(tenant_id)
         .bind(id)
-        .execute(pool)
+        .execute(exec)
         .await?;
     Ok(r.rows_affected() > 0)
 }

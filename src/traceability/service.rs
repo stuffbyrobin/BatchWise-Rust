@@ -134,7 +134,7 @@ pub async fn recall_scope(
             }),
         },
     )
-    .await;
+    .await?;
 
     Ok(scope)
 }

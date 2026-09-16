@@ -426,9 +426,6 @@ pub async fn fulfill_order(
     req: FulfillOrderRequest,
 ) -> Result<Order, ApiError> {
     let mut o = get_order(state, tenant_id, id).await?;
-    if o.status != "confirmed" {
-        return Err(fsm_error(&o.status, "fulfilled"));
-    }
 
     let tenant = tenant_repo::get_by_id(&state.pool, tenant_id)
         .await?
@@ -439,26 +436,36 @@ pub async fn fulfill_order(
         .filter(|d| !d.is_empty())
         .unwrap_or_else(today);
 
+    // Load every linked batch in one query, before taking any locks.
+    let batch_ids: Vec<Uuid> = o.items.iter().filter_map(|i| i.batch_id).collect();
+    let gravities = repo::select_batch_gravities(&state.pool, tenant_id, &batch_ids).await?;
+
     let mut tx = state.pool.begin().await?;
+
+    // Check the status under a row lock: concurrent fulfilments queue here, and
+    // all but the first see `fulfilled` instead of each crystallising duty.
+    let status = repo::lock_order_status(&mut tx, tenant_id, id)
+        .await?
+        .ok_or_else(|| ApiError::not_found("order"))?;
+    if status != "confirmed" {
+        return Err(fsm_error(&status, "fulfilled"));
+    }
 
     // One duty event per item that is linked to a batch.
     for item in &o.items {
         let Some(batch_id) = item.batch_id else {
             continue;
         };
-        let batch = match batch_svc::get(state, tenant_id, batch_id).await {
-            Ok(b) => b,
-            Err(_) => {
-                tracing::warn!(
-                    %batch_id, order_id = %id,
-                    "batch not found for duty event; skipping"
-                );
-                continue;
-            }
+        let Some(&(actual_og, actual_fg)) = gravities.get(&batch_id) else {
+            tracing::warn!(
+                %batch_id, order_id = %id,
+                "batch not found for duty event; skipping"
+            );
+            continue;
         };
 
         let mut abv_pct = 0.0;
-        if let (Some(og), Some(fg)) = (batch.actual_og, batch.actual_fg) {
+        if let (Some(og), Some(fg)) = (actual_og, actual_fg) {
             if let Ok(abv) = gravity::calculate_abv(og, fg) {
                 abv_pct = abv;
             }
