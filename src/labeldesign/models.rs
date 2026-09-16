@@ -112,7 +112,9 @@ pub struct PatchLabelDesignRequest {
     #[validate(length(min = 1, max = 120))]
     pub name: Option<String>,
     pub brand_profile_id: Option<Uuid>,
+    #[validate(length(min = 1))]
     pub size_key: Option<String>,
+    #[validate(length(min = 1))]
     pub template_key: Option<String>,
     pub options: Option<DesignOptions>,
 }

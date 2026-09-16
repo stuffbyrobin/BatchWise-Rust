@@ -8,7 +8,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use uuid::Uuid;
-use validator::Validate;
+use validator::{Validate, ValidationError};
 
 /// Full tenant record.
 #[derive(Debug, Clone, FromRow)]
@@ -42,8 +42,11 @@ pub struct UpdateRequest {
     pub region: Option<String>,
     #[validate(length(max = 500))]
     pub address: Option<String>,
+    #[validate(range(min = 1))]
     pub next_batch_number: Option<i32>,
+    #[validate(range(min = 1))]
     pub next_order_number: Option<i32>,
+    #[validate(custom(function = "validate_ibu_method"))]
     pub ibu_method: Option<String>,
     #[validate(range(min = 0.0))]
     pub sbr_annual_production_hl_pa: Option<f64>,
@@ -96,5 +99,14 @@ impl From<Tenant> for Response {
             sbr_annual_production_hl_pa: t.sbr_annual_production_hl_pa,
             created_at: t.created_at,
         }
+    }
+}
+
+/// IBU formulas the recipe calculator supports (matches the OpenAPI enum).
+fn validate_ibu_method(v: &str) -> Result<(), ValidationError> {
+    if matches!(v, "tinseth" | "rager") {
+        Ok(())
+    } else {
+        Err(ValidationError::new("invalid_ibu_method"))
     }
 }

@@ -48,13 +48,28 @@ fn font_variants(family: &str) -> (BuiltinFont, BuiltinFont, BuiltinFont) {
     }
 }
 
+/// Decodes a stored logo with dimension and allocation limits, so a crafted file
+/// cannot exhaust memory while a PDF renders. `None` on any failure.
+fn decode_logo(logo: &[u8]) -> Option<printpdf::image_crate::DynamicImage> {
+    use printpdf::image_crate::io::{Limits, Reader};
+    let mut reader = Reader::new(std::io::Cursor::new(logo))
+        .with_guessed_format()
+        .ok()?;
+    let mut limits = Limits::default();
+    limits.max_image_width = Some(4096);
+    limits.max_image_height = Some(4096);
+    limits.max_alloc = Some(64 * 1024 * 1024);
+    reader.limits(limits);
+    reader.decode().ok()
+}
+
 /// Embeds the logo in the top-right corner (~20 mm wide), best-effort: any decode
 /// failure simply omits the logo so a bad image never breaks PDF generation.
 fn embed_logo(layer: &PdfLayerReference, width_mm: f64, height_mm: f64, logo: &[u8]) {
     if logo.is_empty() {
         return;
     }
-    let Ok(img) = printpdf::image_crate::load_from_memory(logo) else {
+    let Some(img) = decode_logo(logo) else {
         return;
     };
     let (w_px, h_px) = (img.width() as f32, img.height() as f32);

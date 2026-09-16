@@ -138,6 +138,8 @@ async fn get_asset(
         [
             (header::CONTENT_TYPE, asset.content_type),
             (header::CONTENT_LENGTH, len.to_string()),
+            // Never render an uploaded file inline in the API origin.
+            (header::CONTENT_DISPOSITION, "attachment".to_string()),
         ],
         Body::from(data),
     )

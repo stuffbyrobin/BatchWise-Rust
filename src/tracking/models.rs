@@ -87,8 +87,11 @@ pub struct UpdateAssetRequest {
 #[derive(Debug, Default, Deserialize, Validate)]
 #[serde(deny_unknown_fields)]
 pub struct PatchAssetRequest {
+    #[validate(length(min = 1))]
     pub asset_number: Option<String>,
+    #[validate(custom(function = "validate_container_type"))]
     pub container_type: Option<String>,
+    #[validate(range(exclusive_min = 0.0))]
     pub capacity_liters: Option<f64>,
     pub deposit_pence: Option<i64>,
     pub notes: Option<String>,

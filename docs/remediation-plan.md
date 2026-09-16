@@ -109,14 +109,14 @@ and in Phases 6–7.
 
 Depends on Phase 2 (shared validator helper, 4xx error mapping).
 
-- [ ] `recipe::service::import`: call `req.validate()` immediately after parsing.
-- [ ] Reject non-finite floats globally: a custom validator `finite` applied to every `f64` DTO field, or a serde helper.
-- [ ] PATCH DTOs: add the same `length`/`range`/enum rules as the matching CREATE DTO in `recipe`, `inventory`, `library` (×3), `tracking`, `sales`, `tenant`, `procurement`, `equipment`. Consider a small macro to share the attribute sets.
-- [ ] Attach the dead `validate_event_type` in `sales/models.rs`; add `range(min=1)` to order item `quantity`; validate `ibu_method` as an enum and `next_batch_number`/`next_order_number` as `>= 1`.
-- [ ] `#[validate(length(max = N))]` on every request `Vec` (recipe children, PO lines, allergens, water additions).
-- [ ] `ComputeBatchCostRequest`: validate ranges; use `checked_add` in `reporting/service.rs`; reject NaN/inf before `round_half_away`.
-- [ ] Brand assets: sniff PNG/JPEG magic bytes at upload; decode with `image::io::Reader::with_limits` in `pkg/labelkit/render.rs`; run `render_pdf` in `spawn_blocking`; serve assets with `Content-Disposition: attachment`.
-- [ ] Tests: PATCH rejects what POST rejects (one per module), BeerXML with `NaN` amount and 10k-char name is rejected, oversized image is rejected.
+- [x] `recipe::service::import`: call `req.validate()` immediately after parsing. (A 10k-character BeerXML name and a `NaN` amount were both being saved.)
+- [x] Reject non-finite floats globally: a custom validator `finite` applied to every `f64` DTO field, or a serde helper. Narrowed: serde_json refuses NaN/Infinity and overflowing numbers, so no JSON body can carry one; they only arrive through the BeerXML/Brewfather importers (text parsing accepts `NaN`) or arithmetic. `finite` is applied to every float in the recipe request/input types the importers produce, and `validator`'s `range` is not relied on (NaN passes it).
+- [x] PATCH DTOs: add the same `length`/`range`/enum rules as the matching CREATE DTO in `recipe`, `inventory`, `library` (×3), `tracking`, `sales`, `tenant`, `procurement`, `equipment`. Consider a small macro to share the attribute sets. Found by diffing every Patch/Create pair: inventory (13 fields), recipe (11), library (5 names), label design, supplier, PO, cost rate, customer, container asset, water profile/adjustment, yeast kinetics. Equipment had no gaps. No macro: the attributes are copied verbatim and the test pins them. Three of these gaps were 500s (empty cost-rate `effective_from`, zero adjustment volume, huge labor hours). Error `details.field` now reports raw identifiers by their JSON name (`type`, not `r#type`).
+- [x] Attach the dead `validate_event_type` in `sales/models.rs`; add `range(min=1)` to order item `quantity`; validate `ibu_method` as an enum and `next_batch_number`/`next_order_number` as `>= 1`. `validate_event_type` was deleted instead: no request carries an event type (duty events are created by fulfilment). `ibu_method` accepts `tinseth`/`rager`, matching the OpenAPI enum.
+- [x] `#[validate(length(max = N))]` on every request `Vec` (recipe children, PO lines, allergens, water additions). Recipe children and batch ingredients 100, mash steps 50, PO receive lines 500, water additions 50, inventory and label allergens 50.
+- [x] `ComputeBatchCostRequest`: validate ranges; use `checked_add` in `reporting/service.rs`; reject NaN/inf before `round_half_away`.
+- [x] Brand assets: sniff PNG/JPEG magic bytes at upload; decode with `image::io::Reader::with_limits` in `pkg/labelkit/render.rs`; run `render_pdf` in `spawn_blocking`; serve assets with `Content-Disposition: attachment`. Upload also reads only the header to reject anything over 4096×4096 and requires the bytes to match the declared content type.
+- [x] Tests: PATCH rejects what POST rejects (one per module), BeerXML with `NaN` amount and 10k-char name is rejected, oversized image is rejected. `tests/input_validation.rs` (6 tests, ~70 cases, each must be a 400 on the named field).
 
 ---
 

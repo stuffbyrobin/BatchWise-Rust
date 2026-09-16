@@ -65,13 +65,20 @@ pub type UpdateWaterProfileRequest = CreateWaterProfileRequest;
 #[derive(Debug, Default, Deserialize, Validate)]
 #[serde(deny_unknown_fields)]
 pub struct PatchWaterProfileRequest {
+    #[validate(length(min = 1, max = 200))]
     pub name: Option<String>,
     pub description: Option<String>,
+    #[validate(range(min = 0.0))]
     pub calcium_ppm: Option<f64>,
+    #[validate(range(min = 0.0))]
     pub magnesium_ppm: Option<f64>,
+    #[validate(range(min = 0.0))]
     pub sodium_ppm: Option<f64>,
+    #[validate(range(min = 0.0))]
     pub sulfate_ppm: Option<f64>,
+    #[validate(range(min = 0.0))]
     pub chloride_ppm: Option<f64>,
+    #[validate(range(min = 0.0))]
     pub bicarbonate_ppm: Option<f64>,
     pub notes: Option<String>,
 }
@@ -241,10 +248,13 @@ pub struct CreateWaterAdjustmentRequest {
     #[validate(range(exclusive_min = 0.0))]
     pub volume_liters: f64,
     #[serde(default)]
+    #[validate(length(max = 50))]
     pub mineral_additions: Vec<MineralAddition>,
     #[serde(default)]
+    #[validate(length(max = 50))]
     pub acid_additions: Vec<AcidAddition>,
     #[serde(default)]
+    #[validate(length(max = 50))]
     pub grain_additions: Vec<GrainAddition>,
     pub notes: Option<String>,
 }
@@ -256,14 +266,19 @@ pub type UpdateWaterAdjustmentRequest = CreateWaterAdjustmentRequest;
 #[derive(Debug, Default, Deserialize, Validate)]
 #[serde(deny_unknown_fields)]
 pub struct PatchWaterAdjustmentRequest {
+    #[validate(length(min = 1, max = 200))]
     pub name: Option<String>,
     pub source_profile_id: Option<Uuid>,
     pub target_profile_id: Option<Uuid>,
     pub batch_id: Option<Uuid>,
     pub recipe_id: Option<Uuid>,
+    #[validate(range(exclusive_min = 0.0))]
     pub volume_liters: Option<f64>,
+    #[validate(length(max = 50))]
     pub mineral_additions: Option<Vec<MineralAddition>>,
+    #[validate(length(max = 50))]
     pub acid_additions: Option<Vec<AcidAddition>>,
+    #[validate(length(max = 50))]
     pub grain_additions: Option<Vec<GrainAddition>>,
     pub notes: Option<String>,
 }
@@ -277,10 +292,13 @@ pub struct CalculateRequest {
     #[validate(range(exclusive_min = 0.0))]
     pub volume_liters: f64,
     #[serde(default)]
+    #[validate(length(max = 50))]
     pub mineral_additions: Vec<MineralAddition>,
     #[serde(default)]
+    #[validate(length(max = 50))]
     pub acid_additions: Vec<AcidAddition>,
     #[serde(default)]
+    #[validate(length(max = 50))]
     pub grain_additions: Vec<GrainAddition>,
 }
 

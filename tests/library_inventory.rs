@@ -465,5 +465,5 @@ async fn check_violation_maps_to_validation_error() {
         .unwrap();
     assert_eq!(resp.status(), 400);
     let body: Value = resp.json().await.unwrap();
-    assert_eq!(body["details"]["field"], json!("body"));
+    assert_eq!(body["details"]["field"], json!("type"));
 }

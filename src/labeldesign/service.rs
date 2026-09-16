@@ -9,6 +9,7 @@
 use std::collections::BTreeMap;
 
 use chrono::NaiveDate;
+use image::{ImageFormat, ImageReader, Limits};
 use uuid::Uuid;
 
 use super::models::{
@@ -35,6 +36,47 @@ fn str_ptr(s: String) -> Option<String> {
 
 // ---- brand assets ----
 
+/// Largest logo edge, in pixels, accepted at upload and when rendering.
+pub(crate) const MAX_LOGO_EDGE_PX: u32 = 4096;
+
+/// Rejects bytes that are not really a PNG or JPEG of the declared type, or whose
+/// header declares more than [`MAX_LOGO_EDGE_PX`] per edge (a decompression bomb
+/// fits in a few bytes). Only the header is read here, never the pixels.
+fn check_image(content_type: &str, data: &[u8]) -> Result<(), ApiError> {
+    let sniffed = match data {
+        [0x89, b'P', b'N', b'G', 0x0D, 0x0A, 0x1A, 0x0A, ..] => ImageFormat::Png,
+        [0xFF, 0xD8, 0xFF, ..] => ImageFormat::Jpeg,
+        _ => return Err(ApiError::validation("file", "must be a PNG or JPEG image")),
+    };
+    let declared = if content_type == "image/png" {
+        ImageFormat::Png
+    } else {
+        ImageFormat::Jpeg
+    };
+    if sniffed != declared {
+        return Err(ApiError::validation(
+            "file",
+            "content does not match its content type",
+        ));
+    }
+    let mut reader = ImageReader::with_format(std::io::Cursor::new(data), sniffed);
+    let mut limits = Limits::default();
+    limits.max_image_width = Some(MAX_LOGO_EDGE_PX);
+    limits.max_image_height = Some(MAX_LOGO_EDGE_PX);
+    reader.limits(limits);
+    match reader.into_dimensions() {
+        Ok((w, h))
+            if (1..=MAX_LOGO_EDGE_PX).contains(&w) && (1..=MAX_LOGO_EDGE_PX).contains(&h) =>
+        {
+            Ok(())
+        }
+        _ => Err(ApiError::validation(
+            "file",
+            "unreadable image, or larger than 4096x4096 pixels",
+        )),
+    }
+}
+
 pub async fn upload_asset(
     state: &AppState,
     tenant_id: Uuid,
@@ -51,6 +93,7 @@ pub async fn upload_asset(
     if data.len() > MAX_ASSET_BYTES {
         return Err(ApiError::validation("file", "must not exceed 2 MiB"));
     }
+    check_image(content_type, data)?;
     Ok(repo::insert_asset(
         &state.pool,
         tenant_id,
@@ -350,7 +393,11 @@ pub async fn render_pdf(state: &AppState, tenant_id: Uuid, id: Uuid) -> Result<V
             logo = data;
         }
     }
-    labelkit::render_pdf(&model, &logo).map_err(ApiError::internal)
+    // Layout and image decoding are CPU-bound; keep them off the async runtime.
+    tokio::task::spawn_blocking(move || labelkit::render_pdf(&model, &logo))
+        .await
+        .map_err(ApiError::internal)?
+        .map_err(ApiError::internal)
 }
 
 async fn resolve_brand(

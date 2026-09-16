@@ -75,6 +75,8 @@ pub(crate) fn validation_to_api_error(errs: validator::ValidationErrors) -> ApiE
             .first()
             .map(|e| e.code.to_string())
             .unwrap_or_else(|| "invalid".to_string());
+        // Raw identifiers (`r#type`) must be reported by their JSON name.
+        let field = field.strip_prefix("r#").unwrap_or(field);
         return ApiError::validation(field, &reason);
     }
     ApiError::validation("body", "validation failed")
@@ -90,5 +92,24 @@ mod tests {
             serde_json::from_str::<std::collections::HashMap<String, i32>>("[]").unwrap_err();
         // Just ensure decode_error never panics on arbitrary serde errors.
         let _ = decode_error(&err);
+    }
+
+    #[derive(validator::Validate)]
+    struct RawIdent {
+        #[validate(length(min = 1))]
+        r#type: String,
+    }
+
+    #[test]
+    fn raw_identifier_fields_use_their_json_name() {
+        use validator::Validate;
+        let err = RawIdent {
+            r#type: String::new(),
+        }
+        .validate()
+        .unwrap_err();
+        let rendered = format!("{:?}", validation_to_api_error(err));
+        assert!(rendered.contains("\"type\""), "{rendered}");
+        assert!(!rendered.contains("r#type"), "{rendered}");
     }
 }

@@ -125,41 +125,51 @@ pub struct CalculatedValues {
 
 // ---- Request DTOs ----
 
+/// Rejects NaN and infinities. JSON bodies cannot carry them, but the BeerXML
+/// and Brewfather importers parse numbers from text, and `range` lets NaN pass.
+fn finite(v: f64) -> Result<(), ValidationError> {
+    if v.is_finite() {
+        Ok(())
+    } else {
+        Err(ValidationError::new("not_finite"))
+    }
+}
+
 /// One fermentable in a create/replace request.
-#[derive(Debug, Clone, Deserialize, Validate)]
+#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
 #[serde(deny_unknown_fields)]
 pub struct FermentableInput {
     #[validate(range(min = 1))]
     pub step_order: i32,
     #[validate(length(min = 1, max = 255))]
     pub name: String,
-    #[validate(range(exclusive_min = 0.0))]
+    #[validate(range(exclusive_min = 0.0), custom(function = "finite"))]
     pub amount: f64,
     #[validate(custom(function = "validate_ferm_unit"))]
     pub unit: String,
-    #[validate(range(min = 0.0))]
+    #[validate(range(min = 0.0), custom(function = "finite"))]
     pub color_ebc: Option<f64>,
-    #[validate(range(min = 0.0))]
+    #[validate(range(min = 0.0), custom(function = "finite"))]
     pub potential_ppg: Option<f64>,
     pub r#type: Option<String>,
     pub addition: Option<String>,
 }
 
 /// One hop addition in a create/replace request.
-#[derive(Debug, Clone, Deserialize, Validate)]
+#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
 #[serde(deny_unknown_fields)]
 pub struct HopInput {
     #[validate(range(min = 1))]
     pub step_order: i32,
     #[validate(length(min = 1, max = 255))]
     pub name: String,
-    #[validate(range(exclusive_min = 0.0))]
+    #[validate(range(exclusive_min = 0.0), custom(function = "finite"))]
     pub amount: f64,
     #[validate(custom(function = "validate_hop_unit"))]
     pub unit: String,
-    #[validate(range(exclusive_min = 0.0))]
+    #[validate(range(exclusive_min = 0.0), custom(function = "finite"))]
     pub alpha_acid_pct: f64,
-    #[validate(range(min = 0.0))]
+    #[validate(range(min = 0.0), custom(function = "finite"))]
     pub boil_time_minutes: f64,
     #[validate(custom(function = "validate_hop_form"))]
     pub form: Option<String>,
@@ -168,32 +178,33 @@ pub struct HopInput {
 }
 
 /// One yeast addition in a create/replace request.
-#[derive(Debug, Clone, Deserialize, Validate)]
+#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
 #[serde(deny_unknown_fields)]
 pub struct YeastInput {
     pub yeast_id: Option<Uuid>,
     #[validate(length(min = 1, max = 255))]
     pub name: String,
-    #[validate(range(exclusive_min = 0.0))]
+    #[validate(range(exclusive_min = 0.0), custom(function = "finite"))]
     pub amount: f64,
     #[validate(custom(function = "validate_yeast_unit"))]
     pub unit: String,
-    #[validate(range(min = 0.0, max = 100.0))]
+    #[validate(range(min = 0.0, max = 100.0), custom(function = "finite"))]
     pub attenuation_pct: Option<f64>,
 }
 
 /// One mash step in a create/replace request.
-#[derive(Debug, Clone, Deserialize, Validate)]
+#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
 #[serde(deny_unknown_fields)]
 pub struct MashStepInput {
     #[validate(range(min = 1))]
     pub step_order: i32,
     #[validate(custom(function = "validate_mash_step_type"))]
     pub step_type: String,
+    #[validate(custom(function = "finite"))]
     pub target_temp_c: f64,
     #[validate(range(min = 1))]
     pub hold_minutes: i32,
-    #[validate(range(exclusive_min = 0.0))]
+    #[validate(range(exclusive_min = 0.0), custom(function = "finite"))]
     pub infusion_volume_liters: Option<f64>,
 }
 
@@ -208,13 +219,13 @@ pub struct CreateRequest {
     pub style_id: Option<Uuid>,
     pub equipment_profile_id: Option<Uuid>,
     pub mash_profile_id: Option<Uuid>,
-    #[validate(range(exclusive_min = 0.0))]
+    #[validate(range(exclusive_min = 0.0), custom(function = "finite"))]
     pub batch_size_liters: f64,
-    #[validate(range(exclusive_min = 0.0))]
+    #[validate(range(exclusive_min = 0.0), custom(function = "finite"))]
     pub boil_size_liters: Option<f64>,
     #[validate(range(min = 0))]
     pub boil_time_minutes: Option<i32>,
-    #[validate(range(min = 0.0, max = 100.0))]
+    #[validate(range(min = 0.0, max = 100.0), custom(function = "finite"))]
     pub efficiency_pct: Option<f64>,
     #[validate(length(max = 1000))]
     pub tasting_aroma: Option<String>,
@@ -226,16 +237,16 @@ pub struct CreateRequest {
     pub tasting_finish: Option<String>,
     #[validate(length(max = 5000))]
     pub notes: Option<String>,
-    #[validate(nested)]
+    #[validate(length(max = 100), nested)]
     #[serde(default)]
     pub fermentables: Option<Vec<FermentableInput>>,
-    #[validate(nested)]
+    #[validate(length(max = 100), nested)]
     #[serde(default)]
     pub hops: Option<Vec<HopInput>>,
-    #[validate(nested)]
+    #[validate(length(max = 100), nested)]
     #[serde(default)]
     pub yeasts: Option<Vec<YeastInput>>,
-    #[validate(nested)]
+    #[validate(length(max = 100), nested)]
     #[serde(default)]
     pub mash_steps: Option<Vec<MashStepInput>>,
 }
@@ -245,27 +256,38 @@ pub struct CreateRequest {
 #[derive(Debug, Clone, Default, Deserialize, Validate)]
 #[serde(deny_unknown_fields)]
 pub struct PatchRequest {
+    #[validate(length(min = 1, max = 255))]
     pub name: Option<String>,
+    #[validate(custom(function = "validate_recipe_type"))]
     pub r#type: Option<String>,
     pub style_id: Option<Uuid>,
     pub equipment_profile_id: Option<Uuid>,
     pub mash_profile_id: Option<Uuid>,
+    #[validate(range(exclusive_min = 0.0), custom(function = "finite"))]
     pub batch_size_liters: Option<f64>,
+    #[validate(range(exclusive_min = 0.0), custom(function = "finite"))]
     pub boil_size_liters: Option<f64>,
+    #[validate(range(min = 0))]
     pub boil_time_minutes: Option<i32>,
+    #[validate(range(min = 0.0, max = 100.0), custom(function = "finite"))]
     pub efficiency_pct: Option<f64>,
+    #[validate(length(max = 1000))]
     pub tasting_aroma: Option<String>,
+    #[validate(length(max = 1000))]
     pub tasting_flavour: Option<String>,
+    #[validate(length(max = 1000))]
     pub tasting_mouthfeel: Option<String>,
+    #[validate(length(max = 1000))]
     pub tasting_finish: Option<String>,
+    #[validate(length(max = 5000))]
     pub notes: Option<String>,
-    #[validate(nested)]
+    #[validate(length(max = 100), nested)]
     pub fermentables: Option<Vec<FermentableInput>>,
-    #[validate(nested)]
+    #[validate(length(max = 100), nested)]
     pub hops: Option<Vec<HopInput>>,
-    #[validate(nested)]
+    #[validate(length(max = 100), nested)]
     pub yeasts: Option<Vec<YeastInput>>,
-    #[validate(nested)]
+    #[validate(length(max = 100), nested)]
     pub mash_steps: Option<Vec<MashStepInput>>,
 }
 

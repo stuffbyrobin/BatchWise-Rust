@@ -125,6 +125,7 @@ pub struct CreateRequest {
     #[validate(range(min = 0.0, max = 100.0))]
     pub attenuation_pct: Option<f64>,
     #[serde(default)]
+    #[validate(length(max = 50))]
     pub allergens: Vec<String>,
     #[validate(length(max = 1000))]
     pub notes: Option<String>,
@@ -134,20 +135,34 @@ pub struct CreateRequest {
 #[derive(Debug, Default, Deserialize, Validate)]
 #[serde(deny_unknown_fields)]
 pub struct PatchRequest {
+    #[validate(custom(function = "validate_type"))]
     pub r#type: Option<String>,
+    #[validate(length(min = 1, max = 255))]
     pub name: Option<String>,
+    #[validate(range(min = 0.0))]
     pub amount: Option<f64>,
+    #[validate(custom(function = "validate_unit"))]
     pub unit: Option<String>,
+    #[validate(custom(function = "validate_lot_number"))]
     pub lot_number: Option<String>,
     pub best_before_date: Option<String>,
+    #[validate(range(min = 0))]
     pub cost_pence: Option<i64>,
+    #[validate(custom(function = "validate_currency_opt"))]
     pub cost_currency: Option<String>,
+    #[validate(length(max = 255))]
     pub supplier: Option<String>,
+    #[validate(length(max = 100))]
     pub origin: Option<String>,
+    #[validate(range(min = 0.0))]
     pub color_ebc: Option<f64>,
+    #[validate(range(min = 0.0, max = 100.0))]
     pub alpha_acid_pct: Option<f64>,
+    #[validate(range(min = 0.0, max = 100.0))]
     pub attenuation_pct: Option<f64>,
+    #[validate(length(max = 50))]
     pub allergens: Option<Vec<String>>,
+    #[validate(length(max = 1000))]
     pub notes: Option<String>,
 }
 

@@ -63,6 +63,7 @@ pub struct StyleRequest {
 #[derive(Debug, Deserialize, Validate)]
 #[serde(deny_unknown_fields)]
 pub struct PatchStyleRequest {
+    #[validate(length(min = 1, max = 255))]
     pub name: Option<String>,
     pub category: Option<String>,
     pub og_min: Option<f64>,
@@ -167,6 +168,7 @@ pub struct EquipmentRequest {
 #[derive(Debug, Deserialize, Validate)]
 #[serde(deny_unknown_fields)]
 pub struct PatchEquipmentRequest {
+    #[validate(length(min = 1, max = 255))]
     pub name: Option<String>,
     pub batch_size_liters: Option<f64>,
     pub batch_volume_target_liters: Option<f64>,
@@ -261,7 +263,7 @@ impl MashProfileRow {
 }
 
 /// Payload for a single mash step.
-#[derive(Debug, Clone, Deserialize, Validate)]
+#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
 #[serde(deny_unknown_fields)]
 pub struct MashStepRequest {
     #[validate(range(min = 1))]
@@ -290,7 +292,7 @@ pub struct MashProfileRequest {
     pub name: String,
     pub notes: Option<String>,
     #[serde(default)]
-    #[validate(nested)]
+    #[validate(length(max = 50), nested)]
     pub mash_steps: Vec<MashStepRequest>,
 }
 
@@ -298,10 +300,11 @@ pub struct MashProfileRequest {
 #[derive(Debug, Deserialize, Validate)]
 #[serde(deny_unknown_fields)]
 pub struct PatchMashProfileRequest {
+    #[validate(length(min = 1, max = 255))]
     pub name: Option<String>,
     pub notes: Option<String>,
     #[serde(default)]
-    #[validate(nested)]
+    #[validate(length(max = 50), nested)]
     pub mash_steps: Option<Vec<MashStepRequest>>,
 }
 
@@ -364,6 +367,7 @@ pub struct YeastRequest {
 #[derive(Debug, Deserialize, Validate)]
 #[serde(deny_unknown_fields)]
 pub struct PatchYeastRequest {
+    #[validate(length(min = 1, max = 255))]
     pub name: Option<String>,
     pub manufacturer: Option<String>,
     pub product_code: Option<String>,
@@ -444,6 +448,7 @@ pub struct FermentableRequest {
 #[derive(Debug, Deserialize, Validate)]
 #[serde(deny_unknown_fields)]
 pub struct PatchFermentableRequest {
+    #[validate(length(min = 1, max = 255))]
     pub name: Option<String>,
     pub supplier: Option<String>,
     #[serde(rename = "type")]

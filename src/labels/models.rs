@@ -62,6 +62,7 @@ pub struct PatchRequest {
     pub product_name: Option<String>,
     #[validate(range(min = 0.0))]
     pub abv_percent: Option<f64>,
+    #[validate(length(max = 50))]
     pub allergens: Option<Vec<String>>,
     #[validate(range(min = 1))]
     pub net_volume_ml: Option<i32>,
