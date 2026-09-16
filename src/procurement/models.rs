@@ -102,14 +102,19 @@ pub struct CreateSupplierRequest {
 pub struct PatchSupplierRequest {
     #[validate(length(min = 1, max = 200))]
     pub name: Option<String>,
+    #[validate(length(max = 200))]
     #[serde(default, deserialize_with = "double_option")]
     pub contact_name: Option<Option<String>>,
+    #[validate(email, length(max = 320))]
     #[serde(default, deserialize_with = "double_option")]
     pub email: Option<Option<String>>,
+    #[validate(length(max = 50))]
     #[serde(default, deserialize_with = "double_option")]
     pub phone: Option<Option<String>>,
+    #[validate(length(max = 500))]
     #[serde(default, deserialize_with = "double_option")]
     pub website: Option<Option<String>>,
+    #[validate(length(max = 2000))]
     #[serde(default, deserialize_with = "double_option")]
     pub notes: Option<Option<String>>,
 }
@@ -130,6 +135,7 @@ pub struct PatchPORequest {
     pub status: Option<String>,
     #[serde(default, deserialize_with = "double_option")]
     pub expected_delivery: Option<Option<String>>,
+    #[validate(length(max = 2000))]
     #[serde(default, deserialize_with = "double_option")]
     pub notes: Option<Option<String>>,
 }
@@ -172,7 +178,7 @@ pub struct PatchLineRequest {
 #[derive(Debug, Deserialize, Validate)]
 #[serde(deny_unknown_fields)]
 pub struct ReceiveRequest {
-    #[validate(length(min = 1), nested)]
+    #[validate(length(min = 1, max = 500), nested)]
     pub lines: Vec<ReceiveLine>,
 }
 

@@ -4,6 +4,7 @@
 //! Port of the Go `internal/recipe/service.go`.
 
 use uuid::Uuid;
+use validator::Validate;
 
 use super::calc;
 use super::import_beerxml::parse_beerxml;
@@ -17,6 +18,7 @@ use crate::platform::errors::is_unique_violation;
 use crate::platform::errors::ApiError;
 use crate::platform::refs::{ensure_opt_ref, Ref};
 use crate::platform::sort;
+use crate::platform::web::validation_to_api_error;
 use crate::state::AppState;
 
 fn write_from_create(req: &CreateRequest) -> RecipeWrite {
@@ -473,6 +475,8 @@ pub async fn import(
         }
     }
     .map_err(|e| ApiError::validation("data", &e))?;
+    // Imported recipes get exactly the checks a typed-in recipe gets.
+    req.validate().map_err(validation_to_api_error)?;
 
     let name = req.name.clone();
     match create(state, tenant_id, req).await {

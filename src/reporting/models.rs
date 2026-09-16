@@ -103,10 +103,14 @@ pub struct CreateRateRequest {
 #[derive(Debug, Clone, Default, Deserialize, Validate)]
 #[serde(deny_unknown_fields)]
 pub struct PatchRateRequest {
+    #[validate(length(min = 1))]
     pub rate_name: Option<String>,
+    #[validate(length(min = 1))]
     pub unit: Option<String>,
+    #[validate(custom(function = "validate_rate_value"))]
     pub rate_value: Option<f64>,
     pub currency: Option<String>,
+    #[validate(length(min = 1))]
     pub effective_from: Option<String>,
     pub effective_to: Option<String>,
     pub notes: Option<String>,
@@ -127,9 +131,13 @@ pub struct RateFilter {
 #[serde(deny_unknown_fields)]
 pub struct ComputeBatchCostRequest {
     pub batch_id: Uuid,
+    #[validate(range(min = 0.0, max = 1_000_000.0))]
     pub energy_kwh: Option<f64>,
+    #[validate(range(min = 0.0, max = 100_000.0))]
     pub labor_hours: Option<f64>,
+    #[validate(range(min = 0.0, max = 10_000_000.0))]
     pub water_liters: Option<f64>,
+    #[validate(range(min = 0_i64, max = 100_000_000_000_i64))]
     pub overhead_pence: Option<i64>,
 }
 

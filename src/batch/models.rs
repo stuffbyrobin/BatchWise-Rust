@@ -117,10 +117,13 @@ pub struct TransitionRequest {
 #[derive(Debug, Deserialize, Validate)]
 #[serde(deny_unknown_fields)]
 pub struct PatchIngredientsRequest {
+    #[validate(length(max = 100))]
     #[serde(default)]
     pub fermentables: Vec<Fermentable>,
+    #[validate(length(max = 100))]
     #[serde(default)]
     pub hops: Vec<Hop>,
+    #[validate(length(max = 100))]
     #[serde(default)]
     pub yeasts: Vec<Yeast>,
 }

@@ -198,9 +198,16 @@ pub async fn delete_rate(state: &AppState, tenant_id: Uuid, id: Uuid) -> Result<
 
 // ---- batch costs ----
 
-/// Rounds half away from zero, matching Go's `math.Round`.
-fn round_half_away(x: f64) -> i64 {
-    x.round() as i64
+/// Rounds half away from zero, matching Go's `math.Round`. `None` when the value
+/// is NaN, infinite, or does not fit in an `i64` (a plain `as` cast would silently
+/// saturate, or turn NaN into 0).
+fn round_half_away(x: f64) -> Option<i64> {
+    let r = x.round();
+    (r.is_finite() && r >= i64::MIN as f64 && r <= i64::MAX as f64).then_some(r as i64)
+}
+
+fn cost_out_of_range() -> ApiError {
+    ApiError::validation("body", "computed cost is out of range")
 }
 
 /// Computes (and upserts) the cost breakdown for a batch.
@@ -223,7 +230,8 @@ pub async fn compute_batch_cost(
             if let Some(rate) =
                 repo::select_current_rate_for_type(&state.pool, tenant_id, "energy").await?
             {
-                energy_cost = round_half_away(kwh * rate.rate_value);
+                energy_cost =
+                    round_half_away(kwh * rate.rate_value).ok_or_else(cost_out_of_range)?;
             }
         }
     }
@@ -234,7 +242,8 @@ pub async fn compute_batch_cost(
             if let Some(rate) =
                 repo::select_current_rate_for_type(&state.pool, tenant_id, "labor").await?
             {
-                labor_cost = round_half_away(hours * rate.rate_value);
+                labor_cost =
+                    round_half_away(hours * rate.rate_value).ok_or_else(cost_out_of_range)?;
             }
         }
     }
@@ -245,7 +254,8 @@ pub async fn compute_batch_cost(
             if let Some(rate) =
                 repo::select_current_rate_for_type(&state.pool, tenant_id, "water").await?
             {
-                water_cost = round_half_away(liters * rate.rate_value);
+                water_cost =
+                    round_half_away(liters * rate.rate_value).ok_or_else(cost_out_of_range)?;
             }
         }
     }
@@ -275,10 +285,21 @@ pub async fn compute_batch_cost(
 
     // total_cost_pence is DB-generated; we compute it here only to derive
     // cost_per_liter_pence prior to the upsert.
-    let total_cost =
-        ingredient_cost + energy_cost + labor_cost + water_cost + overhead_cost + estimated_duty;
+    let total_cost = [
+        ingredient_cost,
+        energy_cost,
+        labor_cost,
+        water_cost,
+        overhead_cost,
+        estimated_duty,
+    ]
+    .into_iter()
+    .try_fold(0i64, i64::checked_add)
+    .ok_or_else(cost_out_of_range)?;
     let cost_per_liter_pence = match b.actual_volume_liters {
-        Some(vol) if vol > 0.0 => Some(round_half_away(total_cost as f64 / vol)),
+        Some(vol) if vol > 0.0 => {
+            Some(round_half_away(total_cost as f64 / vol).ok_or_else(cost_out_of_range)?)
+        }
         _ => None,
     };
 

@@ -54,11 +54,17 @@ pub struct CreateRequest {
 #[serde(deny_unknown_fields)]
 pub struct PatchRequest {
     pub yeast_id: Option<Uuid>,
+    #[validate(range(min = 0.0, max = 40.0))]
     pub fermentation_temp_c: Option<f64>,
+    #[validate(range(min = 1, max = 60))]
     pub primary_fermentation_days: Option<i32>,
+    #[validate(range(min = 0, max = 365))]
     pub conditioning_days: Option<i32>,
+    #[validate(range(min = 0, max = 168))]
     pub lag_phase_hours: Option<i32>,
+    #[validate(range(min = 0.0, max = 100.0))]
     pub attenuation_pct: Option<f64>,
+    #[validate(length(max = 500))]
     pub notes: Option<String>,
 }
 

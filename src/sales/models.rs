@@ -9,7 +9,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use uuid::Uuid;
-use validator::{Validate, ValidationError};
+use validator::Validate;
 
 // ---- domain models ----
 
@@ -137,6 +137,7 @@ pub struct CreateCustomerRequest {
 #[derive(Debug, Default, Deserialize, Validate)]
 #[serde(deny_unknown_fields)]
 pub struct PatchCustomerRequest {
+    #[validate(length(min = 1, max = 255))]
     pub name: Option<String>,
     pub contact_name: Option<String>,
     pub email: Option<String>,
@@ -145,6 +146,7 @@ pub struct PatchCustomerRequest {
     pub address_line2: Option<String>,
     pub city: Option<String>,
     pub postcode: Option<String>,
+    #[validate(length(min = 2, max = 2))]
     pub country: Option<String>,
     pub notes: Option<String>,
 }
@@ -174,6 +176,7 @@ pub struct CreateItemRequest {
     pub volume_liters: f64,
     #[validate(range(min = 0))]
     pub unit_price_pence: i64,
+    #[validate(range(min = 1))]
     pub quantity: Option<i32>,
     pub notes: Option<String>,
 }
@@ -192,13 +195,3 @@ pub struct CancelOrderRequest {
 }
 
 // ---- validators (unused for now; reserved for enum-style fields) ----
-
-#[allow(dead_code)]
-fn validate_event_type(v: &str) -> Result<(), ValidationError> {
-    const EVENT_TYPES: [&str; 4] = ["sale", "sample", "waste", "export"];
-    if EVENT_TYPES.contains(&v) {
-        Ok(())
-    } else {
-        Err(ValidationError::new("invalid_event_type"))
-    }
-}
