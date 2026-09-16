@@ -26,6 +26,8 @@ async function waitForUrl(url: string, maxMs = 30_000): Promise<void> {
 }
 
 export default async function globalSetup() {
+  // E2E_DATABASE_URL (CI's Postgres service, or a local database) skips
+  // starting a throwaway Postgres container with podman.
   let dbURL = process.env.E2E_DATABASE_URL
   let startedPg = false
 
@@ -33,7 +35,9 @@ export default async function globalSetup() {
     // Clean up any leftover container
     try {
       execSync(`podman rm -f ${PG_CONTAINER_NAME}`, { stdio: 'ignore' })
-    } catch {}
+    } catch {
+      // Best-effort: nothing to clean up, or already gone.
+    }
 
     execSync(
       `podman run -d --name ${PG_CONTAINER_NAME}` +
@@ -49,10 +53,12 @@ export default async function globalSetup() {
     await new Promise((r) => setTimeout(r, 3_000))
   }
 
-  // Build the backend binary if not already present (CI pre-builds it)
-  const binaryPath = path.join(REPO_ROOT, 'bin', 'batchwise')
+  // The Rust backend. CI builds it first and may point E2E_BACKEND_BIN at the
+  // binary; locally a missing debug binary is built on demand.
+  const binaryPath =
+    process.env.E2E_BACKEND_BIN ?? path.join(REPO_ROOT, 'target', 'debug', 'batchwise')
   if (!existsSync(binaryPath)) {
-    execSync('make build', { cwd: REPO_ROOT, stdio: 'inherit' })
+    execSync('cargo build --bin batchwise', { cwd: REPO_ROOT, stdio: 'inherit' })
   }
 
   const backendEnv: NodeJS.ProcessEnv = {
@@ -66,7 +72,7 @@ export default async function globalSetup() {
     LOG_LEVEL: 'error',
   }
 
-  const backend = spawn(path.join(REPO_ROOT, 'bin', 'batchwise'), [], {
+  const backend = spawn(binaryPath, [], {
     env: backendEnv,
     cwd: REPO_ROOT,
     stdio: ['ignore', 'pipe', 'pipe'],

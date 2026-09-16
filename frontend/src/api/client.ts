@@ -126,12 +126,7 @@ export const apiClient = {
     if (res.ok) {
       return (res.status === 204 ? undefined : await res.json()) as T
     }
-    let errBody: unknown = null
-    try {
-      errBody = await res.json()
-    } catch {
-      errBody = null
-    }
+    const errBody: unknown = await res.json().catch(() => null)
     throw parseAPIError(res.status, errBody)
   },
 
@@ -141,12 +136,7 @@ export const apiClient = {
     if (res.ok) {
       return res.blob()
     }
-    let errBody: unknown = null
-    try {
-      errBody = await res.json()
-    } catch {
-      errBody = null
-    }
+    const errBody: unknown = await res.json().catch(() => null)
     throw parseAPIError(res.status, errBody)
   },
 }

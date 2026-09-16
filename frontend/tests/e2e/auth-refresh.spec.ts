@@ -10,6 +10,8 @@ test('silent token refresh on 401', async ({ page }) => {
   await page.goto('/register')
   await page.getByLabel('Email').fill(EMAIL)
   await page.getByLabel('Password').fill(PASSWORD)
+  // display_name is required by the API (length >= 1).
+  await page.getByLabel('Your Name').fill('E2E Brewer')
   await page.getByLabel('Brewery Name').fill(TENANT)
   await page.getByRole('button', { name: 'Create account' }).click()
   await expect(page).toHaveURL('/app', { timeout: 15_000 })

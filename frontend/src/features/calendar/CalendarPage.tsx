@@ -53,7 +53,7 @@ export function CalendarPage() {
   const { mutate: deleteEvent, isPending: isDeleting } = useDeleteCalendarEvent(selectedEvent?.id ?? '')
   const { mutate: completeEvent, isPending: isCompleting } = useCompleteCalendarEvent(selectedEvent?.id ?? '')
 
-  const events = data?.items ?? []
+  const events = React.useMemo(() => data?.items ?? [], [data])
 
   const eventsByDate = React.useMemo(() => {
     const map: Record<string, CalendarEvent[]> = {}

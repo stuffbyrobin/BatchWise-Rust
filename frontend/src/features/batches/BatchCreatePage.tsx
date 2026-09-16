@@ -17,11 +17,12 @@ export function BatchCreatePage() {
   const [fermenterId, setFermenterId] = React.useState('')
   const [batchNumber, setBatchNumber] = React.useState('')
 
+  const nextBatchNumber = tenant?.next_batch_number
   React.useEffect(() => {
-    if (tenant?.next_batch_number != null && batchNumber === '') {
-      setBatchNumber(String(tenant.next_batch_number))
+    if (nextBatchNumber != null) {
+      setBatchNumber((current) => (current === '' ? String(nextBatchNumber) : current))
     }
-  }, [tenant?.next_batch_number])
+  }, [nextBatchNumber])
   const [name, setName] = React.useState('')
   const [brewDate, setBrewDate] = React.useState('')
   const [notes, setNotes] = React.useState('')

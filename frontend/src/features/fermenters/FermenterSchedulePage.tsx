@@ -66,7 +66,7 @@ export default function FermenterSchedulePage() {
 
     // Default to a today→+90d window when there's nothing scheduled.
     const today = new Date()
-    let rStart = min ? startOfMonth(min) : startOfMonth(today)
+    const rStart = min ? startOfMonth(min) : startOfMonth(today)
     let rEnd = max ? addDays(max, 7) : addDays(today, 90)
     if (rEnd <= rStart) rEnd = addDays(rStart, 30)
     // Round end up to the start of the following month for clean gridlines.

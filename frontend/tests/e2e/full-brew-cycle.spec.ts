@@ -33,6 +33,8 @@ test('full brew cycle', async ({ page }) => {
   await page.goto('/register')
   await page.getByLabel('Email').fill(EMAIL)
   await page.getByLabel('Password').fill(PASSWORD)
+  // display_name is required by the API (length >= 1).
+  await page.getByLabel('Your Name').fill('E2E Brewer')
   await page.getByLabel('Brewery Name').fill(TENANT)
   await page.getByRole('button', { name: 'Create account' }).click()
   await expect(page).toHaveURL('/app', { timeout: 15_000 })
@@ -106,7 +108,8 @@ test('full brew cycle', async ({ page }) => {
 
   // ── 5. Create batch with brew_date = today + 3 ────────────────────────────
   await page.goto('/batches/new')
-  await page.getByRole('combobox').selectOption({ label: `Citra Pale ${RUN_ID}` })
+  // The form has two selects (recipe and fermenter), so pick by label.
+  await page.getByLabel(/^Recipe/i).selectOption({ label: `Citra Pale ${RUN_ID}` })
   await page.getByLabel(/Batch Number/i).fill(`B${RUN_ID}`)
   await page.getByLabel(/Name/i).fill(`E2E Batch ${RUN_ID}`)
   await page.getByLabel(/Brew Date/i).fill(brewDate())
@@ -122,7 +125,7 @@ test('full brew cycle', async ({ page }) => {
   await expect(page.getByRole('heading', { name: /calendar/i })).toBeVisible({ timeout: 10_000 })
 
   // Verify events via API (UI calendar date assertions are fragile across views)
-  const eventsRes = await page.request.get(`${API}/calendar/events?batch_id=${batchId}&page_size=20`, { headers })
+  const eventsRes = await page.request.get(`${API}/calendar-events?batch_id=${batchId}&page_size=20`, { headers })
   expect(eventsRes.ok()).toBeTruthy()
   const eventsBody = await eventsRes.json()
   expect(eventsBody.items).toHaveLength(4)

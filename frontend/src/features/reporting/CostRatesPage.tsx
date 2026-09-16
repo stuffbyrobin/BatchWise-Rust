@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
 import { APIError } from '../../api/error';
 import { useCostRatesList, useCreateCostRate, usePatchCostRate, useDeleteCostRate, RATE_TYPES } from './hooks/useCostRates';
+import type { components } from '../../api/generated';
+
+type CostRate = components['schemas']['CostRate'];
 
 const formatPence = (p: number | null | undefined): string => p == null ? '-' : '£' + (p / 100).toFixed(2);
 
-const CostRateRow: React.FC<{ item: any; onEditStart: (id: string) => void; onEditCancel: () => void; editingId: string | null }> = ({ item, onEditStart, onEditCancel, editingId }) => {
+const CostRateRow: React.FC<{ item: CostRate; onEditStart: (id: string) => void; onEditCancel: () => void; editingId: string | null }> = ({ item, onEditStart, onEditCancel, editingId }) => {
   const [editForm, setEditForm] = useState({
     rate_type: '',
     rate_name: '',
@@ -32,11 +35,11 @@ const CostRateRow: React.FC<{ item: any; onEditStart: (id: string) => void; onEd
       effective_to: item.effective_to || '',
       notes: item.notes || '',
     });
-    onEditStart(item.id);
+    if (item.id) onEditStart(item.id);
   };
 
   const handleSave = () => {
-    const payload: Record<string, any> = {};
+    const payload: Record<string, string | number> = {};
     Object.entries(editForm).forEach(([key, value]) => {
       if (value !== '') {
         payload[key] = key === 'rate_value' ? Number(value) : value;
@@ -260,7 +263,7 @@ export const CostRatesPage: React.FC = () => {
               </tr>
             </thead>
             <tbody>
-              {(data.items ?? []).map((item: any) => (
+              {(data.items ?? []).map((item) => (
                 <CostRateRow
                   key={item.id}
                   item={item}

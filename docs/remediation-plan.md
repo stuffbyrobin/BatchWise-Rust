@@ -166,10 +166,10 @@ One PR touching `src/api/client.ts`, `src/auth/*`, `LoginPage`, `RegisterPage`.
 
 Do **before** the large refactors so they run under lint.
 
-- [ ] `pnpm update react-router-dom` to ≥ 6.30.6; `pnpm audit --prod` clean.
-- [ ] Add ESLint (`typescript-eslint`, `eslint-plugin-react-hooks`) with `react-hooks/exhaustive-deps` as error; fix or justify every existing violation.
-- [ ] `frontend.yml`: add `pnpm audit --prod --audit-level=moderate`, `pnpm lint`, `pnpm types && git diff --exit-code src/api/generated.ts`, and the Playwright e2e job against the backend.
-- [ ] Remove unused deps: `@radix-ui/react-{dialog,popover,select,tabs}`, `@axe-core/react`, `axe-core`, `autoprefixer`, `postcss`. Delete `PhysicsDemo.tsx` and `Spinner.tsx` (or wire Spinner into Suspense in Phase 13).
+- [x] `pnpm update react-router-dom` to ≥ 6.30.6; `pnpm audit --prod` clean. 6.30.6 still left two moderate advisories fixed only in 7.18, so this went straight to react-router-dom 7.18.4 (the app's router usage is v7-compatible); `pnpm audit --prod` reports no known vulnerabilities.
+- [x] Add ESLint (`typescript-eslint`, `eslint-plugin-react-hooks`) with `react-hooks/exhaustive-deps` as error; fix or justify every existing violation. 35 findings fixed, none suppressed: hooks called inside callbacks (YeastKineticsPage), two dependency bugs (BatchCreatePage, CalendarPage), `any` removed from the reporting pages. Typing those pages exposed that Batch Costs read nine non-existent fields, so every cost column showed "-" (fixed), and that the reporting routes were served under a `/reporting` prefix the contract and frontend don't use (fixed separately in #55, with a test that routes every OpenAPI operation).
+- [x] `frontend.yml`: add `pnpm audit --prod --audit-level=moderate`, `pnpm lint`, `pnpm types && git diff --exit-code src/api/generated.ts`, and the Playwright e2e job against the backend. The types check already caught drift (`cost_pence` on deduct allocations). The e2e harness still targeted the Go backend (`make build`, `bin/batchwise`); it now builds/uses the Rust binary, and both specs pass locally after updating stale steps (required display name, two selects on the batch form, `/calendar-events`). CI pnpm is 11 to match the lockfile writer.
+- [x] Remove unused deps: `@radix-ui/react-{dialog,popover,select,tabs}`, `@axe-core/react`, `axe-core`, `autoprefixer`, `postcss`. Delete `PhysicsDemo.tsx` and `Spinner.tsx` (or wire Spinner into Suspense in Phase 13). `PhysicsDemo.tsx` deleted; `Spinner.tsx` kept for the Phase 13 Suspense fallback.
 
 ---
 
@@ -205,7 +205,7 @@ these).
 - [ ] Route-level code splitting: `React.lazy` for every protected page, `<Suspense fallback={<Spinner/>}>`; verify the landing-page chunk shrinks.
 - [ ] Replace `window.confirm`/`alert` with the existing toast/dialog primitives (or drop `ToastProvider`); memoize the toast context value.
 - [ ] `LabelDesignEditorPage`: revoke the previous blob URL before replacing it; add `noopener` unless the handle is needed.
-- [ ] Plan the react-router v7 and zustand v5 upgrades.
+- [ ] Plan the react-router v7 and zustand v5 upgrades. (react-router v7 is done, in Phase 10; zustand v5 remains.)
 
 ---
 
