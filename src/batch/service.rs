@@ -20,6 +20,7 @@ use crate::inventory::models::DeductRequest;
 use crate::inventory::service as inventory_svc;
 use crate::platform::errors::is_unique_violation;
 use crate::platform::errors::ApiError;
+use crate::platform::refs::{ensure_opt_ref, Ref};
 use crate::platform::sort;
 use crate::recipe::service as recipe_svc;
 use crate::state::AppState;
@@ -72,6 +73,15 @@ pub async fn create(
         }
         Err(e) => return Err(e),
     };
+
+    ensure_opt_ref(
+        &state.pool,
+        tenant_id,
+        Ref::Fermenter,
+        req.fermenter_id,
+        "fermenter_id",
+    )
+    .await?;
 
     let snapshot = BatchRecipeSnapshot {
         schema_version: 1,
@@ -264,6 +274,15 @@ pub async fn update(
             Default::default(),
         ));
     }
+
+    ensure_opt_ref(
+        &state.pool,
+        tenant_id,
+        Ref::Fermenter,
+        req.fermenter_id,
+        "fermenter_id",
+    )
+    .await?;
 
     let brew_date = match &req.brew_date {
         Some(_) => parse_date(&req.brew_date)?,

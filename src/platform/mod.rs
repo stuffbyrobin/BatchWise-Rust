@@ -9,6 +9,7 @@
 //! - [`logger`] — `tracing` subscriber setup.
 //! - [`pagination`] — page/page-size clamping, saturating offsets, and the
 //!   shared [`pagination::Page`] envelope.
+//! - [`refs`] — tenant checks for ids supplied in request bodies.
 //! - [`sort`] — allow-listed `?sort=` parsing into `ORDER BY` fragments.
 //! - [`sql`] — small SQL helpers (LIKE pattern escaping).
 //! - [`web`] — JSON request/response helpers.
@@ -20,6 +21,7 @@ pub mod errors;
 pub mod logger;
 pub mod middleware;
 pub mod pagination;
+pub mod refs;
 pub mod seed;
 pub mod sort;
 pub mod sql;

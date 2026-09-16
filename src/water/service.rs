@@ -17,6 +17,7 @@ use super::models::{
 use super::repository as repo;
 use crate::pkg::water as pw;
 use crate::platform::errors::ApiError;
+use crate::platform::refs::{ensure_opt_ref, Ref};
 use crate::state::AppState;
 
 // ---- Water profiles ----
@@ -335,6 +336,37 @@ fn map_grains(additions: &[GrainAddition]) -> Vec<pw::GrainAddition> {
 
 // ---- Water adjustments ----
 
+/// Rejects profile, batch and recipe ids on an adjustment that the tenant cannot see.
+async fn check_adjustment_refs(
+    state: &AppState,
+    tenant_id: Uuid,
+    source_profile_id: Option<Uuid>,
+    target_profile_id: Option<Uuid>,
+    batch_id: Option<Uuid>,
+    recipe_id: Option<Uuid>,
+) -> Result<(), ApiError> {
+    let pool = &state.pool;
+    ensure_opt_ref(
+        pool,
+        tenant_id,
+        Ref::WaterProfile,
+        source_profile_id,
+        "source_profile_id",
+    )
+    .await?;
+    ensure_opt_ref(
+        pool,
+        tenant_id,
+        Ref::WaterProfile,
+        target_profile_id,
+        "target_profile_id",
+    )
+    .await?;
+    ensure_opt_ref(pool, tenant_id, Ref::Batch, batch_id, "batch_id").await?;
+    ensure_opt_ref(pool, tenant_id, Ref::Recipe, recipe_id, "recipe_id").await?;
+    Ok(())
+}
+
 /// Creates a water adjustment, computing and caching its result.
 pub async fn create_water_adjustment(
     state: &AppState,
@@ -349,6 +381,15 @@ pub async fn create_water_adjustment(
         acid_additions: req.acid_additions.clone(),
         grain_additions: req.grain_additions.clone(),
     };
+    check_adjustment_refs(
+        state,
+        tenant_id,
+        req.source_profile_id,
+        req.target_profile_id,
+        req.batch_id,
+        req.recipe_id,
+    )
+    .await?;
     let result = compute_result(state, tenant_id, &calc_req, false).await?;
     repo::insert_water_adjustment(&state.pool, tenant_id, &req, Some(&result)).await
 }
@@ -388,6 +429,15 @@ pub async fn update_water_adjustment(
         acid_additions: req.acid_additions.clone(),
         grain_additions: req.grain_additions.clone(),
     };
+    check_adjustment_refs(
+        state,
+        tenant_id,
+        req.source_profile_id,
+        req.target_profile_id,
+        req.batch_id,
+        req.recipe_id,
+    )
+    .await?;
     let result = compute_result(state, tenant_id, &calc_req, false).await?;
     repo::update_water_adjustment(&state.pool, tenant_id, id, &req, Some(&result))
         .await?
@@ -405,6 +455,16 @@ pub async fn patch_water_adjustment(
     let existing = repo::select_water_adjustment(&state.pool, tenant_id, id)
         .await?
         .ok_or_else(|| ApiError::not_found("water_adjustment"))?;
+
+    check_adjustment_refs(
+        state,
+        tenant_id,
+        req.source_profile_id,
+        req.target_profile_id,
+        req.batch_id,
+        req.recipe_id,
+    )
+    .await?;
 
     // Merge patch fields onto the existing adjustment.
     let name = req.name.unwrap_or(existing.name);

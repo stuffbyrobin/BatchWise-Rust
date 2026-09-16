@@ -200,7 +200,7 @@ pub async fn movements_by_packaging_runs(
         "SELECT dm.id, dm.packaging_run_id, dm.movement_type, dm.quantity, \
             dm.to_location, dm.order_id, COALESCE(o.order_number, ''), dm.moved_at \
          FROM distribution_movements dm \
-         LEFT JOIN orders o ON o.id = dm.order_id \
+         LEFT JOIN orders o ON o.id = dm.order_id AND o.tenant_id = dm.tenant_id \
          WHERE dm.tenant_id = $1 AND dm.packaging_run_id = ANY($2::uuid[]) \
          ORDER BY dm.moved_at DESC",
     )

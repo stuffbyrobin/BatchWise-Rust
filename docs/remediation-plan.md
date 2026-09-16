@@ -96,11 +96,12 @@ limiter.
 Write the test harness **first**; it then guards every change in this phase
 and in Phases 6–7.
 
-- [ ] Integration test `tests/tenant_isolation.rs`: create two tenants, create one resource of each type in tenant A, assert tenant B gets 404 on `GET/PATCH/DELETE /{id}` across all ~20 id routes (parameterised table).
-- [ ] `src/traceability/repository.rs:199`: `LEFT JOIN orders o ON o.id = dm.order_id AND o.tenant_id = dm.tenant_id`.
-- [ ] Add ownership checks (copy the `batch_exists(pool, tenant_id, id)` pattern) for client-supplied foreign keys in: `calendar` (batch_id), `packaging` (batch_id, order_id), `tracking::fill` (batch_id), `yeastbanking` (library_yeast_id, batch_id), `batch::create` (fermenter_id), `recipe` (style_id, equipment_profile_id, mash_profile_id).
-- [ ] Add the redundant `AND tenant_id = $n` to the id-only mutations in `inventory/repository.rs:202`, `procurement/repository.rs:423/440/454`, `recipe/repository.rs:114` and the four child `DELETE`s.
-- [ ] Extend the isolation test to cover the FK cases (tenant B's batch_id in tenant A's calendar event → 404/422).
+- [x] Integration test `tests/tenant_isolation.rs`: create two tenants, create one resource of each type in tenant A, assert tenant B gets 404 on `GET/PATCH/DELETE /{id}` across all ~20 id routes (parameterised table). Covers ~150 probes (GET/PUT/PATCH/DELETE and POST sub-actions on every id route, core and pro tiers); failures are collected so one run lists every leak, and the owner re-checks existence afterwards. All id routes already returned 404.
+- [x] `src/traceability/repository.rs:199`: `LEFT JOIN orders o ON o.id = dm.order_id AND o.tenant_id = dm.tenant_id`.
+- [x] Add ownership checks (copy the `batch_exists(pool, tenant_id, id)` pattern) for client-supplied foreign keys in: `calendar` (batch_id), `packaging` (batch_id, order_id), `tracking::fill` (batch_id), `yeastbanking` (library_yeast_id, batch_id), `batch::create` (fermenter_id), `recipe` (style_id, equipment_profile_id, mash_profile_id). Implemented once as `platform::refs::ensure_ref` (shared library tables also accept system-tenant rows; a foreign id gets the same 400 as a nonexistent one). The test found more than the review listed, all fixed: batch update `fermenter_id`, label design `batch_id`/`recipe_id`, water adjustment `target_profile_id`/`batch_id`/`recipe_id` (create, PUT, PATCH), recipe child yeast `yeast_id`, recipe PUT/PATCH, yeast-bank propagation `batch_id` (no FK at all). `packaging` `order_id` was already checked.
+- [x] Add the redundant `AND tenant_id = $n` to the id-only mutations in `inventory/repository.rs:202`, `procurement/repository.rs:423/440/454` (lines have no tenant column, so they are scoped through their purchase order).
+- [ ] Same for `recipe/repository.rs` `update_calculations` and the four child `DELETE`s. Not done: the child tables have no `tenant_id`, and every caller runs them in the same transaction immediately after a tenant-scoped insert/update of the recipe. Low value; fold into Phase 8's recipe child-row rewrite.
+- [x] Extend the isolation test to cover the FK cases (tenant B's batch_id in tenant A's calendar event → 404/422). `foreign_references_are_rejected`: 43 cases, each sent with the other tenant's id and with a random id; the foreign id must be rejected with the same status as the random one.
 
 ---
 

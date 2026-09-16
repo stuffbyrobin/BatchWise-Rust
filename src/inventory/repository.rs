@@ -185,12 +185,14 @@ pub async fn select_for_deduct<'e, E: PgExecutor<'e>>(
 /// Sets a lot's amount.
 pub async fn update_amount<'e, E: PgExecutor<'e>>(
     exec: E,
+    tenant_id: Uuid,
     id: Uuid,
     new_amount: f64,
 ) -> Result<(), sqlx::Error> {
-    sqlx::query("UPDATE ingredients SET amount=$1, updated_at=now() WHERE id=$2")
+    sqlx::query("UPDATE ingredients SET amount=$1, updated_at=now() WHERE id=$2 AND tenant_id=$3")
         .bind(new_amount)
         .bind(id)
+        .bind(tenant_id)
         .execute(exec)
         .await
         .map(|_| ())

@@ -10,11 +10,12 @@ use super::import_beerxml::parse_beerxml;
 use super::import_brewfather::parse_brewfather;
 use super::models::{
     CreateRequest, Fermentable, Hop, ListFilter, MashStep, Page, PatchRequest, Recipe,
-    RecipeWithIngredients, Yeast,
+    RecipeWithIngredients, Yeast, YeastInput,
 };
 use super::repository::{self as repo, RecipeWrite};
 use crate::platform::errors::is_unique_violation;
 use crate::platform::errors::ApiError;
+use crate::platform::refs::{ensure_opt_ref, Ref};
 use crate::platform::sort;
 use crate::state::AppState;
 
@@ -132,12 +133,63 @@ async fn load(
     })
 }
 
+/// Rejects library references the tenant cannot see: the style, equipment and
+/// mash profiles, and each child yeast's `yeast_id`. Shared system rows pass.
+async fn check_library_refs(
+    state: &AppState,
+    tenant_id: Uuid,
+    style_id: Option<Uuid>,
+    equipment_profile_id: Option<Uuid>,
+    mash_profile_id: Option<Uuid>,
+    yeasts: Option<&[YeastInput]>,
+) -> Result<(), ApiError> {
+    let pool = &state.pool;
+    ensure_opt_ref(pool, tenant_id, Ref::Style, style_id, "style_id").await?;
+    ensure_opt_ref(
+        pool,
+        tenant_id,
+        Ref::EquipmentProfile,
+        equipment_profile_id,
+        "equipment_profile_id",
+    )
+    .await?;
+    ensure_opt_ref(
+        pool,
+        tenant_id,
+        Ref::MashProfile,
+        mash_profile_id,
+        "mash_profile_id",
+    )
+    .await?;
+    for y in yeasts.unwrap_or(&[]) {
+        ensure_opt_ref(
+            pool,
+            tenant_id,
+            Ref::LibraryYeast,
+            y.yeast_id,
+            "yeasts.yeast_id",
+        )
+        .await?;
+    }
+    Ok(())
+}
+
 /// Creates a recipe, its children, and the cached calculations.
 pub async fn create(
     state: &AppState,
     tenant_id: Uuid,
     req: CreateRequest,
 ) -> Result<RecipeWithIngredients, ApiError> {
+    check_library_refs(
+        state,
+        tenant_id,
+        req.style_id,
+        req.equipment_profile_id,
+        req.mash_profile_id,
+        req.yeasts.as_deref(),
+    )
+    .await?;
+
     let mut tx = state.pool.begin().await?;
     let w = write_from_create(&req);
     let rec = match repo::insert(&mut *tx, tenant_id, &w).await {
@@ -220,6 +272,16 @@ pub async fn replace(
         return Err(ApiError::not_found("recipe"));
     }
 
+    check_library_refs(
+        state,
+        tenant_id,
+        req.style_id,
+        req.equipment_profile_id,
+        req.mash_profile_id,
+        req.yeasts.as_deref(),
+    )
+    .await?;
+
     let mut tx = state.pool.begin().await?;
     let w = write_from_create(&req);
     let rec = match repo::update_full(&mut *tx, tenant_id, id, &w).await {
@@ -259,6 +321,15 @@ pub async fn patch(
     req: PatchRequest,
 ) -> Result<RecipeWithIngredients, ApiError> {
     let existing = load(state, tenant_id, id).await?;
+    check_library_refs(
+        state,
+        tenant_id,
+        req.style_id,
+        req.equipment_profile_id,
+        req.mash_profile_id,
+        req.yeasts.as_deref(),
+    )
+    .await?;
 
     let mut tx = state.pool.begin().await?;
 
