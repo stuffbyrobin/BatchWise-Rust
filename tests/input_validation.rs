@@ -332,9 +332,9 @@ async fn patch_rejects_what_create_rejects() {
     ));
 
     let rate = id(&app
-        .create(&t, "/api/v1/reporting/cost-rates", json!({"rate_type": "energy", "rate_name": "Electricity", "unit": "pence_per_kwh", "rate_value": 30.0, "effective_from": "2026-01-01"}))
+        .create(&t, "/api/v1/cost-rates", json!({"rate_type": "energy", "rate_name": "Electricity", "unit": "pence_per_kwh", "rate_value": 30.0, "effective_from": "2026-01-01"}))
         .await);
-    let p = format!("/api/v1/reporting/cost-rates/{rate}");
+    let p = format!("/api/v1/cost-rates/{rate}");
     for (body, field) in [
         (json!({"rate_name": ""}), "rate_name"),
         (json!({"unit": ""}), "unit"),
@@ -621,7 +621,7 @@ async fn batch_cost_inputs_are_bounded() {
     let app = spawn_app().await;
     let t = app.tenant().await;
     let (_recipe, batch) = app.recipe_and_batch(&t).await;
-    let path = "/api/v1/reporting/batch-costs/compute";
+    let path = "/api/v1/batch-costs/compute";
     let cases = vec![
         invalid(
             M::POST,

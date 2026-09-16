@@ -62,7 +62,7 @@ pub fn build_router(state: AppState) -> Router {
         .nest("/calendar-events", calendar::routes(state.clone()))
         .nest("/fermenters", fermenter::routes(state.clone()))
         .nest("/yeast-kinetics", yeastkinetics::routes(state.clone()))
-        .nest("/reporting", reporting::routes(state.clone()))
+        .merge(reporting::routes(state.clone()))
         .nest("/dashboard", dashboard::routes(state.clone()))
         .nest("/duty-returns", duty::routes(state.clone()))
         .nest("/label-records", labels::routes(state.clone()))
@@ -355,5 +355,72 @@ mod tests {
         assert!(!html.contains("swagger-ui-dist@5/"));
         assert_eq!(html.matches("swagger-ui-dist@5.32.15/").count(), 2);
         assert_eq!(html.matches("integrity=\"sha384-").count(), 2);
+    }
+
+    /// Every operation in openapi.yaml must reach a route: an unrouted request is
+    /// a 404 (unknown path) or 405 (unknown method). Requests carry no token and
+    /// no body, so they stop at auth or body extraction and never touch the
+    /// database. Guards against the router drifting from the published contract.
+    #[tokio::test]
+    async fn every_openapi_operation_is_routed() {
+        let spec = include_str!("../openapi.yaml");
+        let mut operations = Vec::new();
+        let mut current: Option<String> = None;
+        for line in spec.lines() {
+            let trimmed = line.trim();
+            if trimmed.is_empty() || trimmed.starts_with('#') {
+                continue;
+            }
+            let indent = line.len() - line.trim_start().len();
+            if indent == 0 {
+                current = None;
+            } else if indent == 2 {
+                current = trimmed
+                    .strip_suffix(':')
+                    .filter(|p| p.starts_with("/api/v1/"))
+                    .map(str::to_string);
+            } else if indent == 4 {
+                if let (Some(path), Some(method)) = (&current, trimmed.strip_suffix(':')) {
+                    if ["get", "post", "put", "patch", "delete"].contains(&method) {
+                        operations.push((method.to_uppercase(), path.clone()));
+                    }
+                }
+            }
+        }
+        assert!(
+            operations.len() > 100,
+            "parsed only {} operations",
+            operations.len()
+        );
+
+        let app = app(config("test", 100_000));
+        let mut unrouted = Vec::new();
+        for (method, path) in &operations {
+            // Replace every `{param}` with a UUID; routing does not check types.
+            let mut uri = String::new();
+            let mut rest = path.as_str();
+            while let Some(open) = rest.find('{') {
+                let close = rest[open..].find('}').expect("closing brace") + open;
+                uri.push_str(&rest[..open]);
+                uri.push_str("00000000-0000-0000-0000-000000000001");
+                rest = &rest[close + 1..];
+            }
+            uri.push_str(rest);
+
+            let req = Request::builder()
+                .method(method.as_str())
+                .uri(&uri)
+                .body(Body::empty())
+                .unwrap();
+            let status = app.clone().oneshot(req).await.unwrap().status();
+            if status == StatusCode::NOT_FOUND || status == StatusCode::METHOD_NOT_ALLOWED {
+                unrouted.push(format!("{method} {path} -> {status}"));
+            }
+        }
+        assert!(
+            unrouted.is_empty(),
+            "operations in openapi.yaml with no route:\n{}",
+            unrouted.join("\n")
+        );
     }
 }

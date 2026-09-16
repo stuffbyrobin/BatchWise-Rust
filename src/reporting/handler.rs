@@ -2,9 +2,9 @@
 //!
 //! Port of the Go `internal/reporting/handler_*.go`. The Go module mounts three
 //! separate chi routers (`/cost-rates`, `/batch-costs`, `/cost-reports`); here
-//! they are combined into one router mounted by the orchestrator at
-//! `/api/v1/reporting`. All routes require auth. The tier `FeatureGate` is added
-//! by the orchestrator, not here.
+//! they are combined into one router defining top-level paths `/api/v1/cost-rates`,
+//! `/api/v1/batch-costs`, `/api/v1/cost-reports`. All routes require auth.
+//! The tier `FeatureGate` is added by the orchestrator, not here.
 //!
 //! Note: the Go code defines no standalone duty-calculation endpoint — the duty
 //! estimate is computed internally as part of `POST /batch-costs/compute`.
@@ -29,8 +29,7 @@ use crate::platform::middleware::{check_feature, require_auth};
 use crate::platform::web::ValidatedJson;
 use crate::state::AppState;
 
-/// Builds the reporting router (mounted at `/reporting`), gated by auth + the
-/// `reporting` feature flag (tier gate).
+/// Builds the reporting router, gated by auth + the `reporting` feature flag (tier gate).
 pub fn routes(state: AppState) -> Router {
     let st = state.clone();
     let feature_layer = axum::middleware::from_fn(move |req, next| {
