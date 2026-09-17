@@ -1,21 +1,17 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '../../../api/client'
 import type { components } from '../../../api/generated'
+import { qs } from '../../../api/qs'
 
 type CostRate = components['schemas']['CostRate']
 type CostRatePage = components['schemas']['CostRatePage']
 type CreateCostRateRequest = components['schemas']['CreateCostRateRequest']
 type PatchCostRateRequest = components['schemas']['PatchCostRateRequest']
 
-function toQueryString(params: Record<string, unknown>): string {
-  const q = Object.entries(params).filter(([, v]) => v !== undefined && v !== null && v !== '').map(([k, v]) => k + '=' + encodeURIComponent(String(v))).join('&')
-  return q ? '?' + q : ''
-}
-
 export function useCostRatesList(params: { rate_type?: string; page?: number; page_size?: number } = {}) {
   return useQuery<CostRatePage>({
     queryKey: ['cost-rates', params],
-    queryFn: ({ signal }) => apiClient.get<CostRatePage>(`/api/v1/cost-rates${toQueryString(params as Record<string, unknown>)}`, { signal }),
+    queryFn: ({ signal }) => apiClient.get<CostRatePage>(`/api/v1/cost-rates${qs(params as Record<string, unknown>)}`, { signal }),
   })
 }
 

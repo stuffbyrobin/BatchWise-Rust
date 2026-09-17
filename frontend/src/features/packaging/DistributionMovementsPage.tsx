@@ -3,6 +3,7 @@ import { APIError } from '../../api/error'
 import { SortableHeader } from '../../components/ui/SortableHeader'
 import { useDistributionMovements, useCreateDistributionMovement, useDeleteDistributionMovement } from './hooks/usePackaging'
 import type { components } from '../../api/generated'
+import { inputCls } from '../../components/ui/styles'
 
 type DistributionMovement = components['schemas']['DistributionMovement']
 
@@ -67,44 +68,44 @@ export default function DistributionMovementsPage() {
           <div className="col-span-2 md:col-span-3 font-medium">New Distribution Movement</div>
           <div>
             <label className="block text-xs text-[var(--color-muted)] mb-1">Packaging Run ID</label>
-            <input className="w-full border rounded px-2 py-1 text-sm" placeholder="UUID"
+            <input className={inputCls} placeholder="UUID"
               value={form.packaging_run_id} onChange={(e) => setForm((f) => ({ ...f, packaging_run_id: e.target.value }))} required />
           </div>
           <div>
             <label className="block text-xs text-[var(--color-muted)] mb-1">Movement Type</label>
-            <select className="w-full border rounded px-2 py-1 text-sm"
+            <select className={inputCls}
               value={form.movement_type} onChange={(e) => setForm((f) => ({ ...f, movement_type: e.target.value }))}>
               {MOVEMENT_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
             </select>
           </div>
           <div>
             <label className="block text-xs text-[var(--color-muted)] mb-1">Quantity</label>
-            <input className="w-full border rounded px-2 py-1 text-sm" type="number" min={1}
+            <input className={inputCls} type="number" min={1}
               value={form.quantity} onChange={(e) => setForm((f) => ({ ...f, quantity: e.target.value }))} required />
           </div>
           <div>
             <label className="block text-xs text-[var(--color-muted)] mb-1">From Location</label>
-            <input className="w-full border rounded px-2 py-1 text-sm" placeholder="brewery"
+            <input className={inputCls} placeholder="brewery"
               value={form.from_location} onChange={(e) => setForm((f) => ({ ...f, from_location: e.target.value }))} />
           </div>
           <div>
             <label className="block text-xs text-[var(--color-muted)] mb-1">To Location</label>
-            <input className="w-full border rounded px-2 py-1 text-sm" placeholder="Customer Depot"
+            <input className={inputCls} placeholder="Customer Depot"
               value={form.to_location} onChange={(e) => setForm((f) => ({ ...f, to_location: e.target.value }))} required />
           </div>
           <div>
             <label className="block text-xs text-[var(--color-muted)] mb-1">Order ID (required for sales)</label>
-            <input className="w-full border rounded px-2 py-1 text-sm" placeholder="UUID"
+            <input className={inputCls} placeholder="UUID"
               value={form.order_id} onChange={(e) => setForm((f) => ({ ...f, order_id: e.target.value }))} />
           </div>
           <div>
             <label className="block text-xs text-[var(--color-muted)] mb-1">Reference</label>
-            <input className="w-full border rounded px-2 py-1 text-sm"
+            <input className={inputCls}
               value={form.reference} onChange={(e) => setForm((f) => ({ ...f, reference: e.target.value }))} />
           </div>
           <div>
             <label className="block text-xs text-[var(--color-muted)] mb-1">Notes</label>
-            <input className="w-full border rounded px-2 py-1 text-sm"
+            <input className={inputCls}
               value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} />
           </div>
           {formErr && <div className="col-span-2 md:col-span-3 text-xs text-[var(--color-danger)]">{formErr}</div>}

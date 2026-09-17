@@ -7,17 +7,14 @@ import {
 import { useSuppliers } from './hooks/useProcurement'
 import { SortableHeader } from '../../components/ui/SortableHeader'
 import type { components } from '../../api/generated'
+import { fmtDate } from '../../utils/format'
+import { inputCls } from '../../components/ui/styles'
 
 type PurchaseOrder = components['schemas']['PurchaseOrder']
 type PurchaseOrderLine = components['schemas']['PurchaseOrderLine']
 
 const STATUSES = ['draft', 'sent', 'partially_received', 'received', 'cancelled']
 const INGREDIENT_TYPES = ['fermentable', 'hop', 'yeast', 'adjunct', 'other']
-
-function fmtDate(s: string | null | undefined): string {
-  if (!s) return '—'
-  return String(s).slice(0, 10)
-}
 
 function fmtGBP(pence: number | null | undefined): string {
   if (pence == null) return '—'
@@ -389,7 +386,7 @@ export default function PurchaseOrdersPage() {
           <div className="col-span-2 md:col-span-3 font-medium">New Purchase Order</div>
           <div>
             <label className="block text-xs text-[var(--color-muted)] mb-1">Supplier *</label>
-            <select className="w-full border rounded px-2 py-1 text-sm"
+            <select className={inputCls}
               value={form.supplier_id}
               onChange={(e) => setForm((f) => ({ ...f, supplier_id: e.target.value }))}
               required>
@@ -399,13 +396,13 @@ export default function PurchaseOrdersPage() {
           </div>
           <div>
             <label className="block text-xs text-[var(--color-muted)] mb-1">Expected Delivery</label>
-            <input className="w-full border rounded px-2 py-1 text-sm" type="date"
+            <input className={inputCls} type="date"
               value={form.expected_delivery}
               onChange={(e) => setForm((f) => ({ ...f, expected_delivery: e.target.value }))} />
           </div>
           <div>
             <label className="block text-xs text-[var(--color-muted)] mb-1">Notes</label>
-            <input className="w-full border rounded px-2 py-1 text-sm"
+            <input className={inputCls}
               value={form.notes}
               onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} />
           </div>

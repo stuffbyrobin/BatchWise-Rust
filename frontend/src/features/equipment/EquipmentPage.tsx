@@ -6,17 +6,14 @@ import {
   useEvents, useCreateEvent, useDeleteEvent,
 } from './hooks/useEquipment'
 import type { components } from '../../api/generated'
+import { fmtDate } from '../../utils/format'
+import { inputCls } from '../../components/ui/styles'
 
 type Equipment = components['schemas']['Equipment']
 type MaintenanceSchedule = components['schemas']['MaintenanceSchedule']
 type MaintenanceEvent = components['schemas']['MaintenanceEvent']
 
 const EVENT_TYPES = ['service', 'calibration', 'repair', 'inspection', 'cleaning', 'other'] as const
-
-function fmtDate(s: string | null | undefined): string {
-  if (!s) return '—'
-  return String(s).slice(0, 10)
-}
 
 function DueBadge({ schedule }: { schedule: MaintenanceSchedule }) {
   const days = schedule.days_until_due ?? 0
@@ -425,32 +422,32 @@ export default function EquipmentPage() {
           <div className="col-span-2 md:col-span-3 font-medium">New Equipment</div>
           <div>
             <label className="block text-xs text-[var(--color-muted)] mb-1">Name *</label>
-            <input className="w-full border rounded px-2 py-1 text-sm" placeholder="Fermenter FV3" required
+            <input className={inputCls} placeholder="Fermenter FV3" required
               value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
           </div>
           <div>
             <label className="block text-xs text-[var(--color-muted)] mb-1">Type *</label>
-            <input className="w-full border rounded px-2 py-1 text-sm" placeholder="fermenter" required
+            <input className={inputCls} placeholder="fermenter" required
               value={form.equipment_type} onChange={(e) => setForm((f) => ({ ...f, equipment_type: e.target.value }))} />
           </div>
           <div>
             <label className="block text-xs text-[var(--color-muted)] mb-1">Serial number</label>
-            <input className="w-full border rounded px-2 py-1 text-sm" placeholder="SS-9001"
+            <input className={inputCls} placeholder="SS-9001"
               value={form.serial_number} onChange={(e) => setForm((f) => ({ ...f, serial_number: e.target.value }))} />
           </div>
           <div>
             <label className="block text-xs text-[var(--color-muted)] mb-1">Location</label>
-            <input className="w-full border rounded px-2 py-1 text-sm" placeholder="Cellar bay 2"
+            <input className={inputCls} placeholder="Cellar bay 2"
               value={form.location} onChange={(e) => setForm((f) => ({ ...f, location: e.target.value }))} />
           </div>
           <div>
             <label className="block text-xs text-[var(--color-muted)] mb-1">Purchased</label>
-            <input className="w-full border rounded px-2 py-1 text-sm" type="date"
+            <input className={inputCls} type="date"
               value={form.purchased_at} onChange={(e) => setForm((f) => ({ ...f, purchased_at: e.target.value }))} />
           </div>
           <div>
             <label className="block text-xs text-[var(--color-muted)] mb-1">Notes</label>
-            <input className="w-full border rounded px-2 py-1 text-sm"
+            <input className={inputCls}
               value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} />
           </div>
           {formErr && <div className="col-span-2 md:col-span-3 text-xs text-[var(--color-danger)]">{formErr}</div>}

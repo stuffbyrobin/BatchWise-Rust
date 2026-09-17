@@ -3,6 +3,7 @@ import { APIError } from '../../api/error'
 import { useSuppliers, useCreateSupplier, usePatchSupplier, useDeleteSupplier } from './hooks/useProcurement'
 import { SortableHeader } from '../../components/ui/SortableHeader'
 import type { components } from '../../api/generated'
+import { inputCls } from '../../components/ui/styles'
 
 type Supplier = components['schemas']['Supplier']
 
@@ -54,32 +55,32 @@ function SupplierRow({ supplier }: { supplier: Supplier }) {
           <form onSubmit={handlePatch} className="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm p-3 border rounded bg-[var(--color-surface)]">
             <div>
               <label className="block text-xs text-[var(--color-muted)] mb-1">Name *</label>
-              <input className="w-full border rounded px-2 py-1 text-sm" value={form.name}
+              <input className={inputCls} value={form.name}
                 onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} required />
             </div>
             <div>
               <label className="block text-xs text-[var(--color-muted)] mb-1">Contact</label>
-              <input className="w-full border rounded px-2 py-1 text-sm" value={form.contact_name}
+              <input className={inputCls} value={form.contact_name}
                 onChange={(e) => setForm((f) => ({ ...f, contact_name: e.target.value }))} />
             </div>
             <div>
               <label className="block text-xs text-[var(--color-muted)] mb-1">Email</label>
-              <input className="w-full border rounded px-2 py-1 text-sm" type="email" value={form.email}
+              <input className={inputCls} type="email" value={form.email}
                 onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} />
             </div>
             <div>
               <label className="block text-xs text-[var(--color-muted)] mb-1">Phone</label>
-              <input className="w-full border rounded px-2 py-1 text-sm" value={form.phone}
+              <input className={inputCls} value={form.phone}
                 onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} />
             </div>
             <div>
               <label className="block text-xs text-[var(--color-muted)] mb-1">Website</label>
-              <input className="w-full border rounded px-2 py-1 text-sm" value={form.website}
+              <input className={inputCls} value={form.website}
                 onChange={(e) => setForm((f) => ({ ...f, website: e.target.value }))} />
             </div>
             <div>
               <label className="block text-xs text-[var(--color-muted)] mb-1">Notes</label>
-              <input className="w-full border rounded px-2 py-1 text-sm" value={form.notes}
+              <input className={inputCls} value={form.notes}
                 onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} />
             </div>
             {err && <div className="col-span-2 md:col-span-3 text-xs text-[var(--color-danger)]">{err}</div>}
@@ -161,32 +162,32 @@ export default function SuppliersPage() {
           <div className="col-span-2 md:col-span-3 font-medium">New Supplier</div>
           <div>
             <label className="block text-xs text-[var(--color-muted)] mb-1">Name *</label>
-            <input className="w-full border rounded px-2 py-1 text-sm" placeholder="Hop Valley Ltd"
+            <input className={inputCls} placeholder="Hop Valley Ltd"
               value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} required />
           </div>
           <div>
             <label className="block text-xs text-[var(--color-muted)] mb-1">Contact</label>
-            <input className="w-full border rounded px-2 py-1 text-sm" placeholder="Jane Smith"
+            <input className={inputCls} placeholder="Jane Smith"
               value={form.contact_name} onChange={(e) => setForm((f) => ({ ...f, contact_name: e.target.value }))} />
           </div>
           <div>
             <label className="block text-xs text-[var(--color-muted)] mb-1">Email</label>
-            <input className="w-full border rounded px-2 py-1 text-sm" type="email" placeholder="jane@supplier.com"
+            <input className={inputCls} type="email" placeholder="jane@supplier.com"
               value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} />
           </div>
           <div>
             <label className="block text-xs text-[var(--color-muted)] mb-1">Phone</label>
-            <input className="w-full border rounded px-2 py-1 text-sm" placeholder="+44 …"
+            <input className={inputCls} placeholder="+44 …"
               value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} />
           </div>
           <div>
             <label className="block text-xs text-[var(--color-muted)] mb-1">Website</label>
-            <input className="w-full border rounded px-2 py-1 text-sm" placeholder="https://…"
+            <input className={inputCls} placeholder="https://…"
               value={form.website} onChange={(e) => setForm((f) => ({ ...f, website: e.target.value }))} />
           </div>
           <div>
             <label className="block text-xs text-[var(--color-muted)] mb-1">Notes</label>
-            <input className="w-full border rounded px-2 py-1 text-sm"
+            <input className={inputCls}
               value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} />
           </div>
           {formErr && <div className="col-span-2 md:col-span-3 text-xs text-[var(--color-danger)]">{formErr}</div>}

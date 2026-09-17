@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '../../../api/client'
 import type { components } from '../../../api/generated'
+import { qs } from '../../../api/qs'
 
 type Ingredient = components['schemas']['Ingredient']
 type CreateIngredientRequest = components['schemas']['CreateIngredientRequest']
@@ -46,18 +47,10 @@ interface SummaryPage {
   total_pages: number
 }
 
-function toQueryString(params: Record<string, unknown>): string {
-  const q = Object.entries(params)
-    .filter(([, v]) => v !== undefined && v !== null && v !== '')
-    .map(([k, v]) => `${k}=${encodeURIComponent(String(v))}`)
-    .join('&')
-  return q ? `?${q}` : ''
-}
-
 export function useInventoryList(params: ListParams = {}) {
   return useQuery<PaginatedIngredients>({
     queryKey: ['inventory', 'list', params],
-    queryFn: ({ signal }) => apiClient.get<PaginatedIngredients>(`/api/v1/inventory${toQueryString(params as Record<string, unknown>)}`, { signal }),
+    queryFn: ({ signal }) => apiClient.get<PaginatedIngredients>(`/api/v1/inventory${qs(params as Record<string, unknown>)}`, { signal }),
   })
 }
 
@@ -112,7 +105,7 @@ export function useDeduct() {
 export function useInventorySummary(params: { type?: string; page?: number; page_size?: number } = {}) {
   return useQuery<SummaryPage>({
     queryKey: ['inventory', 'summary', params],
-    queryFn: ({ signal }) => apiClient.get<SummaryPage>(`/api/v1/inventory/summary${toQueryString(params as Record<string, unknown>)}`, { signal }),
+    queryFn: ({ signal }) => apiClient.get<SummaryPage>(`/api/v1/inventory/summary${qs(params as Record<string, unknown>)}`, { signal }),
   })
 }
 
@@ -122,7 +115,7 @@ export function useStockMovements(
   return useQuery<PaginatedMovements>({
     queryKey: ['inventory', 'movements', params],
     queryFn: ({ signal }) => apiClient.get<PaginatedMovements>(
-        `/api/v1/inventory/stock-movements${toQueryString(params as Record<string, unknown>)}`, { signal },
+        `/api/v1/inventory/stock-movements${qs(params as Record<string, unknown>)}`, { signal },
       ),
   })
 }

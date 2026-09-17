@@ -32,13 +32,13 @@ export function calcHopIBU(
 
   if (method === 'tinseth') {
     const util = tinsethUtilization(boilMinutes, og)
-    // IBU = W_g × AA × U × 10 / V_L  (derived from original oz/gallon formula)
-    return (weightG * alphaFraction * util * 10) / batchVolL
+    // IBU = U × (W_g × AA_fraction × 1000) / V_L — added alpha acids in mg/L.
+    return (weightG * alphaFraction * util * 1000) / batchVolL
   }
 
   // Rager
   const util = ragerUtilization(boilMinutes)
   // Gravity correction: wort above 1.050 reduces utilisation
   const gravityAdj = og > 1.050 ? 1 + (og - 1.050) / 0.2 : 1
-  return (weightG * alphaFraction * util * 10) / (batchVolL * gravityAdj)
+  return (weightG * alphaFraction * util * 1000) / (batchVolL * gravityAdj)
 }

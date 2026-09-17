@@ -1,5 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { apiClient } from '../../../api/client'
+import { createCrudHooks } from '../../../api/crud'
 import type { components } from '../../../api/generated'
 
 type BeerStyle = components['schemas']['Style']
@@ -8,223 +7,68 @@ type MashProfile = components['schemas']['MashProfile']
 type Yeast = components['schemas']['Yeast']
 type Fermentable = components['schemas']['LibraryFermentable']
 
-function toQueryString(params: Record<string, unknown>): string {
-  const q = Object.entries(params)
-    .filter(([, v]) => v !== undefined && v !== null && v !== '')
-    .map(([k, v]) => `${k}=${encodeURIComponent(String(v))}`)
-    .join('&')
-  return q ? `?${q}` : ''
-}
-
-interface Page<T> {
-  items: T[]
-  total: number
-  page: number
-  page_size: number
-  total_pages: number
-}
-
 type ListParams = { page?: number; page_size?: number; sort?: string }
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 
-export function useStyles(params: ListParams = {}) {
-  return useQuery<Page<BeerStyle>>({
-    queryKey: ['library', 'styles', params],
-    queryFn: ({ signal }) => apiClient.get<Page<BeerStyle>>(`/api/v1/library/styles${toQueryString(params as Record<string, unknown>)}`, { signal }),
-  })
-}
-
-export function useStyle(id: string) {
-  return useQuery<BeerStyle>({
-    queryKey: ['library', 'styles', id],
-    queryFn: ({ signal }) => apiClient.get<BeerStyle>(`/api/v1/library/styles/${id}`, { signal }),
-    enabled: !!id,
-  })
-}
-
-export function useCreateStyle() {
-  const qc = useQueryClient()
-  return useMutation<BeerStyle, Error, Partial<BeerStyle>>({
-    mutationFn: (body) => apiClient.post<BeerStyle>('/api/v1/library/styles', body),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['library', 'styles'] }),
-  })
-}
-
-export function useUpdateStyle(id: string) {
-  const qc = useQueryClient()
-  return useMutation<BeerStyle, Error, Partial<BeerStyle>>({
-    mutationFn: (body) => apiClient.put<BeerStyle>(`/api/v1/library/styles/${id}`, body),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['library', 'styles'] }),
-  })
-}
-
-export function useDeleteStyle() {
-  const qc = useQueryClient()
-  return useMutation<void, Error, string>({
-    mutationFn: (id) => apiClient.delete<void>(`/api/v1/library/styles/${id}`),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['library', 'styles'] }),
-  })
-}
+const styles = createCrudHooks<BeerStyle, Partial<BeerStyle>, Partial<BeerStyle>, ListParams>({
+  path: '/api/v1/library/styles',
+  queryKey: ['library', 'styles'],
+  updateMethod: 'put',
+})
+export const useStyles = styles.useList
+export const useStyle = styles.useOne
+export const useCreateStyle = styles.useCreate
+export const useUpdateStyle = styles.useUpdate
+export const useDeleteStyle = styles.useDelete
 
 // ── Equipment Profiles ────────────────────────────────────────────────────────
 
-export function useEquipmentProfiles(params: ListParams = {}) {
-  return useQuery<Page<EquipmentProfile>>({
-    queryKey: ['library', 'equipment-profiles', params],
-    queryFn: ({ signal }) => apiClient.get<Page<EquipmentProfile>>(
-        `/api/v1/library/equipment-profiles${toQueryString(params as Record<string, unknown>)}`, { signal },
-      ),
-  })
-}
-
-export function useEquipmentProfile(id: string) {
-  return useQuery<EquipmentProfile>({
-    queryKey: ['library', 'equipment-profiles', id],
-    queryFn: ({ signal }) => apiClient.get<EquipmentProfile>(`/api/v1/library/equipment-profiles/${id}`, { signal }),
-    enabled: !!id,
-  })
-}
-
-export function useCreateEquipmentProfile() {
-  const qc = useQueryClient()
-  return useMutation<EquipmentProfile, Error, Partial<EquipmentProfile>>({
-    mutationFn: (body) => apiClient.post<EquipmentProfile>('/api/v1/library/equipment-profiles', body),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['library', 'equipment-profiles'] }),
-  })
-}
-
-export function useUpdateEquipmentProfile(id: string) {
-  const qc = useQueryClient()
-  return useMutation<EquipmentProfile, Error, Partial<EquipmentProfile>>({
-    mutationFn: (body) => apiClient.put<EquipmentProfile>(`/api/v1/library/equipment-profiles/${id}`, body),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['library', 'equipment-profiles'] }),
-  })
-}
-
-export function useDeleteEquipmentProfile() {
-  const qc = useQueryClient()
-  return useMutation<void, Error, string>({
-    mutationFn: (id) => apiClient.delete<void>(`/api/v1/library/equipment-profiles/${id}`),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['library', 'equipment-profiles'] }),
-  })
-}
+const equipmentProfiles = createCrudHooks<EquipmentProfile, Partial<EquipmentProfile>, Partial<EquipmentProfile>, ListParams>({
+  path: '/api/v1/library/equipment-profiles',
+  queryKey: ['library', 'equipment-profiles'],
+  updateMethod: 'put',
+})
+export const useEquipmentProfiles = equipmentProfiles.useList
+export const useEquipmentProfile = equipmentProfiles.useOne
+export const useCreateEquipmentProfile = equipmentProfiles.useCreate
+export const useUpdateEquipmentProfile = equipmentProfiles.useUpdate
+export const useDeleteEquipmentProfile = equipmentProfiles.useDelete
 
 // ── Mash Profiles ─────────────────────────────────────────────────────────────
 
-export function useMashProfiles(params: ListParams = {}) {
-  return useQuery<Page<MashProfile>>({
-    queryKey: ['library', 'mash-profiles', params],
-    queryFn: ({ signal }) => apiClient.get<Page<MashProfile>>(
-        `/api/v1/library/mash-profiles${toQueryString(params as Record<string, unknown>)}`, { signal },
-      ),
-  })
-}
-
-export function useMashProfile(id: string) {
-  return useQuery<MashProfile>({
-    queryKey: ['library', 'mash-profiles', id],
-    queryFn: ({ signal }) => apiClient.get<MashProfile>(`/api/v1/library/mash-profiles/${id}`, { signal }),
-    enabled: !!id,
-  })
-}
-
-export function useCreateMashProfile() {
-  const qc = useQueryClient()
-  return useMutation<MashProfile, Error, Partial<MashProfile>>({
-    mutationFn: (body) => apiClient.post<MashProfile>('/api/v1/library/mash-profiles', body),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['library', 'mash-profiles'] }),
-  })
-}
-
-export function useUpdateMashProfile(id: string) {
-  const qc = useQueryClient()
-  return useMutation<MashProfile, Error, Partial<MashProfile>>({
-    mutationFn: (body) => apiClient.put<MashProfile>(`/api/v1/library/mash-profiles/${id}`, body),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['library', 'mash-profiles'] }),
-  })
-}
-
-export function useDeleteMashProfile() {
-  const qc = useQueryClient()
-  return useMutation<void, Error, string>({
-    mutationFn: (id) => apiClient.delete<void>(`/api/v1/library/mash-profiles/${id}`),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['library', 'mash-profiles'] }),
-  })
-}
+const mashProfiles = createCrudHooks<MashProfile, Partial<MashProfile>, Partial<MashProfile>, ListParams>({
+  path: '/api/v1/library/mash-profiles',
+  queryKey: ['library', 'mash-profiles'],
+  updateMethod: 'put',
+})
+export const useMashProfiles = mashProfiles.useList
+export const useMashProfile = mashProfiles.useOne
+export const useCreateMashProfile = mashProfiles.useCreate
+export const useUpdateMashProfile = mashProfiles.useUpdate
+export const useDeleteMashProfile = mashProfiles.useDelete
 
 // ── Yeasts ────────────────────────────────────────────────────────────────────
 
-export function useYeasts(params: ListParams = {}) {
-  return useQuery<Page<Yeast>>({
-    queryKey: ['library', 'yeasts', params],
-    queryFn: ({ signal }) => apiClient.get<Page<Yeast>>(`/api/v1/library/yeasts${toQueryString(params as Record<string, unknown>)}`, { signal }),
-  })
-}
-
-export function useYeast(id: string) {
-  return useQuery<Yeast>({
-    queryKey: ['library', 'yeasts', id],
-    queryFn: ({ signal }) => apiClient.get<Yeast>(`/api/v1/library/yeasts/${id}`, { signal }),
-    enabled: !!id,
-  })
-}
-
-export function useCreateYeast() {
-  const qc = useQueryClient()
-  return useMutation<Yeast, Error, Partial<Yeast>>({
-    mutationFn: (body) => apiClient.post<Yeast>('/api/v1/library/yeasts', body),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['library', 'yeasts'] }),
-  })
-}
-
-export function useUpdateYeast(id: string) {
-  const qc = useQueryClient()
-  return useMutation<Yeast, Error, Partial<Yeast>>({
-    mutationFn: (body) => apiClient.put<Yeast>(`/api/v1/library/yeasts/${id}`, body),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['library', 'yeasts'] }),
-  })
-}
-
-export function useDeleteYeast() {
-  const qc = useQueryClient()
-  return useMutation<void, Error, string>({
-    mutationFn: (id) => apiClient.delete<void>(`/api/v1/library/yeasts/${id}`),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['library', 'yeasts'] }),
-  })
-}
+const yeasts = createCrudHooks<Yeast, Partial<Yeast>, Partial<Yeast>, ListParams>({
+  path: '/api/v1/library/yeasts',
+  queryKey: ['library', 'yeasts'],
+  updateMethod: 'put',
+})
+export const useYeasts = yeasts.useList
+export const useYeast = yeasts.useOne
+export const useCreateYeast = yeasts.useCreate
+export const useUpdateYeast = yeasts.useUpdate
+export const useDeleteYeast = yeasts.useDelete
 
 // ── Fermentables ──────────────────────────────────────────────────────────────
 
-export function useFermentables(params: ListParams & { name?: string; supplier?: string; type?: string } = {}) {
-  return useQuery<Page<Fermentable>>({
-    queryKey: ['library', 'fermentables', params],
-    queryFn: ({ signal }) => apiClient.get<Page<Fermentable>>(
-        `/api/v1/library/fermentables${toQueryString(params as Record<string, unknown>)}`, { signal },
-      ),
-  })
-}
-
-export function useCreateFermentable() {
-  const qc = useQueryClient()
-  return useMutation<Fermentable, Error, Partial<Fermentable>>({
-    mutationFn: (body) => apiClient.post<Fermentable>('/api/v1/library/fermentables', body),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['library', 'fermentables'] }),
-  })
-}
-
-export function useUpdateFermentable(id: string) {
-  const qc = useQueryClient()
-  return useMutation<Fermentable, Error, Partial<Fermentable>>({
-    mutationFn: (body) => apiClient.put<Fermentable>(`/api/v1/library/fermentables/${id}`, body),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['library', 'fermentables'] }),
-  })
-}
-
-export function useDeleteFermentable() {
-  const qc = useQueryClient()
-  return useMutation<void, Error, string>({
-    mutationFn: (id) => apiClient.delete<void>(`/api/v1/library/fermentables/${id}`),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['library', 'fermentables'] }),
-  })
-}
+const fermentables = createCrudHooks<Fermentable, Partial<Fermentable>, Partial<Fermentable>, ListParams & { name?: string; supplier?: string; type?: string }>({
+  path: '/api/v1/library/fermentables',
+  queryKey: ['library', 'fermentables'],
+  updateMethod: 'put',
+})
+export const useFermentables = fermentables.useList
+export const useCreateFermentable = fermentables.useCreate
+export const useUpdateFermentable = fermentables.useUpdate
+export const useDeleteFermentable = fermentables.useDelete

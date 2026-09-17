@@ -3,13 +3,9 @@ import { APIError } from '../../api/error'
 import { useLabelRecords, useCreateLabelRecord, usePatchLabelRecord, useDeleteLabelRecord } from './hooks/useLabels'
 import { AllergenBadges } from '../../components/AllergenBadges'
 import type { components } from '../../api/generated'
+import { fmtDate } from '../../utils/format'
 
 type LabelRecord = components['schemas']['LabelRecord']
-
-function fmtDate(s: string | null | undefined): string {
-  if (!s) return '—'
-  return String(s).slice(0, 10)
-}
 
 function StatusBadge({ status }: { status: string }) {
   const cls =

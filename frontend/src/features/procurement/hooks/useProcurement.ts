@@ -1,6 +1,7 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { apiClient } from '../../../api/client'
+import { createCrudHooks } from '../../../api/crud'
 import type { components } from '../../../api/generated'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { apiClient } from '../../../api/client'
 
 type Supplier = components['schemas']['Supplier']
 type SupplierList = components['schemas']['SupplierList']
@@ -15,89 +16,28 @@ type CreateLineRequest = components['schemas']['CreateLineRequest']
 type PatchLineRequest = components['schemas']['PatchLineRequest']
 type ReceiveRequest = components['schemas']['ReceiveRequest']
 
-function qs(params: Record<string, unknown>): string {
-  const q = Object.entries(params)
-    .filter(([, v]) => v !== undefined && v !== null && v !== '')
-    .map(([k, v]) => `${k}=${encodeURIComponent(String(v))}`)
-    .join('&')
-  return q ? `?${q}` : ''
-}
-
 // ——— Suppliers ———————————————————————————————————————————————————————————————
 
-export function useSuppliers(params: { search?: string; sort?: string; page?: number; page_size?: number } = {}) {
-  return useQuery<SupplierList>({
-    queryKey: ['suppliers', params],
-    queryFn: ({ signal }) => apiClient.get<SupplierList>(`/api/v1/suppliers${qs(params as Record<string, unknown>)}`, { signal }),
-  })
-}
-
-export function useCreateSupplier() {
-  const qc = useQueryClient()
-  return useMutation<Supplier, Error, CreateSupplierRequest>({
-    mutationFn: (body) => apiClient.post<Supplier>('/api/v1/suppliers', body),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['suppliers'] }),
-  })
-}
-
-export function usePatchSupplier(id: string) {
-  const qc = useQueryClient()
-  return useMutation<Supplier, Error, PatchSupplierRequest>({
-    mutationFn: (body) => apiClient.patch<Supplier>(`/api/v1/suppliers/${id}`, body),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['suppliers'] }),
-  })
-}
-
-export function useDeleteSupplier() {
-  const qc = useQueryClient()
-  return useMutation<void, Error, string>({
-    mutationFn: (id) => apiClient.delete<void>(`/api/v1/suppliers/${id}`),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['suppliers'] }),
-  })
-}
+const suppliers = createCrudHooks<Supplier, CreateSupplierRequest, PatchSupplierRequest, { search?: string; sort?: string; page?: number; page_size?: number }, SupplierList>({
+  path: '/api/v1/suppliers',
+  queryKey: ['suppliers'],
+})
+export const useSuppliers = suppliers.useList
+export const useCreateSupplier = suppliers.useCreate
+export const usePatchSupplier = suppliers.useUpdate
+export const useDeleteSupplier = suppliers.useDelete
 
 // ——— Purchase Orders ——————————————————————————————————————————————————————————
 
-export function usePurchaseOrders(params: { supplier_id?: string; status?: string; sort?: string; page?: number; page_size?: number } = {}) {
-  return useQuery<PurchaseOrderList>({
-    queryKey: ['purchase-orders', params],
-    queryFn: ({ signal }) => apiClient.get<PurchaseOrderList>(`/api/v1/purchase-orders${qs(params as Record<string, unknown>)}`, { signal }),
-  })
-}
-
-export function usePurchaseOrder(id: string) {
-  return useQuery<PurchaseOrder>({
-    queryKey: ['purchase-orders', id],
-    queryFn: ({ signal }) => apiClient.get<PurchaseOrder>(`/api/v1/purchase-orders/${id}`, { signal }),
-    enabled: !!id,
-  })
-}
-
-export function useCreatePO() {
-  const qc = useQueryClient()
-  return useMutation<PurchaseOrder, Error, CreatePORequest>({
-    mutationFn: (body) => apiClient.post<PurchaseOrder>('/api/v1/purchase-orders', body),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['purchase-orders'] }),
-  })
-}
-
-export function usePatchPO(id: string) {
-  const qc = useQueryClient()
-  return useMutation<PurchaseOrder, Error, PatchPORequest>({
-    mutationFn: (body) => apiClient.patch<PurchaseOrder>(`/api/v1/purchase-orders/${id}`, body),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['purchase-orders'] })
-    },
-  })
-}
-
-export function useDeletePO() {
-  const qc = useQueryClient()
-  return useMutation<void, Error, string>({
-    mutationFn: (id) => apiClient.delete<void>(`/api/v1/purchase-orders/${id}`),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['purchase-orders'] }),
-  })
-}
+const purchaseOrders = createCrudHooks<PurchaseOrder, CreatePORequest, PatchPORequest, { supplier_id?: string; status?: string; sort?: string; page?: number; page_size?: number }, PurchaseOrderList>({
+  path: '/api/v1/purchase-orders',
+  queryKey: ['purchase-orders'],
+})
+export const usePurchaseOrders = purchaseOrders.useList
+export const usePurchaseOrder = purchaseOrders.useOne
+export const useCreatePO = purchaseOrders.useCreate
+export const usePatchPO = purchaseOrders.useUpdate
+export const useDeletePO = purchaseOrders.useDelete
 
 // ——— Lines ————————————————————————————————————————————————————————————————————
 

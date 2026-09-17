@@ -2,6 +2,7 @@ import React from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useReadings, useCreateReading, useDeleteReading } from './hooks/useFermentation'
 import type { components } from '../../api/generated'
+import { fmtDateTime } from '../../utils/format'
 
 type Reading = components['schemas']['FermentationReading']
 type CreateRequest = components['schemas']['CreateFermentationReadingRequest']
@@ -10,11 +11,6 @@ const STAGES = ['primary', 'secondary', 'conditioning', 'lagering', 'other'] as 
 
 function fmt(n: number | null | undefined): string {
   return n == null ? '—' : String(n)
-}
-
-function fmtDate(s: string | undefined): string {
-  if (!s) return '—'
-  return new Date(s).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' })
 }
 
 function LogForm({ batchId, onDone }: { batchId: string; onDone: () => void }) {
@@ -129,7 +125,7 @@ function ReadingRow({ reading, batchId }: { reading: Reading; batchId: string })
   const { mutate: del, isPending } = useDeleteReading(batchId)
   return (
     <tr className="border-b border-[var(--color-border)] text-sm hover:bg-[var(--color-surface)]">
-      <td className="py-2 px-3 text-[var(--color-text-secondary)]">{fmtDate(reading.recorded_at)}</td>
+      <td className="py-2 px-3 text-[var(--color-text-secondary)]">{fmtDateTime(reading.recorded_at)}</td>
       <td className="py-2 px-3 capitalize">{reading.stage}</td>
       <td className="py-2 px-3 font-mono">{fmt(reading.gravity)}</td>
       <td className="py-2 px-3 font-mono">{fmt(reading.temp_c)}</td>

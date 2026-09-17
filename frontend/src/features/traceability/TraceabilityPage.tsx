@@ -2,15 +2,11 @@ import React from 'react'
 import { APIError } from '../../api/error'
 import { useTraceIngredientLot, useTracePackagingRun, useRecallScope } from './hooks/useTraceability'
 import type { components } from '../../api/generated'
+import { fmtDate } from '../../utils/format'
 
 type ForwardTrace = components['schemas']['ForwardTrace']
 type BackwardTrace = components['schemas']['BackwardTrace']
 type RecallScope = components['schemas']['RecallScope']
-
-function fmtDate(s: string | null | undefined): string {
-  if (!s) return '—'
-  return String(s).slice(0, 10)
-}
 
 function ForwardTraceView({ trace }: { trace: ForwardTrace }) {
   return (

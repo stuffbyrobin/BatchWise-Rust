@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '../../../api/client'
 import type { components } from '../../../api/generated'
+import { qs } from '../../../api/qs'
 
 type BrandAsset = components['schemas']['BrandAsset']
 type BrandProfile = components['schemas']['BrandProfile']
@@ -12,14 +13,6 @@ type LabelDesignList = components['schemas']['LabelDesignList']
 type CreateLabelDesignRequest = components['schemas']['CreateLabelDesignRequest']
 type PatchLabelDesignRequest = components['schemas']['PatchLabelDesignRequest']
 type RenderModel = components['schemas']['RenderModel']
-
-function qs(params: Record<string, unknown>): string {
-  const q = Object.entries(params)
-    .filter(([, v]) => v !== undefined && v !== null && v !== '')
-    .map(([k, v]) => `${k}=${encodeURIComponent(String(v))}`)
-    .join('&')
-  return q ? `?${q}` : ''
-}
 
 // ——— brand profiles ————————————————————————————————————————————————————————
 

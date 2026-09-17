@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '../../../api/client'
 import type { components } from '../../../api/generated'
+import { qs } from '../../../api/qs'
 
 type Recipe = components['schemas']['Recipe']
 type RecipeWithIngredients = components['schemas']['RecipeWithIngredients']
@@ -24,18 +25,10 @@ interface ListParams {
   page_size?: number
 }
 
-function toQueryString(params: Record<string, unknown>): string {
-  const q = Object.entries(params)
-    .filter(([, v]) => v !== undefined && v !== null && v !== '')
-    .map(([k, v]) => `${k}=${encodeURIComponent(String(v))}`)
-    .join('&')
-  return q ? `?${q}` : ''
-}
-
 export function useRecipesList(params: ListParams = {}) {
   return useQuery<RecipePage>({
     queryKey: ['recipes', 'list', params],
-    queryFn: ({ signal }) => apiClient.get<RecipePage>(`/api/v1/recipes${toQueryString(params as Record<string, unknown>)}`, { signal }),
+    queryFn: ({ signal }) => apiClient.get<RecipePage>(`/api/v1/recipes${qs(params as Record<string, unknown>)}`, { signal }),
   })
 }
 

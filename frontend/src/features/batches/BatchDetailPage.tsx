@@ -18,6 +18,10 @@ import { useInventoryList } from '../inventory/hooks/useInventory'
 import { useTenant } from '../account/hooks/useTenant'
 import type { components } from '../../api/generated'
 import { calcHopIBU, type IBUMethod } from '../../utils/ibu'
+
+type RecipeFermentable = components['schemas']['RecipeFermentable']
+type RecipeHop = components['schemas']['RecipeHop']
+type RecipeYeast = components['schemas']['RecipeYeast']
 import { formatEbc } from '../../utils/ebc'
 import { APIError } from '../../api/error'
 
@@ -529,8 +533,12 @@ function IngredientsEditor({ batch, canEdit, ibuMethod, batchOg, batchVolL }: {
   const handleSave = () => {
     setSaveError(null)
     patchMut.mutate(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      { fermentables: fermentables as any, hops: hops as any, yeasts: yeasts as any },
+      // The editor keeps rows loosely typed until the Phase 12 row-hook refactor.
+      {
+        fermentables: fermentables as unknown as RecipeFermentable[],
+        hops: hops as unknown as RecipeHop[],
+        yeasts: yeasts as unknown as RecipeYeast[],
+      },
       {
         onSuccess: () => { setSaved(true); setTimeout(() => setSaved(false), 2000) },
         onError: (err) => setSaveError(err instanceof Error ? err.message : 'Save failed'),

@@ -1,20 +1,16 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '../../../api/client'
 import type { components } from '../../../api/generated'
+import { qs } from '../../../api/qs'
 
 type CostReport = components['schemas']['CostReport']
 type CostReportPage = components['schemas']['CostReportPage']
 type GenerateReportRequest = components['schemas']['GenerateReportRequest']
 
-function toQueryString(params: Record<string, unknown>): string {
-  const q = Object.entries(params).filter(([, v]) => v !== undefined && v !== null && v !== '').map(([k, v]) => k + '=' + encodeURIComponent(String(v))).join('&')
-  return q ? '?' + q : ''
-}
-
 export function useCostReportsList(params: { page?: number; page_size?: number } = {}) {
   return useQuery<CostReportPage>({
     queryKey: ['cost-reports', params],
-    queryFn: ({ signal }) => apiClient.get<CostReportPage>(`/api/v1/cost-reports${toQueryString(params as Record<string, unknown>)}`, { signal }),
+    queryFn: ({ signal }) => apiClient.get<CostReportPage>(`/api/v1/cost-reports${qs(params as Record<string, unknown>)}`, { signal }),
   })
 }
 

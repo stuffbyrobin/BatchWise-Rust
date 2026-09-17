@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useContainerAssetsList, CONTAINER_TYPES } from './hooks/useContainerAssets'
 import { APIError } from '../../api/error'
+import { Skeleton } from '../../components/ui/Skeleton'
 
 export function ContainerAssetsListPage() {
   const navigate = useNavigate()
@@ -68,13 +69,7 @@ export function ContainerAssetsListPage() {
         </select>
       </div>
 
-      {isLoading && (
-        <div className="space-y-2 animate-pulse">
-          {[...Array(5)].map((_, i) => (
-            <div key={i} className="h-12 rounded bg-[var(--color-border)/20]" />
-          ))}
-        </div>
-      )}
+      {isLoading && <Skeleton rows={5} rowClassName="h-12" />}
 
       {!isLoading && !isError && data && (data.items ?? []).length === 0 && (
         <p className="text-[var(--color-muted)]">No container assets yet.</p>

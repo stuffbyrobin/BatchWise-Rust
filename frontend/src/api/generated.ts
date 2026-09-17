@@ -2968,10 +2968,10 @@ export interface components {
             calc_abv_pct?: number | null;
             calc_ibu?: number | null;
             calc_color_ebc?: number | null;
-            fermentables?: Record<string, never>[];
-            hops?: Record<string, never>[];
-            yeasts?: Record<string, never>[];
-            mash_steps?: Record<string, never>[];
+            fermentables?: components["schemas"]["RecipeFermentable"][];
+            hops?: components["schemas"]["RecipeHop"][];
+            yeasts?: components["schemas"]["RecipeYeast"][];
+            mash_steps?: components["schemas"]["RecipeMashStep"][];
         };
         CreateBatchRequest: {
             /** Format: uuid */
@@ -3006,9 +3006,9 @@ export interface components {
             to_status: "brewing" | "fermenting" | "conditioning" | "packaging" | "completed" | "cancelled" | "spoiled";
         };
         PatchIngredientsRequest: {
-            fermentables?: Record<string, never>[];
-            hops?: Record<string, never>[];
-            yeasts?: Record<string, never>[];
+            fermentables?: components["schemas"]["RecipeFermentable"][];
+            hops?: components["schemas"]["RecipeHop"][];
+            yeasts?: components["schemas"]["RecipeYeast"][];
         };
         CreateBatchResponse: {
             batch?: components["schemas"]["Batch"];

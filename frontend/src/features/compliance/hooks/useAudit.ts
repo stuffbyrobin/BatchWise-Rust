@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { apiClient } from '../../../api/client'
 import type { components } from '../../../api/generated'
+import { qs } from '../../../api/qs'
 
 type AuditEvent = components['schemas']['AuditEvent']
 type AuditEventList = components['schemas']['AuditEventList']
@@ -14,14 +15,6 @@ export interface AuditParams {
   sort?: string
   page?: number
   page_size?: number
-}
-
-function qs(params: Record<string, unknown>): string {
-  const q = Object.entries(params)
-    .filter(([, v]) => v !== undefined && v !== null && v !== '')
-    .map(([k, v]) => `${k}=${encodeURIComponent(String(v))}`)
-    .join('&')
-  return q ? `?${q}` : ''
 }
 
 export function useAuditEvents(params: AuditParams = {}) {

@@ -5,6 +5,8 @@ import {
   usePropagations, useCreatePropagation, usePatchPropagation, useDeletePropagation,
 } from './hooks/useYeastBank'
 import type { components } from '../../api/generated'
+import { fmtDate } from '../../utils/format'
+import { inputCls } from '../../components/ui/styles'
 
 type YeastBankEntry = components['schemas']['YeastBankEntry']
 type Propagation = components['schemas']['Propagation']
@@ -13,11 +15,6 @@ const STATUS_COLORS: Record<string, string> = {
   active: 'text-green-600',
   depleted: 'text-yellow-600',
   discarded: 'text-[var(--color-muted)]',
-}
-
-function fmtDate(s: string | null | undefined): string {
-  if (!s) return '—'
-  return String(s).slice(0, 10)
 }
 
 function PropagationsPanel({ entry }: { entry: YeastBankEntry }) {
@@ -371,42 +368,42 @@ export default function YeastBankPage() {
           <div className="col-span-2 md:col-span-3 font-medium">New Yeast Bank Entry</div>
           <div className="col-span-2 md:col-span-1">
             <label className="block text-xs text-[var(--color-muted)] mb-1">Name *</label>
-            <input className="w-full border rounded px-2 py-1 text-sm" placeholder="WY1056 Batch A"
+            <input className={inputCls} placeholder="WY1056 Batch A"
               value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} required />
           </div>
           <div>
             <label className="block text-xs text-[var(--color-muted)] mb-1">Generation</label>
-            <input className="w-full border rounded px-2 py-1 text-sm" type="number" min={1} placeholder="1"
+            <input className={inputCls} type="number" min={1} placeholder="1"
               value={form.generation} onChange={(e) => setForm((f) => ({ ...f, generation: e.target.value }))} />
           </div>
           <div>
             <label className="block text-xs text-[var(--color-muted)] mb-1">Last Harvested</label>
-            <input className="w-full border rounded px-2 py-1 text-sm" type="date"
+            <input className={inputCls} type="date"
               value={form.harvested_at} onChange={(e) => setForm((f) => ({ ...f, harvested_at: e.target.value }))} />
           </div>
           <div>
             <label className="block text-xs text-[var(--color-muted)] mb-1">Viability %</label>
-            <input className="w-full border rounded px-2 py-1 text-sm" type="number" min={0} max={100} placeholder="95"
+            <input className={inputCls} type="number" min={0} max={100} placeholder="95"
               value={form.viability_percent} onChange={(e) => setForm((f) => ({ ...f, viability_percent: e.target.value }))} />
           </div>
           <div>
             <label className="block text-xs text-[var(--color-muted)] mb-1">Quantity (mL)</label>
-            <input className="w-full border rounded px-2 py-1 text-sm" type="number" min={0} placeholder="500"
+            <input className={inputCls} type="number" min={0} placeholder="500"
               value={form.quantity_ml} onChange={(e) => setForm((f) => ({ ...f, quantity_ml: e.target.value }))} />
           </div>
           <div>
             <label className="block text-xs text-[var(--color-muted)] mb-1">Storage Temp (&deg;C)</label>
-            <input className="w-full border rounded px-2 py-1 text-sm" type="number" placeholder="2"
+            <input className={inputCls} type="number" placeholder="2"
               value={form.storage_temp_c} onChange={(e) => setForm((f) => ({ ...f, storage_temp_c: e.target.value }))} />
           </div>
           <div>
             <label className="block text-xs text-[var(--color-muted)] mb-1">Location</label>
-            <input className="w-full border rounded px-2 py-1 text-sm" placeholder="Fridge 2, shelf A"
+            <input className={inputCls} placeholder="Fridge 2, shelf A"
               value={form.location} onChange={(e) => setForm((f) => ({ ...f, location: e.target.value }))} />
           </div>
           <div className="col-span-2">
             <label className="block text-xs text-[var(--color-muted)] mb-1">Notes</label>
-            <input className="w-full border rounded px-2 py-1 text-sm"
+            <input className={inputCls}
               value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} />
           </div>
           {formErr && <div className="col-span-2 md:col-span-3 text-xs text-[var(--color-danger)]">{formErr}</div>}
