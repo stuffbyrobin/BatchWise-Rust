@@ -80,6 +80,17 @@ describe('ConfirmDialog', () => {
     expect(onCancel).not.toHaveBeenCalled()
   })
 
+  it('renders extra content and can hold the confirm button disabled', () => {
+    render(
+      <ConfirmDialog open title="Mark spoiled?" confirmLabel="Mark spoiled" confirmDisabled onConfirm={vi.fn()} onCancel={vi.fn()}>
+        <p>Reason field</p>
+      </ConfirmDialog>,
+    )
+    expect(screen.getByText('Reason field')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Mark spoiled' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeEnabled()
+  })
+
   it('useConfirm requires the provider', () => {
     function Bare() {
       useConfirm()

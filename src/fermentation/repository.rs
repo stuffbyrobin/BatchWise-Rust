@@ -22,6 +22,19 @@ fn order_by(sort: &str) -> &'static str {
 }
 
 /// True if the batch exists for this tenant.
+/// The batch's status, or `None` if the batch does not exist for the tenant.
+pub async fn batch_status(
+    pool: &PgPool,
+    tenant_id: Uuid,
+    batch_id: Uuid,
+) -> Result<Option<String>, sqlx::Error> {
+    sqlx::query_scalar::<_, String>("SELECT status FROM batches WHERE id = $1 AND tenant_id = $2")
+        .bind(batch_id)
+        .bind(tenant_id)
+        .fetch_optional(pool)
+        .await
+}
+
 pub async fn batch_exists(
     pool: &PgPool,
     tenant_id: Uuid,

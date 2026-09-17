@@ -11,15 +11,33 @@ use super::repository as repo;
 use crate::platform::errors::ApiError;
 use crate::state::AppState;
 
+/// Readings belong to a batch's production record, so they are read-only once
+/// the batch is completed, cancelled or spoiled.
+async fn ensure_batch_open(
+    state: &AppState,
+    tenant_id: Uuid,
+    batch_id: Uuid,
+) -> Result<(), ApiError> {
+    let status = repo::batch_status(&state.pool, tenant_id, batch_id)
+        .await?
+        .ok_or_else(|| ApiError::not_found("batch"))?;
+    if matches!(status.as_str(), "completed" | "cancelled" | "spoiled") {
+        return Err(ApiError::business_rule(
+            "batch_terminal_status",
+            "Readings of a completed, cancelled or spoiled batch cannot be changed.",
+            Default::default(),
+        ));
+    }
+    Ok(())
+}
+
 pub async fn create_reading(
     state: &AppState,
     tenant_id: Uuid,
     batch_id: Uuid,
     req: CreateReadingRequest,
 ) -> Result<Reading, ApiError> {
-    if !repo::batch_exists(&state.pool, tenant_id, batch_id).await? {
-        return Err(ApiError::not_found("batch"));
-    }
+    ensure_batch_open(state, tenant_id, batch_id).await?;
 
     let recorded_at = req.recorded_at.unwrap_or_else(Utc::now);
     let stage = req.stage.as_deref().unwrap_or("primary");
@@ -57,6 +75,7 @@ pub async fn patch_reading(
     id: Uuid,
     req: PatchReadingRequest,
 ) -> Result<Reading, ApiError> {
+    ensure_batch_open(state, tenant_id, batch_id).await?;
     let mut rd = repo::select_reading_by_id(&state.pool, tenant_id, batch_id, id)
         .await?
         .ok_or_else(|| ApiError::not_found("fermentation_reading"))?;
@@ -105,6 +124,7 @@ pub async fn delete_reading(
     batch_id: Uuid,
     id: Uuid,
 ) -> Result<(), ApiError> {
+    ensure_batch_open(state, tenant_id, batch_id).await?;
     if !repo::delete_reading(&state.pool, tenant_id, batch_id, id).await? {
         return Err(ApiError::not_found("fermentation_reading"));
     }

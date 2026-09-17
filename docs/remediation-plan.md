@@ -233,13 +233,13 @@ edits and ingredient changes; submitted duty returns are final; only draft sales
 orders can be deleted; approved label records cannot be deleted; deleting your
 own account only deactivates it, so audit entries keep their actor.
 
-- [ ] Batches: allow `DELETE` only while `planned`. Today `cancelled` batches can be deleted too, but a batch can be cancelled after brewing started, when stock has been deducted. Deleting it cascades `batch_ingredients` (lot traceability), `fermentation_readings`, `label_records` and `batch_costs`, and sets `batch_id` to null on `duty_events` and `order_items`. Cancelled batches stay as records. Integration test.
+- [x] Batches: allow `DELETE` only while `planned`. Today `cancelled` batches can be deleted too, but a batch can be cancelled after brewing started, when stock has been deducted. Deleting it cascades `batch_ingredients` (lot traceability), `fermentation_readings`, `label_records` and `batch_costs`, and sets `batch_id` to null on `duty_events` and `order_items`. Cancelled batches stay as records. Integration test. (Done: the batch page shows Delete only for planned batches.)
 - [ ] Distribution movements: remove `DELETE` (one-step-forward traceability). Quantities must be positive, so a mistake cannot be reversed with a negative entry; add `voided_at`, `voided_by` and `void_reason` instead. Voided movements stay visible and are excluded from totals.
-- [ ] Packaging runs: not deletable once their batch is `completed` (today they are only protected once they have movements).
-- [ ] Fermentation readings: read-only (no create, update or delete) once the batch is terminal.
-- [ ] `completed → spoiled`: require a `reason` in the transition request and write it to the compliance audit log. Phase 15 limits this transition to Manager and Owner.
-- [ ] Retention: `duty_returns`, `duty_events` and `compliance_audit_log` cascade on tenant delete. There is no tenant-delete endpoint today; switch these foreign keys to `RESTRICT` so any future account closure has to deactivate the tenant and purge only after the retention period.
-- [ ] Audit log: add a database trigger that rejects `UPDATE` and `DELETE` on `compliance_audit_log`, so it stays append-only even against a code bug.
+- [x] Packaging runs: not deletable once their batch is `completed` (today they are only protected once they have movements). (Blocked for every terminal status, `completed`, `cancelled` and `spoiled`, matching the other locks. Integration test.)
+- [x] Fermentation readings: read-only (no create, update or delete) once the batch is terminal. (Integration test; the fermentation page hides the form and Delete for finished batches.)
+- [x] `completed → spoiled`: require a `reason` in the transition request and write it to the compliance audit log. Phase 15 limits this transition to Manager and Owner. (Every transition to `cancelled` or `spoiled` now writes a `batch.cancelled` or `batch.spoiled` audit event with the reason, optional except for `completed → spoiled`. The batch page asks for the reason in a dialog.)
+- [x] Retention: `duty_returns`, `duty_events` and `compliance_audit_log` cascade on tenant delete. There is no tenant-delete endpoint today; switch these foreign keys to `RESTRICT` so any future account closure has to deactivate the tenant and purge only after the retention period. (`duty_returns` already blocked tenant deletion, since its foreign key has no `ON DELETE`. Migration `000030_compliance_retention` switches `duty_events` and `compliance_audit_log` to `RESTRICT`.)
+- [x] Audit log: add a database trigger that rejects `UPDATE` and `DELETE` on `compliance_audit_log`, so it stays append-only even against a code bug. (Same migration. An integration test checks that updates, deletes and tenant deletion are all rejected.)
 
 ---
 

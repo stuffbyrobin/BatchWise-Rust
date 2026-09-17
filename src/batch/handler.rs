@@ -113,8 +113,15 @@ async fn transition(
     Path(id): Path<Uuid>,
     ValidatedJson(req): ValidatedJson<TransitionRequest>,
 ) -> Result<Response, ApiError> {
-    let batch =
-        service::transition(&state, ctx.tenant_id()?, ctx.user_id()?, id, &req.to_status).await?;
+    let batch = service::transition(
+        &state,
+        ctx.tenant_id()?,
+        ctx.user_id()?,
+        id,
+        &req.to_status,
+        req.reason.as_deref(),
+    )
+    .await?;
     Ok(Json(batch).into_response())
 }
 

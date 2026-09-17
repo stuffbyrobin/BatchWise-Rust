@@ -121,7 +121,8 @@ pub async fn patch_run(
     .ok_or_else(|| ApiError::not_found("packaging_run"))
 }
 
-/// Deletes a packaging run; blocked if it has movements.
+/// Deletes a packaging run; blocked if it has movements or its batch is
+/// completed, cancelled or spoiled (the run is then part of the batch record).
 pub async fn delete_run(
     state: &AppState,
     tenant_id: Uuid,
@@ -135,6 +136,17 @@ pub async fn delete_run(
     }
     if repo::has_movements(&mut *tx, tenant_id, id).await? {
         return Err(ApiError::conflict("packaging_run", "has_movements"));
+    }
+    let batch_status = repo::batch_status(&mut *tx, tenant_id, run.batch_id).await?;
+    if matches!(
+        batch_status.as_deref(),
+        Some("completed" | "cancelled" | "spoiled")
+    ) {
+        return Err(ApiError::business_rule(
+            "batch_terminal_status",
+            "Packaging runs of a completed, cancelled or spoiled batch cannot be deleted.",
+            Default::default(),
+        ));
     }
     if !repo::delete_run(&mut *tx, tenant_id, id).await? {
         return Err(ApiError::not_found("packaging_run"));

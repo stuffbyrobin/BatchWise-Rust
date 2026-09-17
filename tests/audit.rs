@@ -293,3 +293,48 @@ async fn audit_is_tenant_scoped() {
         .unwrap();
     assert_eq!(page["total"].as_i64().unwrap(), 0);
 }
+
+#[tokio::test]
+async fn audit_log_is_append_only_and_outlives_tenant_deletion() {
+    let app = spawn_app().await;
+    let (_token, tenant_id) = app.register().await;
+    let pool = sqlx::PgPool::connect(&app.db_url).await.unwrap();
+    sqlx::query(
+        "INSERT INTO compliance_audit_log (tenant_id, event_type, entity_type) \
+         VALUES ($1, 'test.event', 'test')",
+    )
+    .bind(tenant_id)
+    .execute(&pool)
+    .await
+    .unwrap();
+    let count = || async {
+        sqlx::query_scalar::<_, i64>(
+            "SELECT COUNT(*) FROM compliance_audit_log WHERE tenant_id = $1",
+        )
+        .bind(tenant_id)
+        .fetch_one(&pool)
+        .await
+        .unwrap()
+    };
+    let before = count().await;
+
+    let update =
+        sqlx::query("UPDATE compliance_audit_log SET event_type = 'edited' WHERE tenant_id = $1")
+            .bind(tenant_id)
+            .execute(&pool)
+            .await;
+    assert!(update.unwrap_err().to_string().contains("append-only"));
+    let delete = sqlx::query("DELETE FROM compliance_audit_log WHERE tenant_id = $1")
+        .bind(tenant_id)
+        .execute(&pool)
+        .await;
+    assert!(delete.unwrap_err().to_string().contains("append-only"));
+
+    // Deleting the tenant must not take its compliance records with it.
+    let tenant_delete = sqlx::query("DELETE FROM tenants WHERE id = $1")
+        .bind(tenant_id)
+        .execute(&pool)
+        .await;
+    assert!(tenant_delete.is_err(), "tenant delete must be blocked");
+    assert_eq!(count().await, before);
+}
