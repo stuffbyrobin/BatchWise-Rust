@@ -190,6 +190,7 @@ pub async fn me(state: &AppState, user_id: Uuid) -> Result<MeResponse, ApiError>
         email: user.email,
         display_name: user.display_name,
         is_owner: user.is_owner,
+        role: user.role,
         tenant_name: tenant.tenant_name,
         tier: tenant.tier,
         country: tenant.country,
@@ -245,6 +246,8 @@ pub async fn update_me(
 pub async fn delete_me(state: &AppState, user_id: Uuid) -> Result<(), ApiError> {
     repo::deactivate_user(&state.pool, user_id).await?;
     repo::delete_refresh_tokens_for_user(&state.pool, user_id).await?;
+    // Refuse the still-valid access token from the next request.
+    state.roles.invalidate(user_id);
     Ok(())
 }
 
@@ -264,6 +267,7 @@ async fn issue_token_pair(state: &AppState, user: &User) -> Result<AuthResponse,
         email: user.email.clone(),
         display_name: user.display_name.clone(),
         is_owner: user.is_owner,
+        role: user.role.clone(),
         access_token,
         refresh_token: token,
         token_type: "Bearer".to_string(),

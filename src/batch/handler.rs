@@ -117,6 +117,7 @@ async fn transition(
         &state,
         ctx.tenant_id()?,
         ctx.user_id()?,
+        ctx.role()?,
         id,
         &req.to_status,
         req.reason.as_deref(),

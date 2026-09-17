@@ -9,6 +9,7 @@ use axum::extract::FromRequestParts;
 use axum::http::request::Parts;
 use uuid::Uuid;
 
+use super::authz::Role;
 use super::errors::ApiError;
 
 /// Values attached to every request as it flows through the middleware stack.
@@ -19,6 +20,8 @@ pub struct RequestContext {
     pub request_id: String,
     /// Acting user for audit logging; usually equal to `user_id`.
     pub actor_id: Option<Uuid>,
+    /// The caller's role, set by `require_auth`.
+    pub role: Option<Role>,
 }
 
 impl RequestContext {
@@ -32,6 +35,12 @@ impl RequestContext {
     pub fn user_id(&self) -> Result<Uuid, ApiError> {
         self.user_id
             .ok_or_else(|| ApiError::unauthorized("missing user context"))
+    }
+
+    /// Returns the caller's role or an `unauthorized` error if none is set.
+    pub fn role(&self) -> Result<Role, ApiError> {
+        self.role
+            .ok_or_else(|| ApiError::unauthorized("missing role context"))
     }
 }
 
@@ -76,6 +85,7 @@ mod tests {
             user_id: Some(id),
             request_id: "req-1".into(),
             actor_id: Some(id),
+            role: Some(Role::Viewer),
         };
         assert_eq!(ctx.tenant_id().unwrap(), id);
         assert_eq!(ctx.user_id().unwrap(), id);

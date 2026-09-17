@@ -96,7 +96,7 @@ async fn patch(
     Path(id): Path<Uuid>,
     ValidatedJson(req): ValidatedJson<PatchRequest>,
 ) -> Result<Response, ApiError> {
-    let rec = service::patch(&state, ctx.tenant_id()?, id, ctx.actor_id, req).await?;
+    let rec = service::patch(&state, ctx.tenant_id()?, id, ctx.actor_id, ctx.role()?, req).await?;
     Ok(Json(rec).into_response())
 }
 

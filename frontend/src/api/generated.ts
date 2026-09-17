@@ -2308,6 +2308,11 @@ export interface components {
             email: string;
             display_name: string;
             is_owner: boolean;
+            /**
+             * @description What the user may do; see docs/remediation-plan.md, Phase 15.
+             * @enum {string}
+             */
+            role: "owner" | "manager" | "brewer" | "sales" | "viewer";
             access_token: string;
             refresh_token: string;
             /** @enum {string} */
@@ -2324,6 +2329,11 @@ export interface components {
             email: string;
             display_name: string;
             is_owner: boolean;
+            /**
+             * @description What the user may do; see docs/remediation-plan.md, Phase 15.
+             * @enum {string}
+             */
+            role: "owner" | "manager" | "brewer" | "sales" | "viewer";
             tenant_name: string;
             /** @enum {string} */
             tier: "home" | "pro" | "enterprise";

@@ -1,14 +1,13 @@
 //! Tenant business logic.
 //!
-//! Port of the Go `internal/tenant/service.go`. Ownership checks read the user
-//! via the auth repository (same crate, so no adapter is needed).
+//! Port of the Go `internal/tenant/service.go`. Who may change the settings is
+//! decided by route authorisation (`platform::authz`): only the Owner.
 
 use sqlx::PgPool;
 use uuid::Uuid;
 
 use super::models::{Tenant, UpdateRequest};
 use super::repository;
-use crate::auth::repository as auth_repo;
 use crate::platform::errors::ApiError;
 
 /// Returns the current tenant.
@@ -18,22 +17,12 @@ pub async fn get_current(pool: &PgPool, tenant_id: Uuid) -> Result<Tenant, ApiEr
         .ok_or_else(|| ApiError::not_found("tenant"))
 }
 
-/// Updates the current tenant. Only the tenant owner may do so.
+/// Updates the current tenant (route authorisation limits this to the Owner).
 pub async fn update(
     pool: &PgPool,
-    user_id: Uuid,
     tenant_id: Uuid,
     req: UpdateRequest,
 ) -> Result<Tenant, ApiError> {
-    let user = auth_repo::get_user_by_id(pool, user_id)
-        .await?
-        .ok_or_else(|| ApiError::not_found("user"))?;
-    if !user.is_owner {
-        return Err(ApiError::forbidden(
-            "only the tenant owner can update tenant settings",
-        ));
-    }
-
     let mut tn = repository::get_by_id(pool, tenant_id)
         .await?
         .ok_or_else(|| ApiError::not_found("tenant"))?;

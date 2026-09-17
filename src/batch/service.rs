@@ -19,6 +19,7 @@ use crate::calendar::models::EventWrite;
 use crate::calendar::service as calendar_svc;
 use crate::inventory::models::DeductRequest;
 use crate::inventory::service as inventory_svc;
+use crate::platform::authz::Role;
 use crate::platform::errors::is_unique_violation;
 use crate::platform::errors::ApiError;
 use crate::platform::refs::{ensure_opt_ref, Ref};
@@ -328,11 +329,12 @@ pub async fn delete(state: &AppState, tenant_id: Uuid, id: Uuid) -> Result<(), A
 
 /// Transitions batch status, deducting inventory on `planned → brewing`.
 /// Cancelling or spoiling a batch is recorded in the compliance audit log, and
-/// spoiling a completed batch requires a reason.
+/// spoiling a completed batch requires a reason and an Owner or Manager.
 pub async fn transition(
     state: &AppState,
     tenant_id: Uuid,
     user_id: Uuid,
+    role: Role,
     id: Uuid,
     to_status: &str,
     reason: Option<&str>,
@@ -358,6 +360,12 @@ pub async fn transition(
         ));
     }
 
+    // Writing off finished beer is a compliance correction.
+    if batch.status == "completed" && to_status == "spoiled" && !role.is_manager() {
+        return Err(ApiError::forbidden(
+            "Only an Owner or Manager can mark a completed batch as spoiled.",
+        ));
+    }
     let reason = reason.map(str::trim).filter(|r| !r.is_empty());
     // Spoiling a completed batch writes off finished beer that may already have
     // been declared for duty, so the reason must be on record.

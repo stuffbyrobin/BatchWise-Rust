@@ -15,6 +15,7 @@
 //! - [`sql`] — small SQL helpers (LIKE pattern escaping).
 //! - [`web`] — JSON request/response helpers.
 
+pub mod authz;
 pub mod config;
 pub mod context;
 pub mod database;
@@ -24,6 +25,7 @@ pub mod logger;
 pub mod middleware;
 pub mod pagination;
 pub mod refs;
+pub mod roles;
 pub mod seed;
 pub mod sort;
 pub mod sql;
