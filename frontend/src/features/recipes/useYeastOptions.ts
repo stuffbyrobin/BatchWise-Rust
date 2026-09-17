@@ -82,5 +82,6 @@ export function useYeastOptions() {
     return { byKey, byName, groups }
   }, [generic.data, stock.data])
 
-  return { ...derived, loading: generic.isLoading || stock.isLoading }
+  const loading = generic.isLoading || stock.isLoading
+  return useMemo(() => ({ ...derived, loading }), [derived, loading])
 }

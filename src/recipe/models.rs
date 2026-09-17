@@ -53,7 +53,9 @@ pub struct RecipeWithIngredients {
 /// A single fermentable addition.
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct Fermentable {
+    #[serde(default)]
     pub id: Uuid,
+    #[serde(default)]
     pub recipe_id: Uuid,
     pub step_order: i32,
     pub name: String,
@@ -71,7 +73,9 @@ pub struct Fermentable {
 /// A single hop addition.
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct Hop {
+    #[serde(default)]
     pub id: Uuid,
+    #[serde(default)]
     pub recipe_id: Uuid,
     pub step_order: i32,
     pub name: String,
@@ -89,7 +93,9 @@ pub struct Hop {
 /// A single yeast addition.
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct Yeast {
+    #[serde(default)]
     pub id: Uuid,
+    #[serde(default)]
     pub recipe_id: Uuid,
     pub yeast_id: Option<Uuid>,
     pub name: String,

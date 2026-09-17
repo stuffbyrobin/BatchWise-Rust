@@ -2741,6 +2741,8 @@ export interface components {
             potential_ppg?: number | null;
             type?: string | null;
             addition?: string | null;
+            /** Format: uuid */
+            inventory_lot_id?: string | null;
         };
         RecipeHop: {
             /** Format: uuid */
@@ -2756,6 +2758,8 @@ export interface components {
             boil_time_minutes?: number;
             form?: string | null;
             use?: string | null;
+            /** Format: uuid */
+            inventory_lot_id?: string | null;
         };
         RecipeYeast: {
             /** Format: uuid */
@@ -2769,6 +2773,8 @@ export interface components {
             /** @enum {string} */
             unit?: "g" | "mL" | "count";
             attenuation_pct?: number | null;
+            /** Format: uuid */
+            inventory_lot_id?: string | null;
         };
         RecipeMashStep: {
             /** Format: uuid */
@@ -2834,8 +2840,8 @@ export interface components {
             amount: number;
             /** @enum {string} */
             unit: "kg" | "g";
-            color_ebc?: number;
-            potential_ppg?: number;
+            color_ebc?: number | null;
+            potential_ppg?: number | null;
             type?: string;
             addition?: string;
         };
@@ -2859,7 +2865,7 @@ export interface components {
             amount: number;
             /** @enum {string} */
             unit: "g" | "mL" | "count";
-            attenuation_pct?: number;
+            attenuation_pct?: number | null;
         };
         MashStepInput: {
             step_order: number;
@@ -2867,7 +2873,7 @@ export interface components {
             step_type: "infusion" | "temperature" | "decoction";
             target_temp_c: number;
             hold_minutes: number;
-            infusion_volume_liters?: number;
+            infusion_volume_liters?: number | null;
         };
         CreateRecipeRequest: {
             name: string;
@@ -3005,6 +3011,7 @@ export interface components {
             /** @enum {string} */
             to_status: "brewing" | "fermenting" | "conditioning" | "packaging" | "completed" | "cancelled" | "spoiled";
         };
+        /** @description Replaces the batch snapshot's ingredient lists. Rows may omit `id` and `recipe_id`; new rows get a fresh id and every row is tied to the snapshot's recipe. */
         PatchIngredientsRequest: {
             fermentables?: components["schemas"]["RecipeFermentable"][];
             hops?: components["schemas"]["RecipeHop"][];

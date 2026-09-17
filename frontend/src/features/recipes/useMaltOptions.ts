@@ -30,8 +30,6 @@ function extractToPpg(lkg?: number | null): number | undefined {
   return Math.round((lkg / 8.3454) * 10) / 10
 }
 
-
-
 // Display generic malts in a sensible order; unknown types fall to the end.
 const GENERIC_TYPE_ORDER = [
   'Base Malt',
@@ -111,5 +109,6 @@ export function useMaltOptions() {
     return { options, byKey, byName, groups }
   }, [generic.data, stock.data])
 
-  return { ...derived, loading: generic.isLoading || stock.isLoading }
+  const loading = generic.isLoading || stock.isLoading
+  return useMemo(() => ({ ...derived, loading }), [derived, loading])
 }

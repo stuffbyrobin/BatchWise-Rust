@@ -464,13 +464,33 @@ pub async fn patch_ingredients(
     }
 
     let mut snapshot = existing.batch_recipe_snapshot;
+    // Rows added in the editor arrive without ids; every row belongs to the
+    // snapshot's recipe regardless of what the client sent.
+    let recipe_id = snapshot.recipe_id;
     snapshot.fermentables = req.fermentables;
+    for f in &mut snapshot.fermentables {
+        assign_row_ids(&mut f.id, &mut f.recipe_id, recipe_id);
+    }
     snapshot.hops = req.hops;
+    for h in &mut snapshot.hops {
+        assign_row_ids(&mut h.id, &mut h.recipe_id, recipe_id);
+    }
     snapshot.yeasts = req.yeasts;
+    for y in &mut snapshot.yeasts {
+        assign_row_ids(&mut y.id, &mut y.recipe_id, recipe_id);
+    }
 
     repo::update_snapshot(&mut *tx, tenant_id, id, &snapshot).await?;
     tx.commit().await?;
     get(state, tenant_id, id).await
+}
+
+/// Gives a snapshot row a fresh id if it has none and ties it to the recipe.
+fn assign_row_ids(id: &mut Uuid, row_recipe_id: &mut Uuid, recipe_id: Uuid) {
+    if id.is_nil() {
+        *id = Uuid::new_v4();
+    }
+    *row_recipe_id = recipe_id;
 }
 
 /// Returns a count per status (all eight statuses present).
