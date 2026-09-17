@@ -90,6 +90,9 @@ const MaintenanceDuePage = lazy(() => import('../features/equipment/MaintenanceD
 // Compliance Audit
 const ComplianceAuditPage = lazy(() => import('../features/compliance/ComplianceAuditPage'))
 
+// Members
+const MembersPage = named(() => import('../features/members/MembersPage'), 'MembersPage')
+
 // Phase 07d — reporting & container assets
 const ContainerAssetsListPage = named(() => import('../features/reporting/ContainerAssetsListPage'), 'ContainerAssetsListPage')
 const ContainerAssetDetailPage = named(() => import('../features/reporting/ContainerAssetDetailPage'), 'ContainerAssetDetailPage')
@@ -179,6 +182,7 @@ const router = createBrowserRouter([
       { path: 'distribution-movements', element: <DistributionMovementsPage /> },
       { path: 'traceability', element: <TraceabilityPage /> },
       { path: 'compliance-audit', element: <ComplianceAuditPage /> },
+      { path: 'members', element: <MembersPage /> },
 
       // Phase 07d — reporting & container assets
       { path: 'container-assets', element: <ContainerAssetsListPage /> },

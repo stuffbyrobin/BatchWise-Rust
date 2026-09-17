@@ -91,6 +91,43 @@ export interface paths {
         patch: operations["updateMe"];
         trace?: never;
     };
+    "/api/v1/members": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List the tenant's members (Owners and Managers) */
+        get: operations["listMembers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/members/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Change a member's role or active flag
+         * @description Owners manage every member; Managers only Brewer, Sales and Viewer members, and only to one of those roles. A tenant must keep an active Owner (422 `last_owner`). Changes are audited and apply from the member's next request.
+         */
+        patch: operations["patchMember"];
+        trace?: never;
+    };
     "/api/v1/tenants/current": {
         parameters: {
             query?: never;
@@ -105,7 +142,7 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        /** Update tenant name, country, or region (owner only) */
+        /** Update tenant name, country, or region (Owner only) */
         patch: operations["updateCurrentTenant"];
         trace?: never;
     };
@@ -2299,6 +2336,27 @@ export interface components {
             current_password?: string;
             new_password?: string;
         };
+        Member: {
+            /** Format: uuid */
+            id: string;
+            /** Format: email */
+            email: string;
+            display_name: string;
+            /** @enum {string} */
+            role: "owner" | "manager" | "brewer" | "sales" | "viewer";
+            is_active: boolean;
+            /** Format: date-time */
+            created_at: string;
+        };
+        MemberList: {
+            items: components["schemas"]["Member"][];
+        };
+        PatchMemberRequest: {
+            /** @enum {string} */
+            role?: "owner" | "manager" | "brewer" | "sales" | "viewer";
+            /** @description Deactivating signs the member out and revokes their refresh tokens. */
+            is_active?: boolean;
+        };
         AuthResponse: {
             /** Format: uuid */
             user_id: string;
@@ -2307,7 +2365,6 @@ export interface components {
             /** Format: email */
             email: string;
             display_name: string;
-            is_owner: boolean;
             /**
              * @description What the user may do; see docs/remediation-plan.md, Phase 15.
              * @enum {string}
@@ -2328,7 +2385,6 @@ export interface components {
             /** Format: email */
             email: string;
             display_name: string;
-            is_owner: boolean;
             /**
              * @description What the user may do; see docs/remediation-plan.md, Phase 15.
              * @enum {string}
@@ -4658,6 +4714,59 @@ export interface operations {
             };
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
+        };
+    };
+    listMembers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MemberList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    patchMember: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PatchMemberRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Member"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["UnprocessableEntity"];
         };
     };
     getCurrentTenant: {

@@ -32,6 +32,10 @@ pub const EVENT_RECALL_QUERIED: &str = "recall.queried";
 pub const EVENT_BATCH_CANCELLED: &str = "batch.cancelled";
 pub const EVENT_BATCH_SPOILED: &str = "batch.spoiled";
 
+pub const EVENT_MEMBER_ROLE_CHANGED: &str = "member.role_changed";
+pub const EVENT_MEMBER_DEACTIVATED: &str = "member.deactivated";
+pub const EVENT_MEMBER_REACTIVATED: &str = "member.reactivated";
+
 /// A single compliance audit log entry.
 #[derive(Debug, Clone, Serialize, FromRow)]
 pub struct AuditEvent {

@@ -15,6 +15,8 @@ use super::password::{
 };
 use super::refresh::{generate_refresh_token, hash_refresh_token};
 use super::repository as repo;
+use crate::members::service as members_svc;
+use crate::platform::authz::Role;
 use crate::platform::errors::is_unique_violation;
 use crate::platform::errors::ApiError;
 use crate::state::AppState;
@@ -64,7 +66,7 @@ pub async fn register(state: &AppState, req: RegisterRequest) -> Result<AuthResp
 
     let mut tx = state.pool.begin().await?;
 
-    let (tenant_id, is_owner) = if let Some(name) = &req.tenant_name {
+    let (tenant_id, role) = if let Some(name) = &req.tenant_name {
         let flags = presets::preset_for_tier("home");
         let id = tenant_repo::insert(
             &mut *tx,
@@ -75,9 +77,9 @@ pub async fn register(state: &AppState, req: RegisterRequest) -> Result<AuthResp
             &flags,
         )
         .await?;
-        (id, true)
+        (id, Role::Owner)
     } else {
-        (system_tenant_id(), false)
+        (system_tenant_id(), Role::Manager)
     };
 
     let user = match repo::create_user(
@@ -86,7 +88,7 @@ pub async fn register(state: &AppState, req: RegisterRequest) -> Result<AuthResp
         &email,
         &hash,
         &req.display_name,
-        is_owner,
+        role.as_str(),
         true,
     )
     .await
@@ -189,7 +191,6 @@ pub async fn me(state: &AppState, user_id: Uuid) -> Result<MeResponse, ApiError>
         tenant_id: user.tenant_id,
         email: user.email,
         display_name: user.display_name,
-        is_owner: user.is_owner,
         role: user.role,
         tenant_name: tenant.tenant_name,
         tier: tenant.tier,
@@ -244,6 +245,16 @@ pub async fn update_me(
 
 /// Soft-deletes the user and revokes all refresh tokens.
 pub async fn delete_me(state: &AppState, user_id: Uuid) -> Result<(), ApiError> {
+    let user = repo::get_user_by_id(&state.pool, user_id)
+        .await?
+        .ok_or_else(|| ApiError::not_found("user"))?;
+    let role = user
+        .role
+        .parse::<Role>()
+        .map_err(|_| ApiError::internal(format!("unknown role {:?}", user.role)))?;
+    if members_svc::is_last_active_owner(&state.pool, user.tenant_id, user_id, role).await? {
+        return Err(members_svc::last_owner());
+    }
     repo::deactivate_user(&state.pool, user_id).await?;
     repo::delete_refresh_tokens_for_user(&state.pool, user_id).await?;
     // Refuse the still-valid access token from the next request.
@@ -266,7 +277,6 @@ async fn issue_token_pair(state: &AppState, user: &User) -> Result<AuthResponse,
         tenant_id: user.tenant_id,
         email: user.email.clone(),
         display_name: user.display_name.clone(),
-        is_owner: user.is_owner,
         role: user.role.clone(),
         access_token,
         refresh_token: token,

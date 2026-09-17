@@ -176,7 +176,7 @@ async fn member(app: &TestApp, tenant_id: Uuid, role: &str) -> (String, Uuid) {
     .unwrap();
 
     let pool = sqlx::PgPool::connect(&app.db_url).await.unwrap();
-    sqlx::query("UPDATE users SET tenant_id = $1, role = $2, is_owner = false WHERE id = $3")
+    sqlx::query("UPDATE users SET tenant_id = $1, role = $2 WHERE id = $3")
         .bind(tenant_id)
         .bind(role)
         .bind(user_id)
