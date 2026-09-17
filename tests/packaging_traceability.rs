@@ -278,3 +278,38 @@ async fn traceability_forward_backward_and_recall() {
     assert!(recall["affected_batches"].as_i64().unwrap() >= 1);
     assert!(recall["affected_packaging_runs"].as_i64().unwrap() >= 1);
 }
+
+#[tokio::test]
+async fn packaging_runs_of_a_finished_batch_cannot_be_deleted() {
+    let app = spawn_app().await;
+    let (token, tid) = app.register().await;
+    app.enable(tid, "{\"packaging\":true}").await;
+    let (bid, _lot, _name) = app.brewed_batch(&token).await;
+    let run_id = app.packaging_run(&token, &bid).await;
+
+    for to in ["fermenting", "conditioning", "packaging", "completed"] {
+        let resp = app
+            .post(
+                &format!("/api/v1/batches/{bid}/transition"),
+                &token,
+                json!({"to_status": to}),
+            )
+            .await;
+        assert_eq!(resp.status(), 200, "{to}");
+    }
+
+    let resp = app
+        .client
+        .delete(format!("{}/api/v1/packaging-runs/{run_id}", app.base))
+        .bearer_auth(&token)
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), 422);
+    let body: Value = resp.json().await.unwrap();
+    assert_eq!(body["details"]["rule"], json!("batch_terminal_status"));
+    let resp = app
+        .get(&format!("/api/v1/packaging-runs/{run_id}"), &token)
+        .await;
+    assert_eq!(resp.status(), 200);
+}

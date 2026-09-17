@@ -292,3 +292,44 @@ async fn reading_crud_lifecycle() {
         404
     );
 }
+
+#[tokio::test]
+async fn readings_are_read_only_once_the_batch_is_terminal() {
+    let app = spawn_app().await;
+    let (token, _tid) = app.register().await;
+    let batch_id = app.make_batch(&token).await;
+    let readings = format!("/api/v1/batches/{batch_id}/fermentation");
+
+    let resp = app.post(&readings, &token, json!({"gravity": 1.050})).await;
+    assert_eq!(resp.status(), 201);
+    let id = resp.json::<Value>().await.unwrap()["id"]
+        .as_str()
+        .unwrap()
+        .to_string();
+
+    // planned -> cancelled needs no stock.
+    let resp = app
+        .post(
+            &format!("/api/v1/batches/{batch_id}/transition"),
+            &token,
+            json!({"to_status": "cancelled"}),
+        )
+        .await;
+    assert_eq!(resp.status(), 200);
+
+    let reading = format!("{readings}/{id}");
+    for resp in [
+        app.post(&readings, &token, json!({"gravity": 1.010})).await,
+        app.patch(&reading, &token, json!({"notes": "late edit"}))
+            .await,
+        app.delete(&reading, &token).await,
+    ] {
+        assert_eq!(resp.status(), 422);
+        let body: Value = resp.json().await.unwrap();
+        assert_eq!(body["details"]["rule"], json!("batch_terminal_status"));
+    }
+
+    // The reading history stays readable.
+    let page: Value = app.get(&readings, &token).await.json().await.unwrap();
+    assert_eq!(page["total"].as_i64().unwrap(), 1);
+}

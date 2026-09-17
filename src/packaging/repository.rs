@@ -136,6 +136,19 @@ pub async fn delete_run<'e, E: PgExecutor<'e>>(
 }
 
 /// True if the packaging run has any distribution movements.
+/// The status of a tenant's batch, or `None` if it does not exist.
+pub async fn batch_status<'e, E: PgExecutor<'e>>(
+    exec: E,
+    tenant_id: Uuid,
+    batch_id: Uuid,
+) -> Result<Option<String>, sqlx::Error> {
+    sqlx::query_scalar::<_, String>("SELECT status FROM batches WHERE id = $1 AND tenant_id = $2")
+        .bind(batch_id)
+        .bind(tenant_id)
+        .fetch_optional(exec)
+        .await
+}
+
 pub async fn has_movements<'e, E: PgExecutor<'e>>(
     exec: E,
     tenant_id: Uuid,

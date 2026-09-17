@@ -194,6 +194,15 @@ impl TestApp {
         resp.json::<Value>().await.unwrap()
     }
 
+    async fn delete(&self, path: &str, token: &str) -> reqwest::Response {
+        self.client
+            .delete(format!("{}{path}", self.base))
+            .bearer_auth(token)
+            .send()
+            .await
+            .unwrap()
+    }
+
     async fn transition(&self, token: &str, batch_id: &str, to: &str) -> reqwest::Response {
         self.post(
             &format!("/api/v1/batches/{batch_id}/transition"),
@@ -549,4 +558,104 @@ async fn yeast_kinetics_crud() {
         .await
         .unwrap();
     assert!(page["total"].as_i64().unwrap() >= 1);
+}
+
+/// A planned batch whose recipe ingredients are all in stock; returns its id.
+async fn stocked_batch(app: &TestApp, token: &str) -> String {
+    let base = uniq();
+    let recipe_id = app.create_recipe(token, &base).await;
+    app.create_lot(token, "fermentable", &format!("Malt {base}"), "kg", 10.0)
+        .await;
+    app.create_lot(token, "hop", &format!("Hop {base}"), "g", 100.0)
+        .await;
+    app.create_lot(token, "yeast", &format!("Yeast {base}"), "g", 50.0)
+        .await;
+    let resp = app
+        .post("/api/v1/batches", token, json!({"recipe_id": recipe_id, "batch_number": format!("B-{}", uniq()), "name": "Record"}))
+        .await;
+    assert_eq!(resp.status(), 201);
+    resp.json::<Value>().await.unwrap()["batch"]["id"]
+        .as_str()
+        .unwrap()
+        .to_string()
+}
+
+#[tokio::test]
+async fn only_planned_batches_can_be_deleted() {
+    let app = spawn_app().await;
+    let token = app.token().await;
+
+    let planned = stocked_batch(&app, &token).await;
+    let resp = app
+        .delete(&format!("/api/v1/batches/{planned}"), &token)
+        .await;
+    assert_eq!(resp.status(), 204);
+
+    // Cancelled after brewing: stock was deducted, so the batch is a record.
+    let brewed = stocked_batch(&app, &token).await;
+    assert_eq!(
+        app.transition(&token, &brewed, "brewing").await.status(),
+        200
+    );
+    assert_eq!(
+        app.transition(&token, &brewed, "cancelled").await.status(),
+        200
+    );
+    let resp = app
+        .delete(&format!("/api/v1/batches/{brewed}"), &token)
+        .await;
+    assert_eq!(resp.status(), 422);
+    let body: Value = resp.json().await.unwrap();
+    assert_eq!(body["details"]["rule"], json!("batch_not_deletable"));
+    let resp = app.get(&format!("/api/v1/batches/{brewed}"), &token).await;
+    assert_eq!(resp.status(), 200);
+}
+
+#[tokio::test]
+async fn spoiling_a_completed_batch_requires_a_reason_and_is_audited() {
+    let app = spawn_app().await;
+    let token = app.token().await;
+    let id = stocked_batch(&app, &token).await;
+    for to in [
+        "brewing",
+        "fermenting",
+        "conditioning",
+        "packaging",
+        "completed",
+    ] {
+        assert_eq!(app.transition(&token, &id, to).await.status(), 200, "{to}");
+    }
+    let path = format!("/api/v1/batches/{id}/transition");
+
+    for body in [
+        json!({"to_status": "spoiled"}),
+        json!({"to_status": "spoiled", "reason": "   "}),
+    ] {
+        let resp = app.post(&path, &token, body).await;
+        assert_eq!(resp.status(), 400);
+        let err: Value = resp.json().await.unwrap();
+        assert_eq!(err["details"]["field"], json!("reason"));
+    }
+
+    let reason = "Infected: sour off-flavour in 12 kegs";
+    let resp = app
+        .post(
+            &path,
+            &token,
+            json!({"to_status": "spoiled", "reason": reason}),
+        )
+        .await;
+    assert_eq!(resp.status(), 200);
+
+    let pool = sqlx::PgPool::connect(&app.db_url).await.unwrap();
+    let data: Value = sqlx::query_scalar(
+        "SELECT event_data FROM compliance_audit_log \
+         WHERE entity_id = $1 AND event_type = 'batch.spoiled'",
+    )
+    .bind(Uuid::parse_str(&id).unwrap())
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert_eq!(data["from_status"], json!("completed"));
+    assert_eq!(data["reason"], json!(reason));
 }

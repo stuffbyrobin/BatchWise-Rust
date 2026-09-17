@@ -507,7 +507,10 @@ export interface paths {
         /** Replace a batch */
         put: operations["replaceBatch"];
         post?: never;
-        /** Delete a batch */
+        /**
+         * Delete a batch
+         * @description Only planned batches can be deleted. Once brewing has started the batch is a production record and stays, even if cancelled.
+         */
         delete: operations["deleteBatch"];
         options?: never;
         head?: never;
@@ -3010,6 +3013,8 @@ export interface components {
         TransitionRequest: {
             /** @enum {string} */
             to_status: "brewing" | "fermenting" | "conditioning" | "packaging" | "completed" | "cancelled" | "spoiled";
+            /** @description Why the batch is cancelled or spoiled. Recorded in the compliance audit log; required when spoiling a completed batch. */
+            reason?: string;
         };
         /** @description Replaces the batch snapshot's ingredient lists. Rows may omit `id` and `recipe_id`; new rows get a fresh id and every row is tied to the snapshot's recipe. */
         PatchIngredientsRequest: {

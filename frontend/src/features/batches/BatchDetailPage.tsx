@@ -15,6 +15,7 @@ import { useBatchCost, useComputeBatchCost } from '../reporting/hooks/useBatchCo
 import { BatchIngredientsEditor } from './BatchIngredientsEditor'
 import { APIError } from '../../api/error'
 import { ConfirmDialog, useConfirm } from '../../components/feedback/ConfirmDialog'
+import { LossReasonDialog, type LossStatus } from './LossReasonDialog'
 
 export function BatchDetailPage() {
   const confirm = useConfirm()
@@ -39,6 +40,7 @@ export function BatchDetailPage() {
 
   const [pendingTransition, setPendingTransition] = React.useState<BatchStatus | null>(null)
   const [confirmBrewing, setConfirmBrewing] = React.useState(false)
+  const [lossTransition, setLossTransition] = React.useState<LossStatus | null>(null)
 
   React.useEffect(() => {
     if (batch) {
@@ -75,6 +77,8 @@ export function BatchDetailPage() {
     if (toStatus === 'brewing') {
       setPendingTransition(toStatus)
       setConfirmBrewing(true)
+    } else if (toStatus === 'cancelled' || toStatus === 'spoiled') {
+      setLossTransition(toStatus)
     } else {
       resetTransition()
       transition({ to_status: toStatus as TransitionStatus }, { onSuccess: () => refetch() })
@@ -90,6 +94,15 @@ export function BatchDetailPage() {
         onError: () => setPendingTransition(null),
       })
     }
+  }
+
+  const handleConfirmLoss = (reason: string) => {
+    if (!lossTransition) return
+    resetTransition()
+    transition({ to_status: lossTransition, reason: reason || undefined }, {
+      onSuccess: () => { setLossTransition(null); refetch() },
+      onError: () => setLossTransition(null),
+    })
   }
 
   const handleDelete = async () => {
@@ -120,7 +133,8 @@ export function BatchDetailPage() {
   const allowedNext = ALLOWED_NEXT[batch.status as BatchStatus] ?? []
   const isTerminal = allowedNext.length === 0
   const canEdit = !['completed', 'cancelled', 'spoiled'].includes(batch.status ?? '')
-  const canDelete = ['planned', 'cancelled'].includes(batch.status ?? '')
+  // Once brewing starts the batch is a production record, even if cancelled.
+  const canDelete = batch.status === 'planned'
   const transitionErrorMessage = transitionError instanceof APIError
     ? transitionError.message
     : transitionError instanceof Error ? transitionError.message : null
@@ -139,6 +153,13 @@ export function BatchDetailPage() {
 
   return (
     <div>
+      <LossReasonDialog
+        toStatus={lossTransition}
+        fromStatus={batch.status ?? ''}
+        busy={isTransitioning}
+        onConfirm={handleConfirmLoss}
+        onCancel={() => setLossTransition(null)}
+      />
       <ConfirmDialog
         open={confirmBrewing}
         title="Start brewing?"

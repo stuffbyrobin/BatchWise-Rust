@@ -111,6 +111,10 @@ pub struct UpdateRequest {
 pub struct TransitionRequest {
     #[validate(length(min = 1))]
     pub to_status: String,
+    /// Why the batch is cancelled or spoiled; required for `completed → spoiled`.
+    #[validate(length(max = 1000))]
+    #[serde(default)]
+    pub reason: Option<String>,
 }
 
 /// Payload to replace the ingredient lists in the recipe snapshot.

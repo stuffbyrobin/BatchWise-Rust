@@ -1,6 +1,7 @@
 import React from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useReadings, useCreateReading, useDeleteReading } from './hooks/useFermentation'
+import { useBatch } from '../batches/hooks/useBatches'
 import type { components } from '../../api/generated'
 import { fmtDateTime } from '../../utils/format'
 
@@ -121,7 +122,7 @@ function LogForm({ batchId, onDone }: { batchId: string; onDone: () => void }) {
   )
 }
 
-function ReadingRow({ reading, batchId }: { reading: Reading; batchId: string }) {
+function ReadingRow({ reading, batchId, locked }: { reading: Reading; batchId: string; locked: boolean }) {
   const { mutate: del, isPending } = useDeleteReading(batchId)
   return (
     <tr className="border-b border-[var(--color-border)] text-sm hover:bg-[var(--color-surface)]">
@@ -132,13 +133,15 @@ function ReadingRow({ reading, batchId }: { reading: Reading; batchId: string })
       <td className="py-2 px-3 font-mono">{fmt(reading.ph)}</td>
       <td className="py-2 px-3 text-[var(--color-text-secondary)] max-w-xs truncate">{reading.notes ?? '—'}</td>
       <td className="py-2 px-3 text-right">
-        <button
-          onClick={() => del(reading.id ?? '')}
-          disabled={isPending}
-          className="text-xs text-[var(--color-danger)] hover:opacity-70"
-        >
-          Delete
-        </button>
+        {!locked && (
+          <button
+            onClick={() => del(reading.id ?? '')}
+            disabled={isPending}
+            className="text-xs text-[var(--color-danger)] hover:opacity-70"
+          >
+            Delete
+          </button>
+        )}
       </td>
     </tr>
   )
@@ -147,6 +150,9 @@ function ReadingRow({ reading, batchId }: { reading: Reading; batchId: string })
 export function FermentationPage() {
   const { batchId } = useParams<{ batchId: string }>()
   const [stageFilter, setStageFilter] = React.useState('')
+  const { data: batch } = useBatch(batchId ?? '')
+  // Readings of a finished batch are part of its production record.
+  const locked = ['completed', 'cancelled', 'spoiled'].includes(batch?.status ?? '')
   const { data, isLoading, isError, refetch } = useReadings(batchId ?? '', {
     stage: stageFilter || undefined,
   })
@@ -165,7 +171,13 @@ export function FermentationPage() {
         <h1 className="text-2xl font-bold text-[var(--color-text)]">Fermentation Log</h1>
       </div>
 
-      <LogForm batchId={batchId} onDone={() => refetch()} />
+      {locked ? (
+        <p className="text-sm text-[var(--color-text-secondary)]">
+          This batch is {batch?.status}, so its readings are read-only.
+        </p>
+      ) : (
+        <LogForm batchId={batchId} onDone={() => refetch()} />
+      )}
 
       <div>
         <div className="flex items-center gap-3 mb-3">
@@ -202,7 +214,7 @@ export function FermentationPage() {
                 </thead>
                 <tbody>
                   {data.items.map((rd) => (
-                    <ReadingRow key={rd.id} reading={rd} batchId={batchId} />
+                    <ReadingRow key={rd.id} reading={rd} batchId={batchId} locked={locked} />
                   ))}
                 </tbody>
               </table>

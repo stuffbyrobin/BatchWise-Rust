@@ -902,6 +902,10 @@ components:
       required: [to_status]
       properties:
         to_status: { type: string, enum: [brewing, fermenting, conditioning, packaging, completed, cancelled, spoiled] }
+        reason:
+          type: string
+          maxLength: 1000
+          description: Why the batch is cancelled or spoiled. Recorded in the compliance audit log; required when spoiling a completed batch.
     PatchIngredientsRequest:
       type: object
       description: Replaces the batch snapshot's ingredient lists. Rows may omit `id` and `recipe_id`; new rows get a fresh id and every row is tied to the snapshot's recipe.
@@ -3150,6 +3154,7 @@ paths:
     delete:
       operationId: deleteBatch
       summary: Delete a batch
+      description: Only planned batches can be deleted. Once brewing has started the batch is a production record and stays, even if cancelled.
       tags: [batches]
       parameters:
         - { name: id, in: path, required: true, schema: { type: string, format: uuid } }

@@ -29,6 +29,9 @@ pub const EVENT_MOVEMENT_DELETED: &str = "distribution_movement.deleted";
 
 pub const EVENT_RECALL_QUERIED: &str = "recall.queried";
 
+pub const EVENT_BATCH_CANCELLED: &str = "batch.cancelled";
+pub const EVENT_BATCH_SPOILED: &str = "batch.spoiled";
+
 /// A single compliance audit log entry.
 #[derive(Debug, Clone, Serialize, FromRow)]
 pub struct AuditEvent {

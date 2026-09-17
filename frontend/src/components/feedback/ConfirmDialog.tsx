@@ -15,6 +15,10 @@ interface ConfirmDialogProps extends ConfirmOptions {
   open: boolean
   /** Disables both buttons, and Escape, while the confirmed action runs. */
   busy?: boolean
+  /** Disables only the confirming button, e.g. until a required field is filled. */
+  confirmDisabled?: boolean
+  /** Extra content between the description and the buttons, such as a reason field. */
+  children?: ReactNode
   onConfirm: () => void
   onCancel: () => void
 }
@@ -32,6 +36,8 @@ export function ConfirmDialog({
   cancelLabel = 'Cancel',
   destructive = false,
   busy = false,
+  confirmDisabled = false,
+  children,
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
@@ -54,6 +60,7 @@ export function ConfirmDialog({
               {description}
             </AlertDialog.Description>
           )}
+          {children}
           <div className="flex gap-3 justify-end">
             <AlertDialog.Cancel
               disabled={busy}
@@ -64,7 +71,7 @@ export function ConfirmDialog({
             <button
               type="button"
               onClick={onConfirm}
-              disabled={busy}
+              disabled={busy || confirmDisabled}
               className={`px-4 py-2 rounded text-sm text-white disabled:opacity-50 ${
                 destructive ? 'bg-[var(--color-danger)]' : 'bg-[var(--color-accent)]'
               }`}

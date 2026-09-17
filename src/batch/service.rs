@@ -14,6 +14,7 @@ use super::models::{
     PatchIngredientsRequest, UpdateRequest,
 };
 use super::repository::{self as repo, BatchMutable, NewBatch};
+use crate::audit;
 use crate::calendar::models::EventWrite;
 use crate::calendar::service as calendar_svc;
 use crate::inventory::models::DeductRequest;
@@ -310,10 +311,12 @@ pub async fn update(
 /// Deletes a batch (only planned or cancelled).
 pub async fn delete(state: &AppState, tenant_id: Uuid, id: Uuid) -> Result<(), ApiError> {
     let existing = get(state, tenant_id, id).await?;
-    if existing.status != "planned" && existing.status != "cancelled" {
+    // Once brewing starts, stock has been deducted and the batch is a production
+    // record (lot traceability, readings, labels, costs), even if later cancelled.
+    if existing.status != "planned" {
         return Err(ApiError::business_rule(
             "batch_not_deletable",
-            "Only planned or cancelled batches can be deleted.",
+            "Only planned batches can be deleted.",
             Default::default(),
         ));
     }
@@ -324,12 +327,15 @@ pub async fn delete(state: &AppState, tenant_id: Uuid, id: Uuid) -> Result<(), A
 }
 
 /// Transitions batch status, deducting inventory on `planned → brewing`.
+/// Cancelling or spoiling a batch is recorded in the compliance audit log, and
+/// spoiling a completed batch requires a reason.
 pub async fn transition(
     state: &AppState,
     tenant_id: Uuid,
     user_id: Uuid,
     id: Uuid,
     to_status: &str,
+    reason: Option<&str>,
 ) -> Result<Batch, ApiError> {
     let mut tx = state.pool.begin().await?;
     let batch = repo::select_for_update(&mut *tx, tenant_id, id)
@@ -352,6 +358,13 @@ pub async fn transition(
         ));
     }
 
+    let reason = reason.map(str::trim).filter(|r| !r.is_empty());
+    // Spoiling a completed batch writes off finished beer that may already have
+    // been declared for duty, so the reason must be on record.
+    if batch.status == "completed" && to_status == "spoiled" && reason.is_none() {
+        return Err(ApiError::validation("reason", "required"));
+    }
+
     if batch.status == "planned" && to_status == "brewing" {
         deduct_for_brewing(
             &mut tx,
@@ -364,6 +377,32 @@ pub async fn transition(
     }
 
     repo::update_status(&mut *tx, tenant_id, id, to_status).await?;
+
+    let loss_event = match to_status {
+        "cancelled" => Some(audit::models::EVENT_BATCH_CANCELLED),
+        "spoiled" => Some(audit::models::EVENT_BATCH_SPOILED),
+        _ => None,
+    };
+    if let Some(event_type) = loss_event {
+        audit::service::write(
+            &mut *tx,
+            audit::models::WriteRequest {
+                tenant_id,
+                event_type,
+                entity_type: "batch",
+                entity_id: Some(id),
+                actor_user_id: Some(user_id),
+                event_data: serde_json::json!({
+                    "batch_number": batch.batch_number,
+                    "from_status": batch.status,
+                    "to_status": to_status,
+                    "reason": reason,
+                }),
+            },
+        )
+        .await?;
+    }
+
     tx.commit().await?;
     get(state, tenant_id, id).await
 }
