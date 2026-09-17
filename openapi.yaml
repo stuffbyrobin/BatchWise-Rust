@@ -635,6 +635,7 @@ components:
         potential_ppg: { type: ["number", "null"] }
         type: { type: ["string", "null"] }
         addition: { type: ["string", "null"] }
+        inventory_lot_id: { type: ["string", "null"], format: uuid }
     RecipeHop:
       type: object
       properties:
@@ -648,6 +649,7 @@ components:
         boil_time_minutes: { type: number }
         form: { type: ["string", "null"] }
         use: { type: ["string", "null"] }
+        inventory_lot_id: { type: ["string", "null"], format: uuid }
     RecipeYeast:
       type: object
       properties:
@@ -658,6 +660,7 @@ components:
         amount: { type: number }
         unit: { type: string, enum: [g, mL, count] }
         attenuation_pct: { type: ["number", "null"] }
+        inventory_lot_id: { type: ["string", "null"], format: uuid }
     RecipeMashStep:
       type: object
       properties:
@@ -729,8 +732,8 @@ components:
         name: { type: string }
         amount: { type: number }
         unit: { type: string, enum: [kg, g] }
-        color_ebc: { type: number }
-        potential_ppg: { type: number }
+        color_ebc: { type: ["number", "null"] }
+        potential_ppg: { type: ["number", "null"] }
         type: { type: string }
         addition: { type: string }
     HopInput:
@@ -753,7 +756,7 @@ components:
         name: { type: string }
         amount: { type: number }
         unit: { type: string, enum: [g, mL, count] }
-        attenuation_pct: { type: number }
+        attenuation_pct: { type: ["number", "null"] }
     MashStepInput:
       type: object
       required: [step_order, step_type, target_temp_c, hold_minutes]
@@ -762,7 +765,7 @@ components:
         step_type: { type: string, enum: [infusion, temperature, decoction] }
         target_temp_c: { type: number }
         hold_minutes: { type: integer }
-        infusion_volume_liters: { type: number }
+        infusion_volume_liters: { type: ["number", "null"] }
     CreateRecipeRequest:
       type: object
       required: [name, type, batch_size_liters]
@@ -901,6 +904,7 @@ components:
         to_status: { type: string, enum: [brewing, fermenting, conditioning, packaging, completed, cancelled, spoiled] }
     PatchIngredientsRequest:
       type: object
+      description: Replaces the batch snapshot's ingredient lists. Rows may omit `id` and `recipe_id`; new rows get a fresh id and every row is tied to the snapshot's recipe.
       properties:
         fermentables: { type: array, items: { $ref: "#/components/schemas/RecipeFermentable" } }
         hops: { type: array, items: { $ref: "#/components/schemas/RecipeHop" } }

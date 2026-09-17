@@ -52,7 +52,7 @@ const blankInline = () => ({
 interface RecipeFermentable {
   amount: number
   unit: string
-  color_ebc?: number
+  color_ebc?: number | null
 }
 
 export function RecipeWaterChemistry({

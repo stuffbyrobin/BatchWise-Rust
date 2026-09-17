@@ -45,5 +45,6 @@ export function useHopOptions() {
     return { byKey, byName, groups }
   }, [stock.data])
 
-  return { ...derived, loading: stock.isLoading }
+  const loading = stock.isLoading
+  return useMemo(() => ({ ...derived, loading }), [derived, loading])
 }

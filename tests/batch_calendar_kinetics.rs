@@ -405,6 +405,56 @@ async fn brewing_records_every_lot_with_cost() {
 }
 
 #[tokio::test]
+async fn patch_ingredients_accepts_rows_added_in_the_editor() {
+    let app = spawn_app().await;
+    let token = app.token().await;
+    let recipe = app.create_recipe(&token, &uniq()).await;
+    let resp = app
+        .post("/api/v1/batches", &token, json!({"recipe_id": recipe, "batch_number": format!("B-{}", uniq()), "name": "Edited batch"}))
+        .await;
+    assert_eq!(resp.status(), 201);
+    let created: Value = resp.json().await.unwrap();
+    let batch_id = created["batch"]["id"].as_str().unwrap().to_string();
+    let snap = created["batch"]["batch_recipe_snapshot"].clone();
+
+    // Rows added in the batch editor have no id or recipe_id yet.
+    let mut fermentables = snap["fermentables"].as_array().unwrap().clone();
+    fermentables.push(json!({"step_order": 2, "name": "Added malt", "amount": 1.5, "unit": "kg", "color_ebc": null, "potential_ppg": null, "type": "Grain", "addition": null}));
+    let mut hops = snap["hops"].as_array().unwrap().clone();
+    hops.push(json!({"step_order": 2, "name": "Added hop", "amount": 10.0, "unit": "g", "alpha_acid_pct": 5.0, "boil_time_minutes": 15.0, "use": "boil", "form": null}));
+    let mut yeasts = snap["yeasts"].as_array().unwrap().clone();
+    yeasts.push(json!({"name": "Added yeast", "amount": 1.0, "unit": "count", "attenuation_pct": null, "yeast_id": null}));
+
+    let resp = app
+        .client
+        .patch(format!(
+            "{}/api/v1/batches/{batch_id}/ingredients",
+            app.base
+        ))
+        .bearer_auth(&token)
+        .json(&json!({"fermentables": fermentables, "hops": hops, "yeasts": yeasts}))
+        .send()
+        .await
+        .unwrap();
+    let status = resp.status();
+    let body: Value = resp.json().await.unwrap();
+    assert_eq!(status, 200, "patch ingredients: {body}");
+
+    let updated = &body["batch_recipe_snapshot"];
+    for list in ["fermentables", "hops", "yeasts"] {
+        let rows = updated[list].as_array().unwrap();
+        assert_eq!(rows.len(), 2, "{list}");
+        // The existing row keeps its id; the added row gets a fresh one.
+        assert_eq!(rows[0]["id"], snap[list][0]["id"], "{list}");
+        let added_id = Uuid::parse_str(rows[1]["id"].as_str().unwrap()).unwrap();
+        assert!(!added_id.is_nil(), "{list}");
+        assert_ne!(rows[1]["id"], rows[0]["id"], "{list}");
+        assert_eq!(rows[1]["recipe_id"], json!(recipe), "{list}");
+    }
+    assert_eq!(updated["fermentables"][1]["name"], json!("Added malt"));
+}
+
+#[tokio::test]
 async fn brewing_without_stock_fails() {
     let app = spawn_app().await;
     let token = app.token().await;
