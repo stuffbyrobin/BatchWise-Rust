@@ -21,6 +21,8 @@ pub struct User {
     pub display_name: String,
     pub role: String,
     pub is_active: bool,
+    /// Carried in access tokens; bumping it revokes all of them.
+    pub token_version: i32,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }

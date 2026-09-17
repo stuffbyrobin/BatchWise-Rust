@@ -1,7 +1,8 @@
-//! Background refresh-token cleanup.
+//! Background token cleanup.
 //!
 //! Port of the Go `internal/auth/cleanup.go`. Every hour, deletes expired and
-//! stale-used refresh tokens. The task runs for the lifetime of the process.
+//! stale-used refresh tokens, and revocations of access tokens that have expired
+//! anyway. The task runs for the lifetime of the process.
 
 use std::time::Duration;
 
@@ -20,6 +21,10 @@ pub fn start_cleanup_loop(pool: PgPool) {
             match repository::cleanup_expired_refresh_tokens(&pool).await {
                 Ok(n) => tracing::info!(deleted = n, "refresh token cleanup"),
                 Err(e) => tracing::error!(error = %e, "refresh token cleanup failed"),
+            }
+            match repository::cleanup_revoked_access_tokens(&pool).await {
+                Ok(n) => tracing::info!(deleted = n, "revoked access token cleanup"),
+                Err(e) => tracing::error!(error = %e, "revoked access token cleanup failed"),
             }
         }
     });

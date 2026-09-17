@@ -22,7 +22,7 @@ use super::errors::ApiError;
 use crate::state::AppState;
 
 /// Validates the `Authorization: Bearer <jwt>` header, checks the account is
-/// still active in the token's tenant, authorises the caller's role for the
+/// still active in the token's tenant and the token is not revoked, authorises the caller's role for the
 /// matched route ([`authz`]), and merges the user id, tenant id and role into
 /// the request's [`RequestContext`] (preserving the request id).
 pub async fn require_auth(
@@ -44,13 +44,15 @@ pub async fn require_auth(
         .verify(token)
         .map_err(|_| ApiError::unauthorized("invalid or expired token"))?;
 
-    // Deactivation and role changes apply before the access token expires.
+    // Deactivation, role changes and revocation apply before the token expires.
     let membership = state
         .roles
         .get(&state.pool, claims.subject)
         .await?
-        .filter(|m| m.active && m.tenant_id == claims.tenant_id)
-        .ok_or_else(|| ApiError::unauthorized("account is inactive or no longer exists"))?;
+        .filter(|m| m.accepts(&claims))
+        .ok_or_else(|| {
+            ApiError::unauthorized("token revoked, or account inactive or no longer exists")
+        })?;
     // The route template, e.g. `/api/v1/batches/{id}`.
     let path = req
         .extensions()

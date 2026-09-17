@@ -69,6 +69,8 @@ pub async fn patch(
     let updated = repo::update_member(&mut *tx, tenant_id, id, role.as_str(), active).await?;
     if current.is_active && !active {
         repo::delete_refresh_tokens(&mut *tx, id).await?;
+        // Tokens stay revoked if the member is reactivated later.
+        crate::auth::repository::revoke_all_access_tokens(&mut *tx, id).await?;
     }
     if role != current_role {
         audit::service::write(
