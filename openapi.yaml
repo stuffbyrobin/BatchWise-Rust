@@ -2465,7 +2465,11 @@ paths:
   /api/v1/auth/logout:
     post:
       operationId: logout
-      summary: Invalidate a refresh token
+      summary: Invalidate a refresh token and the access token sent with it
+      description: >-
+        Needs no authentication. When the request also carries an
+        `Authorization: Bearer` access token that is still valid, that token is
+        revoked at once; a missing, invalid or expired one is ignored.
       security: []
       tags: [auth]
       requestBody:

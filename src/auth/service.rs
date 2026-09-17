@@ -7,6 +7,7 @@
 use chrono::{Duration, Utc};
 use uuid::Uuid;
 
+use super::jwt::Claims;
 use super::models::{
     AcceptInvitationRequest, AuthResponse, InvitationPreview, LoginRequest, MeResponse,
     RegisterRequest, UpdateMeRequest, User,
@@ -234,8 +235,8 @@ pub async fn refresh(state: &AppState, refresh_token: &str) -> Result<AuthRespon
 
     if rt.used_at.is_some() {
         // Presenting an already-rotated token is the primary signal of token theft
-        // (RFC 6819 \xA75.2.2.3), so the whole family for that user is revoked.
-        repo::delete_refresh_tokens_for_user(&state.pool, rt.user_id).await?;
+        // (RFC 6819 §5.2.2.3), so every session of that user is revoked.
+        revoke_all_sessions(state, rt.user_id).await?;
         return Err(ApiError::unauthorized("Refresh token already used."));
     }
     if Utc::now() > rt.expires_at {
@@ -251,19 +252,38 @@ pub async fn refresh(state: &AppState, refresh_token: &str) -> Result<AuthRespon
 
     if !repo::mark_refresh_token_used(&state.pool, rt.id).await? {
         // Lost a concurrent rotation race: treat exactly like a replay.
-        repo::delete_refresh_tokens_for_user(&state.pool, rt.user_id).await?;
+        revoke_all_sessions(state, rt.user_id).await?;
         return Err(ApiError::unauthorized("Refresh token already used."));
     }
     issue_token_pair(state, &user).await
 }
 
-/// Invalidates a refresh token. Idempotent: unknown tokens succeed silently.
-pub async fn logout(state: &AppState, refresh_token: &str) -> Result<(), ApiError> {
+/// Invalidates a refresh token and, when given, the access token sent with the
+/// request. Idempotent: unknown tokens succeed silently.
+pub async fn logout(
+    state: &AppState,
+    refresh_token: &str,
+    access: Option<Claims>,
+) -> Result<(), ApiError> {
     if let Some(rt) =
         repo::get_refresh_token_by_hash(&state.pool, &hash_refresh_token(refresh_token)).await?
     {
         let _ = repo::mark_refresh_token_used(&state.pool, rt.id).await?;
     }
+    if let Some(claims) = access {
+        repo::revoke_access_token(&state.pool, claims.jti, claims.subject, claims.expires_at)
+            .await?;
+        state.roles.invalidate(claims.subject);
+    }
+    Ok(())
+}
+
+/// Ends every session of a user: deletes their refresh tokens and revokes their
+/// access tokens.
+async fn revoke_all_sessions(state: &AppState, user_id: Uuid) -> Result<(), ApiError> {
+    repo::delete_refresh_tokens_for_user(&state.pool, user_id).await?;
+    repo::revoke_all_access_tokens(&state.pool, user_id).await?;
+    state.roles.invalidate(user_id);
     Ok(())
 }
 
@@ -292,7 +312,7 @@ pub async fn me(state: &AppState, user_id: Uuid) -> Result<MeResponse, ApiError>
 }
 
 /// Updates display name and/or password. Changing the password requires the
-/// current one and invalidates all refresh tokens.
+/// current one and ends every session, including the caller's.
 pub async fn update_me(
     state: &AppState,
     user_id: Uuid,
@@ -328,12 +348,12 @@ pub async fn update_me(
     .await?;
 
     if changing_password {
-        repo::delete_refresh_tokens_for_user(&state.pool, user_id).await?;
+        revoke_all_sessions(state, user_id).await?;
     }
     me(state, user_id).await
 }
 
-/// Soft-deletes the user and revokes all refresh tokens.
+/// Soft-deletes the user and ends every session.
 pub async fn delete_me(state: &AppState, user_id: Uuid) -> Result<(), ApiError> {
     let user = repo::get_user_by_id(&state.pool, user_id)
         .await?
@@ -346,9 +366,7 @@ pub async fn delete_me(state: &AppState, user_id: Uuid) -> Result<(), ApiError> 
         return Err(members_svc::last_owner());
     }
     repo::deactivate_user(&state.pool, user_id).await?;
-    repo::delete_refresh_tokens_for_user(&state.pool, user_id).await?;
-    // Refuse the still-valid access token from the next request.
-    state.roles.invalidate(user_id);
+    revoke_all_sessions(state, user_id).await?;
     Ok(())
 }
 
@@ -359,7 +377,7 @@ async fn issue_token_pair(state: &AppState, user: &User) -> Result<AuthResponse,
 
     let (access_token, expires_in) = state
         .jwt
-        .issue(user.id, user.tenant_id)
+        .issue(user.id, user.tenant_id, user.token_version)
         .map_err(|e| ApiError::internal(format!("issue jwt: {e}")))?;
 
     Ok(AuthResponse {

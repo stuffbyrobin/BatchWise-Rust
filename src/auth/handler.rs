@@ -5,7 +5,7 @@
 //! register/login/refresh; `/me` routes require a valid JWT.
 
 use axum::extract::State;
-use axum::http::{header, StatusCode};
+use axum::http::{header, HeaderMap, StatusCode};
 use axum::middleware::from_fn_with_state;
 use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post};
@@ -126,9 +126,17 @@ async fn refresh(
 
 async fn logout(
     State(state): State<AppState>,
+    headers: HeaderMap,
     ValidatedJson(req): ValidatedJson<LogoutRequest>,
 ) -> Result<Response, ApiError> {
-    service::logout(&state, &req.refresh_token).await?;
+    // The access token, when sent, is revoked too. A missing or invalid one is
+    // ignored: logout must work with an expired token.
+    let access = headers
+        .get(header::AUTHORIZATION)
+        .and_then(|v| v.to_str().ok())
+        .and_then(|v| v.strip_prefix("Bearer "))
+        .and_then(|token| state.jwt.verify(token).ok());
+    service::logout(&state, &req.refresh_token, access).await?;
     Ok(StatusCode::NO_CONTENT.into_response())
 }
 

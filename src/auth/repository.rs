@@ -14,7 +14,7 @@ use uuid::Uuid;
 use super::models::{RefreshToken, User};
 
 const USER_COLS: &str = "id, tenant_id, email::text AS email, password_hash, display_name, \
-                         role, is_active, created_at, updated_at";
+                         role, is_active, token_version, created_at, updated_at";
 
 /// Inserts a new user, returning the created row.
 #[allow(clippy::too_many_arguments)]
@@ -82,6 +82,46 @@ pub async fn update_user(
     .execute(pool)
     .await
     .map(|_| ())
+}
+
+/// Revokes every access token of a user by bumping their token version.
+pub async fn revoke_all_access_tokens<'e, E: PgExecutor<'e>>(
+    exec: E,
+    user_id: Uuid,
+) -> Result<(), sqlx::Error> {
+    sqlx::query("UPDATE users SET token_version = token_version + 1 WHERE id = $1")
+        .bind(user_id)
+        .execute(exec)
+        .await
+        .map(|_| ())
+}
+
+/// Revokes one access token until it expires.
+pub async fn revoke_access_token(
+    pool: &PgPool,
+    jti: Uuid,
+    user_id: Uuid,
+    expires_at: DateTime<Utc>,
+) -> Result<(), sqlx::Error> {
+    sqlx::query(
+        "INSERT INTO revoked_access_tokens (jti, user_id, expires_at) VALUES ($1, $2, $3) \
+         ON CONFLICT (jti) DO NOTHING",
+    )
+    .bind(jti)
+    .bind(user_id)
+    .bind(expires_at)
+    .execute(pool)
+    .await
+    .map(|_| ())
+}
+
+/// Deletes revocations of access tokens that have expired anyway; returns the
+/// number removed.
+pub async fn cleanup_revoked_access_tokens(pool: &PgPool) -> Result<u64, sqlx::Error> {
+    let result = sqlx::query("DELETE FROM revoked_access_tokens WHERE expires_at < now()")
+        .execute(pool)
+        .await?;
+    Ok(result.rows_affected())
 }
 
 /// Sets `is_active = false` (soft delete).

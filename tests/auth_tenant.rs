@@ -121,6 +121,29 @@ impl TestApp {
         assert!(resp.headers().contains_key("location"));
         resp.json().await.unwrap()
     }
+
+    async fn login(&self, email: &str, password: &str) -> Value {
+        let resp = self
+            .post(
+                "/api/v1/auth/login",
+                json!({"email": email, "password": password}),
+            )
+            .await;
+        assert_eq!(resp.status(), 200, "login");
+        resp.json().await.unwrap()
+    }
+
+    /// Status of `GET /auth/me` with `access_token`.
+    async fn me_status(&self, access_token: &Value) -> u16 {
+        self.client
+            .get(format!("{}/api/v1/auth/me", self.base))
+            .bearer_auth(access_token.as_str().unwrap())
+            .send()
+            .await
+            .unwrap()
+            .status()
+            .as_u16()
+    }
 }
 
 #[tokio::test]
@@ -135,6 +158,20 @@ async fn register_login_refresh_and_me_flow() {
     assert_eq!(reg["token_type"], json!("Bearer"));
     let access = reg["access_token"].as_str().unwrap().to_string();
     let refresh = reg["refresh_token"].as_str().unwrap().to_string();
+
+    // /me with the bearer token.
+    let resp = app
+        .client
+        .get(format!("{}/api/v1/auth/me", app.base))
+        .bearer_auth(&access)
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), 200);
+    let me: Value = resp.json().await.unwrap();
+    assert_eq!(me["email"], json!(email));
+    assert_eq!(me["tenant_name"], json!(tenant));
+    assert_eq!(me["tier"], json!("home"));
 
     // Login as that user.
     let resp = app
@@ -166,19 +203,8 @@ async fn register_login_refresh_and_me_flow() {
         .await;
     assert_eq!(resp.status(), 401);
 
-    // /me with the bearer token.
-    let resp = app
-        .client
-        .get(format!("{}/api/v1/auth/me", app.base))
-        .bearer_auth(&access)
-        .send()
-        .await
-        .unwrap();
-    assert_eq!(resp.status(), 200);
-    let me: Value = resp.json().await.unwrap();
-    assert_eq!(me["email"], json!(email));
-    assert_eq!(me["tenant_name"], json!(tenant));
-    assert_eq!(me["tier"], json!("home"));
+    // The replay ends every session, so the access token is refused too.
+    assert_eq!(app.me_status(&json!(access)).await, 401);
 }
 
 #[tokio::test]
@@ -312,6 +338,7 @@ async fn refresh_replay_revokes_token_family() {
     assert_eq!(resp.status(), 200);
     let body: Value = resp.json().await.unwrap();
     let r2 = body["refresh_token"].as_str().unwrap().to_string();
+    assert_eq!(app.me_status(&body["access_token"]).await, 200);
 
     let resp = app
         .post("/api/v1/auth/refresh", json!({"refresh_token": r1}))
@@ -322,6 +349,10 @@ async fn refresh_replay_revokes_token_family() {
         .post("/api/v1/auth/refresh", json!({"refresh_token": r2}))
         .await;
     assert_eq!(resp.status(), 401);
+
+    // Access tokens from before the replay are revoked as well.
+    assert_eq!(app.me_status(&body["access_token"]).await, 401);
+    assert_eq!(app.me_status(&reg["access_token"]).await, 401);
 }
 
 #[tokio::test]
@@ -376,4 +407,90 @@ async fn repeated_failed_logins_lock_the_account() {
         )
         .await;
     assert_eq!(resp.status(), 429);
+}
+
+#[tokio::test]
+async fn logout_revokes_the_access_token_sent_with_it() {
+    let app = spawn_app().await;
+    let email = format!("logout-{}@example.com", uniq());
+    let first = app.register(&email, None).await;
+    let second = app.login(&email, "Sup3rSecret!pw").await;
+    assert_eq!(app.me_status(&first["access_token"]).await, 200);
+
+    let resp = app
+        .client
+        .post(format!("{}/api/v1/auth/logout", app.base))
+        .bearer_auth(first["access_token"].as_str().unwrap())
+        .json(&json!({"refresh_token": first["refresh_token"]}))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), 204);
+
+    // That session is over, and the other one is untouched.
+    assert_eq!(app.me_status(&first["access_token"]).await, 401);
+    assert_eq!(app.me_status(&second["access_token"]).await, 200);
+
+    // A garbage bearer token does not break logout.
+    let resp = app
+        .client
+        .post(format!("{}/api/v1/auth/logout", app.base))
+        .bearer_auth("not.a.jwt")
+        .json(&json!({"refresh_token": "unknown"}))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), 204);
+
+    // Without an access token, logout ends the refresh token only.
+    let resp = app
+        .post(
+            "/api/v1/auth/logout",
+            json!({"refresh_token": second["refresh_token"]}),
+        )
+        .await;
+    assert_eq!(resp.status(), 204);
+    assert_eq!(app.me_status(&second["access_token"]).await, 200);
+
+    // Refreshing with a logged-out token is indistinguishable from a stolen one
+    // being replayed, so it ends every session the user has.
+    let resp = app
+        .post(
+            "/api/v1/auth/refresh",
+            json!({"refresh_token": first["refresh_token"]}),
+        )
+        .await;
+    assert_eq!(resp.status(), 401);
+    assert_eq!(app.me_status(&second["access_token"]).await, 401);
+}
+
+#[tokio::test]
+async fn password_change_ends_every_session() {
+    let app = spawn_app().await;
+    let email = format!("pwchange-{}@example.com", uniq());
+    let first = app.register(&email, None).await;
+    let second = app.login(&email, "Sup3rSecret!pw").await;
+
+    let resp = app
+        .client
+        .patch(format!("{}/api/v1/auth/me", app.base))
+        .bearer_auth(first["access_token"].as_str().unwrap())
+        .json(&json!({"current_password": "Sup3rSecret!pw", "new_password": "N3w-Sup3rSecret!pw"}))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), 200);
+
+    assert_eq!(app.me_status(&first["access_token"]).await, 401);
+    assert_eq!(app.me_status(&second["access_token"]).await, 401);
+    let resp = app
+        .post(
+            "/api/v1/auth/refresh",
+            json!({"refresh_token": second["refresh_token"]}),
+        )
+        .await;
+    assert_eq!(resp.status(), 401);
+
+    let fresh = app.login(&email, "N3w-Sup3rSecret!pw").await;
+    assert_eq!(app.me_status(&fresh["access_token"]).await, 200);
 }

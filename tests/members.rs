@@ -348,7 +348,20 @@ async fn deactivated_members_lose_access_until_reactivated() {
             .status(),
         200
     );
-    assert_eq!(login(&app, &brewer.email).await.status(), 200);
+    // Tokens from before the deactivation stay revoked; signing in again works.
+    assert_eq!(
+        app.get("/api/v1/recipes", &brewer.token).await.status(),
+        401
+    );
+    let resp = login(&app, &brewer.email).await;
+    assert_eq!(resp.status(), 200);
+    let body: Value = resp.json().await.unwrap();
+    assert_eq!(
+        app.get("/api/v1/recipes", body["access_token"].as_str().unwrap())
+            .await
+            .status(),
+        200
+    );
 }
 
 #[tokio::test]
