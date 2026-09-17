@@ -8,6 +8,7 @@ import {
 import type { components } from '../../api/generated'
 import { fmtDate } from '../../utils/format'
 import { inputCls } from '../../components/ui/styles'
+import { useCanWrite } from '../../auth/useCan'
 
 type Equipment = components['schemas']['Equipment']
 type MaintenanceSchedule = components['schemas']['MaintenanceSchedule']
@@ -26,6 +27,7 @@ function DueBadge({ schedule }: { schedule: MaintenanceSchedule }) {
 // ——— Schedules panel —————————————————————————————————————————————————————————
 
 function SchedulesPanel({ equipment }: { equipment: Equipment }) {
+  const canWrite = useCanWrite('production')
   const equipmentID = equipment.id ?? ''
   const { data, isLoading } = useSchedules(equipmentID)
   const create = useCreateSchedule(equipmentID)
@@ -77,14 +79,15 @@ function SchedulesPanel({ equipment }: { equipment: Equipment }) {
         <p className="text-xs text-[var(--color-muted)] mb-2">No schedules yet.</p>
       )}
 
-      {!showForm ? (
+      {canWrite && !showForm && (
         <button
           className="text-xs px-2 py-1 rounded border border-[var(--color-border)] hover:bg-[var(--color-surface-alt)]"
           onClick={() => setShowForm(true)}
         >
           + Add Schedule
         </button>
-      ) : (
+      )}
+      {canWrite && showForm && (
         <form onSubmit={handleCreate} className="flex flex-wrap gap-2 items-end text-xs mt-1">
           <div>
             <label className="block text-[var(--color-muted)] mb-0.5">Task *</label>
@@ -117,6 +120,7 @@ function SchedulesPanel({ equipment }: { equipment: Equipment }) {
 }
 
 function ScheduleRow({ schedule, equipmentID }: { schedule: MaintenanceSchedule; equipmentID: string }) {
+  const canWrite = useCanWrite('production')
   const patch = usePatchSchedule(equipmentID, schedule.id ?? '')
   const del = useDeleteSchedule(equipmentID)
 
@@ -128,22 +132,22 @@ function ScheduleRow({ schedule, equipmentID }: { schedule: MaintenanceSchedule;
       <td className="pr-3">{fmtDate(schedule.next_due_at)}</td>
       <td className="pr-3"><DueBadge schedule={schedule} /></td>
       <td className="pr-3">
-        <button
+        {canWrite && <button
           className="text-xs hover:underline"
           onClick={() => patch.mutate({ active: !schedule.active })}
           disabled={patch.isPending}
         >
           {schedule.active ? 'Active' : 'Paused'}
-        </button>
+        </button>}
       </td>
       <td>
-        <button
+        {canWrite && <button
           className="text-[var(--color-danger)] hover:underline text-xs"
           onClick={() => del.mutate(schedule.id ?? '')}
           disabled={del.isPending}
         >
           Delete
-        </button>
+        </button>}
       </td>
     </tr>
   )
@@ -152,6 +156,7 @@ function ScheduleRow({ schedule, equipmentID }: { schedule: MaintenanceSchedule;
 // ——— Events panel ————————————————————————————————————————————————————————————
 
 function EventsPanel({ equipment }: { equipment: Equipment }) {
+  const canWrite = useCanWrite('production')
   const equipmentID = equipment.id ?? ''
   const { data, isLoading } = useEvents(equipmentID)
   const { data: schedData } = useSchedules(equipmentID)
@@ -204,14 +209,15 @@ function EventsPanel({ equipment }: { equipment: Equipment }) {
         <p className="text-xs text-[var(--color-muted)] mb-2">No events logged yet.</p>
       )}
 
-      {!showForm ? (
+      {canWrite && !showForm && (
         <button
           className="text-xs px-2 py-1 rounded border border-[var(--color-border)] hover:bg-[var(--color-surface-alt)]"
           onClick={() => setShowForm(true)}
         >
           + Log Event
         </button>
-      ) : (
+      )}
+      {canWrite && showForm && (
         <form onSubmit={handleCreate} className="flex flex-wrap gap-2 items-end text-xs mt-1">
           <div>
             <label className="block text-[var(--color-muted)] mb-0.5">Type *</label>
@@ -264,6 +270,7 @@ function EventsPanel({ equipment }: { equipment: Equipment }) {
 }
 
 function EventRow({ event, equipmentID }: { event: MaintenanceEvent; equipmentID: string }) {
+  const canWrite = useCanWrite('production')
   const del = useDeleteEvent(equipmentID)
   const cost = event.cost_pence != null ? `£${(event.cost_pence / 100).toFixed(2)}` : '—'
   return (
@@ -274,13 +281,13 @@ function EventRow({ event, equipmentID }: { event: MaintenanceEvent; equipmentID
       <td className="pr-3">{cost}</td>
       <td className="pr-3">{event.notes || '—'}</td>
       <td>
-        <button
+        {canWrite && <button
           className="text-[var(--color-danger)] hover:underline text-xs"
           onClick={() => del.mutate(event.id ?? '')}
           disabled={del.isPending}
         >
           Delete
-        </button>
+        </button>}
       </td>
     </tr>
   )
@@ -289,6 +296,7 @@ function EventRow({ event, equipmentID }: { event: MaintenanceEvent; equipmentID
 // ——— Equipment row ————————————————————————————————————————————————————————————
 
 function EquipmentRow({ equipment }: { equipment: Equipment }) {
+  const canWrite = useCanWrite('production')
   const [expanded, setExpanded] = React.useState(false)
   const patch = usePatchEquipment(equipment.id ?? '')
   const del = useDeleteEquipment()
@@ -321,14 +329,14 @@ function EquipmentRow({ equipment }: { equipment: Equipment }) {
             : <span className="text-[var(--color-muted)]">none</span>}
         </td>
         <td className="pr-3 text-xs flex gap-2 items-center flex-wrap">
-          <button
+          {canWrite && <button
             className="hover:underline"
             onClick={() => patch.mutate({ status: equipment.status === 'retired' ? 'active' : 'retired' })}
             disabled={patch.isPending}
           >
             {equipment.status === 'retired' ? 'Reactivate' : 'Retire'}
-          </button>
-          <button
+          </button>}
+          {canWrite && <button
             className="text-[var(--color-danger)] hover:underline disabled:opacity-50"
             disabled={del.isPending}
             onClick={async () => {
@@ -338,7 +346,7 @@ function EquipmentRow({ equipment }: { equipment: Equipment }) {
             }}
           >
             Delete
-          </button>
+          </button>}
           {delErr && <span className="text-[var(--color-danger)]">{delErr}</span>}
         </td>
       </tr>
@@ -357,6 +365,7 @@ function EquipmentRow({ equipment }: { equipment: Equipment }) {
 // ——— Page ————————————————————————————————————————————————————————————————————
 
 export default function EquipmentPage() {
+  const canWrite = useCanWrite('production')
   const [statusFilter, setStatusFilter] = React.useState('')
   const [typeFilter, setTypeFilter] = React.useState('')
   const { data, isLoading, error } = useEquipmentList({
@@ -407,16 +416,18 @@ export default function EquipmentPage() {
             <option value="active">Active</option>
             <option value="retired">Retired</option>
           </select>
-          <button
-            className="px-3 py-1.5 rounded bg-[var(--color-accent)] text-white text-sm hover:opacity-90"
-            onClick={() => setShowForm((x) => !x)}
-          >
-            {showForm ? 'Cancel' : '+ New Equipment'}
-          </button>
+          {canWrite && (
+            <button
+              className="px-3 py-1.5 rounded bg-[var(--color-accent)] text-white text-sm hover:opacity-90"
+              onClick={() => setShowForm((x) => !x)}
+            >
+              {showForm ? 'Cancel' : '+ New Equipment'}
+            </button>
+          )}
         </div>
       </div>
 
-      {showForm && (
+      {canWrite && showForm && (
         <form onSubmit={handleCreate}
           className="mb-6 p-4 border rounded grid grid-cols-2 md:grid-cols-3 gap-3 text-sm bg-[var(--color-surface)]">
           <div className="col-span-2 md:col-span-3 font-medium">New Equipment</div>

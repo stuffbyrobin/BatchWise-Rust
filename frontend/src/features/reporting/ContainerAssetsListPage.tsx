@@ -3,8 +3,10 @@ import { useNavigate } from 'react-router-dom'
 import { useContainerAssetsList, CONTAINER_TYPES } from './hooks/useContainerAssets'
 import { APIError } from '../../api/error'
 import { Skeleton } from '../../components/ui/Skeleton'
+import { useCanWrite } from '../../auth/useCan'
 
 export function ContainerAssetsListPage() {
+  const canWrite = useCanWrite('distribution')
   const navigate = useNavigate()
   const [page, setPage] = useState(1)
   const [containerType, setContainerType] = useState('')
@@ -45,12 +47,14 @@ export function ContainerAssetsListPage() {
     <div className="p-6 space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-[var(--color-fg)]">Container Assets</h1>
-        <button
-          onClick={() => navigate('/container-assets/new')}
-          className="px-4 py-2 rounded text-sm bg-[var(--color-accent)] text-white hover:opacity-90"
-        >
-          New asset
-        </button>
+        {canWrite && (
+          <button
+            onClick={() => navigate('/container-assets/new')}
+            className="px-4 py-2 rounded text-sm bg-[var(--color-accent)] text-white hover:opacity-90"
+          >
+            New asset
+          </button>
+        )}
       </div>
 
       <div className="flex gap-4 items-center">

@@ -1,6 +1,7 @@
 import React from 'react'
 import { APIError } from '../../api/error'
 import { SortableHeader } from '../../components/ui/SortableHeader'
+import { useCanWrite } from '../../auth/useCan'
 import { useDistributionMovements, useCreateDistributionMovement } from './hooks/usePackaging'
 import { MovementVoidCell } from './MovementVoidCell'
 import type { components } from '../../api/generated'
@@ -16,6 +17,7 @@ function fmtDate(s: string | null | undefined): string {
 }
 
 export default function DistributionMovementsPage() {
+  const canWrite = useCanWrite('distribution')
   const [filterType, setFilterType] = React.useState('')
   const [sort, setSort] = React.useState('')
   const { data, isLoading, error } = useDistributionMovements({ movement_type: filterType || undefined, sort: sort || undefined })
@@ -52,15 +54,17 @@ export default function DistributionMovementsPage() {
     <div className="p-6 max-w-6xl mx-auto">
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-xl font-semibold">Distribution Movements</h1>
-        <button
-          className="px-3 py-1.5 rounded bg-[var(--color-accent)] text-white text-sm hover:opacity-90"
-          onClick={() => setShowForm((x) => !x)}
-        >
-          {showForm ? 'Cancel' : '+ Record Movement'}
-        </button>
+        {canWrite && (
+          <button
+            className="px-3 py-1.5 rounded bg-[var(--color-accent)] text-white text-sm hover:opacity-90"
+            onClick={() => setShowForm((x) => !x)}
+          >
+            {showForm ? 'Cancel' : '+ Record Movement'}
+          </button>
+        )}
       </div>
 
-      {showForm && (
+      {canWrite && showForm && (
         <form
           onSubmit={handleCreate}
           className="mb-6 p-4 border rounded grid grid-cols-2 md:grid-cols-3 gap-3 text-sm bg-[var(--color-surface)]"

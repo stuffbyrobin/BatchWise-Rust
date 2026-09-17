@@ -1,5 +1,6 @@
 import React from 'react'
 import { APIError } from '../../api/error'
+import { useCanWrite } from '../../auth/useCan'
 import { useWaterProfiles, useWaterAdjustments, useCreateWaterAdjustment, useUpdateWaterAdjustment } from '../water/hooks/useWater'
 import { useBrewingPhysics } from '../../lib/physics/useBrewingPhysics'
 import type { WaterTreatmentResult } from '../../lib/physics'
@@ -62,6 +63,8 @@ export function RecipeWaterChemistry({
   recipeId?: string
   fermentables?: RecipeFermentable[]
 }) {
+  // Anyone can try adjustments here; saving them needs production write access.
+  const canWrite = useCanWrite('production')
   const { data: profilesData } = useWaterProfiles({ page_size: 100, sort: 'name' })
   const { data: adjustmentsData } = useWaterAdjustments({ recipe_id: recipeId, page_size: 1, sort: '-created_at' })
   const createMut = useCreateWaterAdjustment()
@@ -378,6 +381,7 @@ export function RecipeWaterChemistry({
           Saved
         </div>
       )}
+      {canWrite && (
       <div className="flex gap-3 mb-6">
         <button
           onClick={handleSave}
@@ -394,10 +398,11 @@ export function RecipeWaterChemistry({
           {createMut.isPending || updateMut.isPending ? 'Saving…' : 'Save to recipe'}
         </button>
       </div>
-      {!recipeId && (
+      )}
+      {canWrite && !recipeId && (
         <p className='text-xs text-[var(--color-muted)] mt-1'>Save the recipe first to attach water chemistry.</p>
       )}
-      {sourceMode === 'inline' && (
+      {canWrite && sourceMode === 'inline' && (
         <p className='text-xs text-[var(--color-muted)] mt-1'>Saving requires a saved water profile.</p>
       )}
 

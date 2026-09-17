@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useInventoryList } from './hooks/useInventory'
 import { SortableHeader } from '../../components/ui/SortableHeader'
 import { APIError } from '../../api/error'
+import { useCanWrite } from '../../auth/useCan'
 
 const INGREDIENT_TYPES = ['all', 'fermentable', 'hop', 'yeast', 'adjunct', 'chemical', 'other'] as const
 
@@ -32,6 +33,7 @@ function SkeletonRow() {
 }
 
 export function InventoryListPage() {
+  const canWrite = useCanWrite('production')
   const navigate = useNavigate()
   const [typeFilter, setTypeFilter] = React.useState<string>('all')
   const [nameFilter, setNameFilter] = React.useState<string>('')
@@ -81,6 +83,7 @@ export function InventoryListPage() {
     <div>
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
         <h1 className="text-xl font-bold text-[var(--color-fg)]">Inventory Lots</h1>
+        {canWrite && (
         <div className="flex gap-2">
           <button
             onClick={() => navigate('/inventory/import')}
@@ -95,6 +98,7 @@ export function InventoryListPage() {
             New lot
           </button>
         </div>
+        )}
       </div>
 
       <div className="flex flex-col md:flex-row gap-4 mb-6">

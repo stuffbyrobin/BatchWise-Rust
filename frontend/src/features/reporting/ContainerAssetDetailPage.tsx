@@ -11,10 +11,12 @@ import {
 } from './hooks/useContainerAssets'
 import { APIError } from '../../api/error'
 import { Skeleton } from '../../components/ui/Skeleton'
+import { useCanWrite } from '../../auth/useCan'
 
 type ContainerType = typeof CONTAINER_TYPES[number]
 
 export function ContainerAssetDetailPage() {
+  const canWrite = useCanWrite('distribution')
   const { id } = useParams<{ id: string }>()
   const [activeAction, setActiveAction] = useState<'fill' | 'deliver' | 'return' | null>(null)
   const [isEditing, setIsEditing] = useState(false)
@@ -176,34 +178,36 @@ export function ContainerAssetDetailPage() {
 
       <div className="pt-4 border-t border-[var(--color-border)]">
         <h2 className="text-xl font-semibold text-[var(--color-fg)] mb-4">Actions</h2>
-        <div className="flex gap-2 mb-4">
-          <button
-            onClick={() => setActiveAction('fill')}
-            className="px-4 py-2 rounded text-sm bg-[var(--color-accent)] text-white hover:opacity-90"
-          >
-            Fill
-          </button>
-          <button
-            onClick={() => setActiveAction('deliver')}
-            className="px-4 py-2 rounded text-sm bg-[var(--color-accent)] text-white hover:opacity-90"
-          >
-            Deliver
-          </button>
-          <button
-            onClick={() => setActiveAction('return')}
-            className="px-4 py-2 rounded text-sm bg-[var(--color-accent)] text-white hover:opacity-90"
-          >
-            Return
-          </button>
-          <button
-            onClick={handleEdit}
-            className="px-4 py-2 rounded text-sm bg-[var(--color-border)] text-[var(--color-fg)] hover:bg-[var(--color-border)/50]"
-          >
-            Edit asset
-          </button>
-        </div>
+        {canWrite && (
+          <div className="flex gap-2 mb-4">
+            <button
+              onClick={() => setActiveAction('fill')}
+              className="px-4 py-2 rounded text-sm bg-[var(--color-accent)] text-white hover:opacity-90"
+            >
+              Fill
+            </button>
+            <button
+              onClick={() => setActiveAction('deliver')}
+              className="px-4 py-2 rounded text-sm bg-[var(--color-accent)] text-white hover:opacity-90"
+            >
+              Deliver
+            </button>
+            <button
+              onClick={() => setActiveAction('return')}
+              className="px-4 py-2 rounded text-sm bg-[var(--color-accent)] text-white hover:opacity-90"
+            >
+              Return
+            </button>
+            <button
+              onClick={handleEdit}
+              className="px-4 py-2 rounded text-sm bg-[var(--color-border)] text-[var(--color-fg)] hover:bg-[var(--color-border)/50]"
+            >
+              Edit asset
+            </button>
+          </div>
+        )}
 
-        {activeAction === 'fill' && (
+        {canWrite && activeAction === 'fill' && (
           <form onSubmit={handleFillSubmit} className="flex gap-2 items-end mb-4">
             <div>
               <label className="block text-[var(--color-muted)] text-sm">Batch ID (optional)</label>
@@ -232,7 +236,7 @@ export function ContainerAssetDetailPage() {
           </form>
         )}
 
-        {activeAction === 'deliver' && (
+        {canWrite && activeAction === 'deliver' && (
           <form onSubmit={handleDeliverSubmit} className="flex gap-2 items-end mb-4">
             <div>
               <label className="block text-[var(--color-muted)] text-sm">Customer Name *</label>
@@ -262,7 +266,7 @@ export function ContainerAssetDetailPage() {
           </form>
         )}
 
-        {activeAction === 'return' && (
+        {canWrite && activeAction === 'return' && (
           <form onSubmit={handleReturnSubmit} className="flex gap-2 items-end mb-4">
             <div>
               <label className="block text-[var(--color-muted)] text-sm">Notes (optional)</label>
@@ -282,7 +286,7 @@ export function ContainerAssetDetailPage() {
           </form>
         )}
 
-        {isEditing && (
+        {canWrite && isEditing && (
           <form onSubmit={handleEditSubmit} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4 border border-[var(--color-border)] rounded bg-[var(--color-surface)] mb-4">
             <div>
               <label className="block text-[var(--color-muted)] text-sm">Asset Number</label>

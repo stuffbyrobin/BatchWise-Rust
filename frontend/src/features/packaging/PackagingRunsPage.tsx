@@ -1,6 +1,7 @@
 import React from 'react'
 import { APIError } from '../../api/error'
 import { SortableHeader } from '../../components/ui/SortableHeader'
+import { useCanWrite } from '../../auth/useCan'
 import {
   usePackagingRuns, useCreatePackagingRun, usePatchPackagingRun, useDeletePackagingRun,
   useDistributionMovements, useCreateDistributionMovement,
@@ -17,6 +18,7 @@ const FORMATS = ['can', 'bottle', 'keg', 'cask', 'polypin', 'bag_in_box', 'other
 const MOVEMENT_TYPES = ['sale', 'taproom_transfer', 'internal_transfer', 'sample', 'return', 'disposal']
 
 function MovementsPanel({ run }: { run: PackagingRun }) {
+  const canWriteMovements = useCanWrite('distribution')
   const { data, isLoading } = useDistributionMovements({ packaging_run_id: run.id })
   const createMov = useCreateDistributionMovement()
   const [showForm, setShowForm] = React.useState(false)
@@ -75,7 +77,7 @@ function MovementsPanel({ run }: { run: PackagingRun }) {
         <p className="text-xs text-[var(--color-muted)] mb-2">No movements yet.</p>
       )}
 
-      {!showForm ? (
+      {canWriteMovements && (!showForm ? (
         <button
           className="text-xs px-2 py-1 rounded border border-[var(--color-border)] hover:bg-[var(--color-surface-alt)]"
           onClick={() => setShowForm(true)}
@@ -127,12 +129,13 @@ function MovementsPanel({ run }: { run: PackagingRun }) {
           </button>
           {err && <span className="text-[var(--color-danger)] w-full">{err}</span>}
         </form>
-      )}
+      ))}
     </div>
   )
 }
 
 function RunRow({ run }: { run: PackagingRun }) {
+  const canWrite = useCanWrite('production')
   const [expanded, setExpanded] = React.useState(false)
   const [editing, setEditing] = React.useState(false)
   const [notes, setNotes] = React.useState(run.notes ?? '')
@@ -159,47 +162,55 @@ function RunRow({ run }: { run: PackagingRun }) {
         <td className="pr-3">{fmtDate(run.packaged_at)}</td>
         <td className="pr-3">{fmtDate(run.best_before_date)}</td>
         <td className="pr-3">
-          {editing ? (
-            <form
-              className="flex gap-1"
-              onSubmit={async (e) => {
-                e.preventDefault()
-                await patch.mutateAsync({ notes })
-                setEditing(false)
-              }}
-            >
-              <input
-                className="border rounded px-1 py-0.5 text-xs w-32"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-              />
-              <button type="submit" className="text-xs text-[var(--color-accent)]">Save</button>
-              <button type="button" className="text-xs" onClick={() => setEditing(false)}>✕</button>
-            </form>
+          {canWrite ? (
+            editing ? (
+              <form
+                className="flex gap-1"
+                onSubmit={async (e) => {
+                  e.preventDefault()
+                  await patch.mutateAsync({ notes })
+                  setEditing(false)
+                }}
+              >
+                <input
+                  className="border rounded px-1 py-0.5 text-xs w-32"
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                />
+                <button type="submit" className="text-xs text-[var(--color-accent)]">Save</button>
+                <button type="button" className="text-xs" onClick={() => setEditing(false)}>✕</button>
+              </form>
+            ) : (
+              <span
+                className="text-xs text-[var(--color-muted)] cursor-pointer hover:underline"
+                onClick={() => setEditing(true)}
+              >
+                {run.notes || '—'}
+              </span>
+            )
           ) : (
-            <span
-              className="text-xs text-[var(--color-muted)] cursor-pointer hover:underline"
-              onClick={() => setEditing(true)}
-            >
+            <span className="text-xs text-[var(--color-muted)]">
               {run.notes || '—'}
             </span>
           )}
         </td>
         <td>
-          <button
-            className="text-xs text-[var(--color-danger)] hover:underline disabled:opacity-50"
-            disabled={del.isPending}
-            onClick={async () => {
-              setDelErr(null)
-              try {
-                await del.mutateAsync(run.id ?? '')
-              } catch (e) {
-                setDelErr(e instanceof APIError ? e.message : 'Delete failed.')
-              }
-            }}
-          >
-            Delete
-          </button>
+          {canWrite && (
+            <button
+              className="text-xs text-[var(--color-danger)] hover:underline disabled:opacity-50"
+              disabled={del.isPending}
+              onClick={async () => {
+                setDelErr(null)
+                try {
+                  await del.mutateAsync(run.id ?? '')
+                } catch (e) {
+                  setDelErr(e instanceof APIError ? e.message : 'Delete failed.')
+                }
+              }}
+            >
+              Delete
+            </button>
+          )}
           {delErr && <span className="text-xs text-[var(--color-danger)] ml-1">{delErr}</span>}
         </td>
       </tr>
@@ -215,6 +226,7 @@ function RunRow({ run }: { run: PackagingRun }) {
 }
 
 export default function PackagingRunsPage() {
+  const canWrite = useCanWrite('production')
   const [sort, setSort] = React.useState('')
   const { data, isLoading, error } = usePackagingRuns({ sort: sort || undefined })
   const createRun = useCreatePackagingRun()
@@ -250,15 +262,17 @@ export default function PackagingRunsPage() {
     <div className="p-6 max-w-6xl mx-auto">
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-xl font-semibold">Packaging Runs</h1>
-        <button
-          className="px-3 py-1.5 rounded bg-[var(--color-accent)] text-white text-sm hover:opacity-90"
-          onClick={() => setShowForm((x) => !x)}
-        >
-          {showForm ? 'Cancel' : '+ New Run'}
-        </button>
+        {canWrite && (
+          <button
+            className="px-3 py-1.5 rounded bg-[var(--color-accent)] text-white text-sm hover:opacity-90"
+            onClick={() => setShowForm((x) => !x)}
+          >
+            {showForm ? 'Cancel' : '+ New Run'}
+          </button>
+        )}
       </div>
 
-      {showForm && (
+      {canWrite && showForm && (
         <form
           onSubmit={handleCreate}
           className="mb-6 p-4 border rounded grid grid-cols-2 md:grid-cols-3 gap-3 text-sm bg-[var(--color-surface)]"

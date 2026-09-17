@@ -15,10 +15,13 @@ import { useBatchCost, useComputeBatchCost } from '../reporting/hooks/useBatchCo
 import { BatchIngredientsEditor } from './BatchIngredientsEditor'
 import { APIError } from '../../api/error'
 import { ConfirmDialog, useConfirm } from '../../components/feedback/ConfirmDialog'
+import { useCanWrite, useIsManager } from '../../auth/useCan'
 import { LossReasonDialog, type LossStatus } from './LossReasonDialog'
 
 export function BatchDetailPage() {
   const confirm = useConfirm()
+  const canWrite = useCanWrite('production')
+  const isManager = useIsManager()
   const navigate = useNavigate()
   const { id } = useParams<{ id: string }>()
 
@@ -132,9 +135,11 @@ export function BatchDetailPage() {
 
   const allowedNext = ALLOWED_NEXT[batch.status as BatchStatus] ?? []
   const isTerminal = allowedNext.length === 0
-  const canEdit = !['completed', 'cancelled', 'spoiled'].includes(batch.status ?? '')
+  // Only an Owner or Manager may spoil a completed batch.
+  const transitions = allowedNext.filter((to) => isManager || !(batch.status === 'completed' && to === 'spoiled'))
+  const canEdit = canWrite && !['completed', 'cancelled', 'spoiled'].includes(batch.status ?? '')
   // Once brewing starts the batch is a production record, even if cancelled.
-  const canDelete = batch.status === 'planned'
+  const canDelete = canWrite && batch.status === 'planned'
   const transitionErrorMessage = transitionError instanceof APIError
     ? transitionError.message
     : transitionError instanceof Error ? transitionError.message : null
@@ -192,11 +197,11 @@ export function BatchDetailPage() {
       </div>
 
       {/* Transition controls */}
-      {!isTerminal && (
+      {canWrite && transitions.length > 0 && (
         <div className="mb-6 p-4 rounded border border-[var(--color-border)] bg-[var(--color-surface)]">
           <p className="text-sm font-medium text-[var(--color-fg)] mb-3">Transition to:</p>
           <div className="flex flex-wrap gap-2">
-            {allowedNext.map((toStatus) => (
+            {transitions.map((toStatus) => (
               <button
                 key={toStatus}
                 onClick={() => handleTransitionClick(toStatus)}
@@ -428,6 +433,7 @@ export function BatchDetailPage() {
 }
 
 function BatchCostSection({ batchId }: { batchId: string }) {
+  const canCompute = useCanWrite('costs')
   const { data: cost, isLoading } = useBatchCost(batchId)
   const computeMutation = useComputeBatchCost()
   const [showForm, setShowForm] = React.useState(false)
@@ -454,9 +460,11 @@ function BatchCostSection({ batchId }: { batchId: string }) {
     <div>
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-base font-semibold text-[var(--color-fg)]">Batch Cost</h2>
-        <button onClick={() => setShowForm(!showForm)} className="px-3 py-1 rounded text-sm bg-[var(--color-accent)] text-white hover:opacity-90">
-          {cost ? 'Recompute' : 'Compute cost'}
-        </button>
+        {canCompute && (
+          <button onClick={() => setShowForm(!showForm)} className="px-3 py-1 rounded text-sm bg-[var(--color-accent)] text-white hover:opacity-90">
+            {cost ? 'Recompute' : 'Compute cost'}
+          </button>
+        )}
       </div>
       {cost && (
         <div className="grid grid-cols-2 gap-2 text-sm mb-4">
@@ -477,9 +485,11 @@ function BatchCostSection({ batchId }: { batchId: string }) {
               <input type="number" value={val} onChange={(e) => setter(e.target.value)} className="p-2 rounded border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-fg)] text-sm w-full" />
             </div>
           ))}
-          <button onClick={handleCompute} disabled={computeMutation.isPending} className="px-4 py-2 rounded text-sm bg-[var(--color-accent)] text-white hover:opacity-90 disabled:opacity-50">
-            {computeMutation.isPending ? 'Computing...' : 'Compute'}
-          </button>
+          {canCompute && (
+            <button onClick={handleCompute} disabled={computeMutation.isPending} className="px-4 py-2 rounded text-sm bg-[var(--color-accent)] text-white hover:opacity-90 disabled:opacity-50">
+              {computeMutation.isPending ? 'Computing...' : 'Compute'}
+            </button>
+          )}
         </div>
       )}
     </div>

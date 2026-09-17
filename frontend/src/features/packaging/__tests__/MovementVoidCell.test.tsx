@@ -5,6 +5,9 @@ import { ToastProvider } from '../../../components/feedback/Toast'
 import { MovementVoidCell } from '../MovementVoidCell'
 
 type VoidArgs = { id: string; reason: string }
+let authRole = 'sales'
+
+vi.mock('../../../auth/useAuth', () => ({ useAuth: () => ({ user: { role: authRole } }) }))
 const voidCalls: VoidArgs[] = []
 let voidImpl: (args: VoidArgs) => Promise<unknown> = async () => undefined
 
@@ -34,6 +37,7 @@ describe('MovementVoidCell', () => {
   beforeEach(() => {
     voidCalls.length = 0
     voidImpl = async () => undefined
+    authRole = 'sales'
   })
 
   it('shows why a voided movement was voided, with no Void action', () => {
@@ -70,5 +74,14 @@ describe('MovementVoidCell', () => {
 
     expect(await screen.findByText('Void failed')).toBeInTheDocument()
     expect(voidCalls).toHaveLength(1)
+  })
+
+  it('hides the Void action from a role that can only read', () => {
+    authRole = 'viewer'
+    const { unmount } = renderCell(movement)
+    expect(screen.queryByRole('button', { name: 'Void' })).toBeNull()
+    unmount()
+    renderCell({ ...movement, voided_at: '2026-09-17T10:00:00Z', void_reason: 'Wrong run' })
+    expect(screen.getByText('Voided: Wrong run')).toBeInTheDocument()
   })
 })

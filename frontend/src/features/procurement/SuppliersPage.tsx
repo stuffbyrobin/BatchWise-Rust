@@ -4,10 +4,12 @@ import { useSuppliers, useCreateSupplier, usePatchSupplier, useDeleteSupplier } 
 import { SortableHeader } from '../../components/ui/SortableHeader'
 import type { components } from '../../api/generated'
 import { inputCls } from '../../components/ui/styles'
+import { useCanWrite } from '../../auth/useCan'
 
 type Supplier = components['schemas']['Supplier']
 
 function SupplierRow({ supplier }: { supplier: Supplier }) {
+  const canWrite = useCanWrite('production')
   const [editing, setEditing] = React.useState(false)
   const [form, setForm] = React.useState({
     name: supplier.name ?? '',
@@ -48,7 +50,7 @@ function SupplierRow({ supplier }: { supplier: Supplier }) {
     }
   }
 
-  if (editing) {
+  if (editing && canWrite) {
     return (
       <tr>
         <td colSpan={6} className="py-2">
@@ -106,11 +108,11 @@ function SupplierRow({ supplier }: { supplier: Supplier }) {
       <td className="pr-3 text-sm">{supplier.phone || '—'}</td>
       <td className="pr-3 text-sm text-[var(--color-muted)]">{supplier.notes || '—'}</td>
       <td className="text-sm flex gap-2">
-        <button className="text-[var(--color-accent)] hover:underline text-xs"
-          onClick={() => setEditing(true)}>Edit</button>
-        <button className="text-[var(--color-danger)] hover:underline text-xs disabled:opacity-50"
+        {canWrite && <button className="text-[var(--color-accent)] hover:underline text-xs"
+          onClick={() => setEditing(true)}>Edit</button>}
+        {canWrite && <button className="text-[var(--color-danger)] hover:underline text-xs disabled:opacity-50"
           disabled={del.isPending}
-          onClick={handleDelete}>Delete</button>
+          onClick={handleDelete}>Delete</button>}
         {err && <span className="text-xs text-[var(--color-danger)]">{err}</span>}
       </td>
     </tr>
@@ -118,6 +120,7 @@ function SupplierRow({ supplier }: { supplier: Supplier }) {
 }
 
 export default function SuppliersPage() {
+  const canWrite = useCanWrite('production')
   const [sort, setSort] = React.useState('')
   const { data, isLoading, error } = useSuppliers({ sort: sort || undefined })
   const createSupplier = useCreateSupplier()
@@ -148,15 +151,15 @@ export default function SuppliersPage() {
     <div className="p-6 max-w-5xl mx-auto">
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-xl font-semibold">Suppliers</h1>
-        <button
+        {canWrite && <button
           className="px-3 py-1.5 rounded bg-[var(--color-accent)] text-white text-sm hover:opacity-90"
           onClick={() => setShowForm((x) => !x)}
         >
           {showForm ? 'Cancel' : '+ New Supplier'}
-        </button>
+        </button>}
       </div>
 
-      {showForm && (
+      {showForm && canWrite && (
         <form onSubmit={handleCreate}
           className="mb-6 p-4 border rounded grid grid-cols-2 md:grid-cols-3 gap-3 text-sm bg-[var(--color-surface)]">
           <div className="col-span-2 md:col-span-3 font-medium">New Supplier</div>

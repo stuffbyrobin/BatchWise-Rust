@@ -7,6 +7,7 @@ import {
 import type { components } from '../../api/generated'
 import { fmtDate } from '../../utils/format'
 import { inputCls } from '../../components/ui/styles'
+import { useCanWrite } from '../../auth/useCan'
 
 type YeastBankEntry = components['schemas']['YeastBankEntry']
 type Propagation = components['schemas']['Propagation']
@@ -18,6 +19,7 @@ const STATUS_COLORS: Record<string, string> = {
 }
 
 function PropagationsPanel({ entry }: { entry: YeastBankEntry }) {
+  const canWrite = useCanWrite('production')
   const { data, isLoading } = usePropagations(entry.id ?? '')
   const create = useCreatePropagation(entry.id ?? '')
   const [showForm, setShowForm] = React.useState(false)
@@ -75,14 +77,15 @@ function PropagationsPanel({ entry }: { entry: YeastBankEntry }) {
         <p className="text-xs text-[var(--color-muted)] mb-2">No propagations yet.</p>
       )}
 
-      {!showForm ? (
+      {canWrite && !showForm && (
         <button
           className="text-xs px-2 py-1 rounded border border-[var(--color-border)] hover:bg-[var(--color-surface-alt)]"
           onClick={() => setShowForm(true)}
         >
           + Log Propagation
         </button>
-      ) : (
+      )}
+      {canWrite && showForm && (
         <form onSubmit={handleCreate} className="flex flex-wrap gap-2 items-end text-xs mt-1">
           <div>
             <label className="block text-[var(--color-muted)] mb-0.5">Started</label>
@@ -125,6 +128,7 @@ function PropRow({ prop, bankID, completing, onComplete }: {
   completing: boolean
   onComplete: () => void
 }) {
+  const canWrite = useCanWrite('production')
   const patch = usePatchPropagation(bankID, prop.id ?? '')
   const del = useDeletePropagation(bankID)
 
@@ -132,7 +136,9 @@ function PropRow({ prop, bankID, completing, onComplete }: {
     <tr>
       <td className="pr-3">{fmtDate(prop.started_at)}</td>
       <td className="pr-3">
-        {prop.completed_at ? fmtDate(prop.completed_at) : (
+        {prop.completed_at ? fmtDate(prop.completed_at) : !canWrite ? (
+          <span className="text-xs text-[var(--color-muted)]">Pending</span>
+        ) : (
           completing ? (
             <button
               className="text-xs text-[var(--color-accent)] hover:underline"
@@ -152,13 +158,15 @@ function PropRow({ prop, bankID, completing, onComplete }: {
       <td className="pr-3 font-mono text-xs">{prop.batch_id ? prop.batch_id.slice(0, 8) + '…' : '—'}</td>
       <td className="pr-3">{prop.notes || '—'}</td>
       <td>
-        <button
-          className="text-[var(--color-danger)] hover:underline text-xs"
-          onClick={() => del.mutate(prop.id ?? '')}
-          disabled={del.isPending}
-        >
-          Delete
-        </button>
+        {canWrite && (
+          <button
+            className="text-[var(--color-danger)] hover:underline text-xs"
+            onClick={() => del.mutate(prop.id ?? '')}
+            disabled={del.isPending}
+          >
+            Delete
+          </button>
+        )}
       </td>
     </tr>
   )
@@ -214,6 +222,7 @@ function HarvestForm({ entry, onDone }: { entry: YeastBankEntry; onDone: () => v
 }
 
 function EntryRow({ entry }: { entry: YeastBankEntry }) {
+  const canWrite = useCanWrite('production')
   const [expanded, setExpanded] = React.useState(false)
   const [harvesting, setHarvesting] = React.useState(false)
   const [editNotes, setEditNotes] = React.useState(false)
@@ -251,7 +260,9 @@ function EntryRow({ entry }: { entry: YeastBankEntry }) {
         <td className="pr-3">{entry.location || '—'}</td>
         <td className="pr-3">{entry.days_in_storage != null ? `${entry.days_in_storage}d` : '—'}</td>
         <td className="pr-3">
-          {editNotes ? (
+          {!canWrite ? (
+            <span className="text-xs text-[var(--color-muted)]">{entry.notes || '—'}</span>
+          ) : editNotes ? (
             <form className="flex gap-1" onSubmit={async (e) => {
               e.preventDefault()
               await patch.mutateAsync({ notes })
@@ -270,6 +281,8 @@ function EntryRow({ entry }: { entry: YeastBankEntry }) {
           )}
         </td>
         <td className="pr-3 text-xs flex gap-1 items-center flex-wrap">
+          {canWrite && (
+          <>
           {!isDiscarded && entry.status !== 'active' && (
             <button className="hover:underline text-green-600" onClick={() => setStatus('active')}>Active</button>
           )}
@@ -293,6 +306,8 @@ function EntryRow({ entry }: { entry: YeastBankEntry }) {
           >
             Delete
           </button>
+          </>
+          )}
           {delErr && <span className="text-[var(--color-danger)]">{delErr}</span>}
         </td>
       </tr>
@@ -307,6 +322,7 @@ function EntryRow({ entry }: { entry: YeastBankEntry }) {
 }
 
 export default function YeastBankPage() {
+  const canWrite = useCanWrite('production')
   const [statusFilter, setStatusFilter] = React.useState('')
   const { data, isLoading, error } = useYeastBank({ status: statusFilter || undefined })
   const create = useCreateYeastBankEntry()
@@ -353,16 +369,18 @@ export default function YeastBankPage() {
             <option value="depleted">Depleted</option>
             <option value="discarded">Discarded</option>
           </select>
-          <button
-            className="px-3 py-1.5 rounded bg-[var(--color-accent)] text-white text-sm hover:opacity-90"
-            onClick={() => setShowForm((x) => !x)}
-          >
-            {showForm ? 'Cancel' : '+ New Entry'}
-          </button>
+          {canWrite && (
+            <button
+              className="px-3 py-1.5 rounded bg-[var(--color-accent)] text-white text-sm hover:opacity-90"
+              onClick={() => setShowForm((x) => !x)}
+            >
+              {showForm ? 'Cancel' : '+ New Entry'}
+            </button>
+          )}
         </div>
       </div>
 
-      {showForm && (
+      {canWrite && showForm && (
         <form onSubmit={handleCreate}
           className="mb-6 p-4 border rounded grid grid-cols-2 md:grid-cols-3 gap-3 text-sm bg-[var(--color-surface)]">
           <div className="col-span-2 md:col-span-3 font-medium">New Yeast Bank Entry</div>

@@ -3,6 +3,7 @@ import { APIError } from '../../api/error';
 import { useCostReportsList, useGenerateCostReport, useDeleteCostReport, REPORT_TYPES } from './hooks/useCostReports';
 import type { components } from '../../api/generated';
 import { fmtPence } from '../../utils/format';
+import { useCanWrite } from '../../auth/useCan';
 
 type CostReport = components['schemas']['CostReport'];
 
@@ -12,6 +13,7 @@ const CostReportRow: React.FC<{
   onToggleView: (id: string | null) => void;
   onRefetch: () => void;
 }> = ({ item, viewingId, onToggleView, onRefetch }) => {
+  const canWrite = useCanWrite('costs');
   const [isDeleting, setIsDeleting] = useState(false);
   const deleteMutation = useDeleteCostReport();
 
@@ -118,9 +120,11 @@ const CostReportRow: React.FC<{
           <button onClick={handleViewToggle} className="px-4 py-2 rounded text-sm bg-[var(--color-accent)] text-white hover:opacity-90">
             {isViewing ? 'Hide' : 'View'}
           </button>
-          <button onClick={handleDelete} disabled={isDeleting} className="px-4 py-2 rounded text-sm bg-[var(--color-danger)] text-white hover:opacity-90 disabled:opacity-50">
-            {isDeleting ? 'Deleting...' : 'Delete'}
-          </button>
+          {canWrite && (
+            <button onClick={handleDelete} disabled={isDeleting} className="px-4 py-2 rounded text-sm bg-[var(--color-danger)] text-white hover:opacity-90 disabled:opacity-50">
+              {isDeleting ? 'Deleting...' : 'Delete'}
+            </button>
+          )}
         </td>
       </tr>
       {isViewing && (
@@ -135,6 +139,7 @@ const CostReportRow: React.FC<{
 };
 
 export const CostReportsPage: React.FC = () => {
+  const canWrite = useCanWrite('costs');
   const [page, setPage] = useState(1);
   const [showGenerateForm, setShowGenerateForm] = useState(false);
   const [viewingId, setViewingId] = useState<string | null>(null);
@@ -193,12 +198,14 @@ export const CostReportsPage: React.FC = () => {
     <div className="p-6 space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-[var(--color-fg)]">Cost Reports</h1>
-        <button onClick={() => setShowGenerateForm((v) => !v)} className="px-4 py-2 rounded text-sm bg-[var(--color-accent)] text-white hover:opacity-90">
-          Generate report
-        </button>
+        {canWrite && (
+          <button onClick={() => setShowGenerateForm((v) => !v)} className="px-4 py-2 rounded text-sm bg-[var(--color-accent)] text-white hover:opacity-90">
+            Generate report
+          </button>
+        )}
       </div>
 
-      {showGenerateForm && (
+      {canWrite && showGenerateForm && (
         <div className="p-4 border border-[var(--color-border)] rounded bg-[var(--color-surface)] space-y-4">
           <h2 className="text-lg font-semibold text-[var(--color-fg)]">Generate Cost Report</h2>
           <div className="grid grid-cols-2 gap-4">

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { can, granted, ROLES, type Access, type Area } from '../permissions'
+import { areaForPath, can, granted, isViewOnlyPage, pageNeedsWrite, ROLES, type Access, type Area } from '../permissions'
 
 describe('permissions', () => {
   // Same rows as grants_match_the_agreed_table in src/platform/authz.rs.
@@ -27,5 +27,16 @@ describe('permissions', () => {
     expect(can('viewer', 'production', 'write')).toBe(false)
     expect(can('sales', 'costs')).toBe(false)
     expect(can(null, 'dashboard')).toBe(false)
+  })
+
+  it('maps app routes to areas', () => {
+    expect(areaForPath('/cost-reports')).toBe('costs')
+    expect(areaForPath('/container-assets/c1/qr')).toBe('distribution')
+    expect(areaForPath('/duty')).toBe('duty')
+    expect(areaForPath('/batches/b1')).toBe('production')
+    expect(pageNeedsWrite('/recipes/new')).toBe(true)
+    expect(pageNeedsWrite('/recipes/r1')).toBe(false)
+    expect(isViewOnlyPage('/container-assets/c1/qr')).toBe(true)
+    expect(isViewOnlyPage('/batches')).toBe(false)
   })
 })

@@ -1,6 +1,7 @@
 import React from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { apiClient } from '../../api/client'
+import { useCanWrite } from '../../auth/useCan'
 import {
   useLabelDesign,
   useCreateLabelDesign,
@@ -46,6 +47,7 @@ function isComplianceKind(kind: string): boolean {
 type ListResp = { items?: Array<{ id?: string; name?: string; batch_number?: string }> }
 
 export function LabelDesignEditorPage() {
+  const canWrite = useCanWrite('production')
   const { id } = useParams<{ id: string }>()
   const editing = !!id && id !== 'new'
   const navigate = useNavigate()
@@ -136,7 +138,7 @@ export function LabelDesignEditorPage() {
             <select
               value={kind}
               onChange={(e) => setKind(e.target.value)}
-              disabled={editing}
+              disabled={!canWrite || editing}
               className="border rounded px-2 py-1"
               style={{ borderColor: 'var(--color-border)' }}
             >
@@ -153,6 +155,7 @@ export function LabelDesignEditorPage() {
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
+              disabled={!canWrite}
               className="border rounded px-2 py-1"
               style={{ borderColor: 'var(--color-border)' }}
             />
@@ -164,6 +167,7 @@ export function LabelDesignEditorPage() {
               <select
                 value={sourceId}
                 onChange={(e) => setSourceId(e.target.value)}
+                disabled={!canWrite}
                 className="border rounded px-2 py-1"
                 style={{ borderColor: 'var(--color-border)' }}
               >
@@ -182,6 +186,7 @@ export function LabelDesignEditorPage() {
             <select
               value={brandProfileId}
               onChange={(e) => setBrandProfileId(e.target.value)}
+              disabled={!canWrite}
               className="border rounded px-2 py-1"
               style={{ borderColor: 'var(--color-border)' }}
             >
@@ -199,6 +204,7 @@ export function LabelDesignEditorPage() {
             <select
               value={sizeKey}
               onChange={(e) => setSizeKey(e.target.value)}
+              disabled={!canWrite}
               className="border rounded px-2 py-1"
               style={{ borderColor: 'var(--color-border)' }}
             >
@@ -214,24 +220,26 @@ export function LabelDesignEditorPage() {
             <legend className="px-1 text-xs text-[var(--color-muted)]">Optional fields</legend>
             {isComplianceKind(kind) ? (
               <>
-                <Toggle label="Ingredient list" checked={!!opts.show_ingredient_list} onChange={() => toggle('show_ingredient_list')} />
-                <Toggle label="Energy (kJ/kcal)" checked={!!opts.show_energy} onChange={() => toggle('show_energy')} />
-                <Toggle label="Alcohol units" checked={!!opts.show_units} onChange={() => toggle('show_units')} />
-                <Toggle label="Drink responsibly" checked={!!opts.show_responsible_drinking} onChange={() => toggle('show_responsible_drinking')} />
+                <Toggle label="Ingredient list" checked={!!opts.show_ingredient_list} onChange={() => toggle('show_ingredient_list')} disabled={!canWrite} />
+                <Toggle label="Energy (kJ/kcal)" checked={!!opts.show_energy} onChange={() => toggle('show_energy')} disabled={!canWrite} />
+                <Toggle label="Alcohol units" checked={!!opts.show_units} onChange={() => toggle('show_units')} disabled={!canWrite} />
+                <Toggle label="Drink responsibly" checked={!!opts.show_responsible_drinking} onChange={() => toggle('show_responsible_drinking')} disabled={!canWrite} />
               </>
             ) : (
-              <Toggle label="Tasting notes" checked={!!opts.show_tasting_notes} onChange={() => toggle('show_tasting_notes')} />
+              <Toggle label="Tasting notes" checked={!!opts.show_tasting_notes} onChange={() => toggle('show_tasting_notes')} disabled={!canWrite} />
             )}
           </fieldset>
 
-          <button
-            onClick={handleSave}
-            disabled={!name || (!editing && !sourceId) || create.isPending || patch.isPending}
-            className="px-3 py-1.5 rounded text-sm text-white disabled:opacity-50"
-            style={{ background: 'var(--color-accent)' }}
-          >
-            {create.isPending || patch.isPending ? 'Saving…' : editing ? 'Save changes' : 'Create design'}
-          </button>
+          {canWrite && (
+            <button
+              onClick={handleSave}
+              disabled={!name || (!editing && !sourceId) || create.isPending || patch.isPending}
+              className="px-3 py-1.5 rounded text-sm text-white disabled:opacity-50"
+              style={{ background: 'var(--color-accent)' }}
+            >
+              {create.isPending || patch.isPending ? 'Saving…' : editing ? 'Save changes' : 'Create design'}
+            </button>
+          )}
         </div>
 
         {/* ── preview ── */}
@@ -241,10 +249,10 @@ export function LabelDesignEditorPage() {
   )
 }
 
-function Toggle({ label, checked, onChange }: { label: string; checked: boolean; onChange: () => void }) {
+function Toggle({ label, checked, onChange, disabled }: { label: string; checked: boolean; onChange: () => void; disabled?: boolean }) {
   return (
     <label className="flex items-center gap-2 py-0.5">
-      <input type="checkbox" checked={checked} onChange={onChange} />
+      <input type="checkbox" checked={checked} onChange={onChange} disabled={disabled} />
       {label}
     </label>
   )

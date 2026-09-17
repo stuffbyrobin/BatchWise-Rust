@@ -57,3 +57,45 @@ export function can(role: Role | null | undefined, area: Area, access: 'read' | 
 
 /** Brewer, Sales and Viewer: the members a Manager may manage. */
 export const STAFF_ROLES: Role[] = ['brewer', 'sales', 'viewer']
+
+/** App routes outside the production area, by path prefix. */
+const ROUTE_AREAS: [string, Area][] = [
+  ['/app', 'dashboard'],
+  ['/account', 'account'],
+  ['/members', 'members'],
+  ['/compliance-audit', 'audit'],
+  ['/duty', 'duty'],
+  ['/cost-rates', 'costs'],
+  ['/batch-costs', 'costs'],
+  ['/cost-reports', 'costs'],
+  ['/container-assets', 'distribution'],
+  ['/distribution-movements', 'distribution'],
+]
+
+const matches = (pathname: string, prefix: string) => pathname === prefix || pathname.startsWith(`${prefix}/`)
+
+/** The area an app page belongs to; anything not listed is production. */
+export function areaForPath(pathname: string): Area {
+  return ROUTE_AREAS.find(([prefix]) => matches(pathname, prefix))?.[1] ?? 'production'
+}
+
+/** Create and import pages, which a role needs write access to open. */
+export function pageNeedsWrite(pathname: string): boolean {
+  return /\/(new|import)$/.test(pathname)
+}
+
+/** Pages that only display data, so a read-only role needs no notice there. */
+const VIEW_ONLY_PAGES = [
+  '/app',
+  '/compliance-audit',
+  '/traceability',
+  '/water/calculator',
+  '/maintenance-due',
+  '/fermenters/schedule',
+  '/inventory/summary',
+  '/inventory/movements',
+]
+
+export function isViewOnlyPage(pathname: string): boolean {
+  return VIEW_ONLY_PAGES.some((prefix) => matches(pathname, prefix)) || pathname.endsWith('/qr')
+}
