@@ -1,6 +1,10 @@
 import { useMemo } from 'react'
-import { useYeasts } from '../library/hooks/useLibrary'
-import { useInventoryList } from '../inventory/hooks/useInventory'
+import { useAllPages } from '../../api/allPages'
+import type { components } from '../../api/generated'
+import { midpoint, aggregateStock } from './optionUtils'
+
+type LibraryYeast = components['schemas']['Yeast']
+type Ingredient = components['schemas']['Ingredient']
 
 export interface YeastOption {
   key: string
@@ -19,11 +23,6 @@ export interface YeastGroup {
   options: YeastOption[]
 }
 
-function midpoint(min?: number | null, max?: number | null): number | undefined {
-  if (min != null && max != null) return Math.round(((min + max) / 2) * 10) / 10
-  return min ?? max ?? undefined
-}
-
 const cap = (s: string) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s)
 
 /**
@@ -31,11 +30,11 @@ const cap = (s: string) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s)
  * grouped selectable options for the recipe editor, mirroring useMaltOptions.
  */
 export function useYeastOptions() {
-  const generic = useYeasts({ page_size: 200 })
-  const stock = useInventoryList({ type: 'yeast', page_size: 200 })
+  const generic = useAllPages<LibraryYeast>(['library', 'yeasts'], '/api/v1/library/yeasts')
+  const stock = useAllPages<Ingredient>(['inventory'], '/api/v1/inventory', { type: 'yeast' })
 
   const derived = useMemo(() => {
-    const libItems = generic.data?.items ?? []
+    const libItems = generic.data ?? []
     const genericOptions: YeastOption[] = libItems
       .map((y) => ({
         key: `generic:${y.id}`,
@@ -54,12 +53,7 @@ export function useYeastOptions() {
       if (g.attenuation_pct != null) attByName.set(g.name.toLowerCase(), g.attenuation_pct)
     }
 
-    const stockAgg = new Map<string, { att?: number; amount: number; unit: string }>()
-    for (const it of stock.data?.items ?? []) {
-      const cur = stockAgg.get(it.name)
-      if (cur) cur.amount += it.amount
-      else stockAgg.set(it.name, { att: it.attenuation_pct ?? undefined, amount: it.amount, unit: it.unit })
-    }
+    const stockAgg = aggregateStock(stock.data ?? [], (it) => ({ att: it.attenuation_pct ?? undefined }))
     const stockOptions: YeastOption[] = [...stockAgg.entries()]
       .map(([name, v]) => ({
         key: `stock:${name}`,

@@ -199,7 +199,7 @@ export function WaterAdjustmentsPage() {
               <label className="block text-xs text-[var(--color-muted)] mb-1">
                 Name <span className="text-[var(--color-danger)]">*</span>
               </label>
-              <input
+              <input aria-label="Name"
                 type="text"
                 value={form.name}
                 onChange={(e) => set('name', e.target.value)}
@@ -210,7 +210,7 @@ export function WaterAdjustmentsPage() {
               <label className="block text-xs text-[var(--color-muted)] mb-1">
                 Volume (litres) <span className="text-[var(--color-danger)]">*</span>
               </label>
-              <input
+              <input aria-label="Volume (litres)"
                 type="number"
                 min="0"
                 step="0.5"
@@ -223,7 +223,7 @@ export function WaterAdjustmentsPage() {
 
           <div className="mb-3">
             <label className="block text-xs text-[var(--color-muted)] mb-1">Source water profile</label>
-            <select
+            <select aria-label="Source water profile"
               value={form.source_profile_id}
               onChange={(e) => set('source_profile_id', e.target.value)}
               className={inputCls}
@@ -296,7 +296,7 @@ export function WaterAdjustmentsPage() {
 
           <div className="mb-4">
             <label className="block text-xs text-[var(--color-muted)] mb-1">Notes</label>
-            <textarea
+            <textarea aria-label="Notes"
               value={form.notes}
               onChange={(e) => set('notes', e.target.value)}
               rows={2}
@@ -381,15 +381,19 @@ function AdjustmentRow({
       className="rounded border"
       style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)' }}
     >
-      <div
-        className="flex items-center gap-3 px-4 py-3 cursor-pointer select-none"
-        onClick={onToggle}
-      >
-        <span className="text-[var(--color-muted)] text-xs">{expanded ? '▾' : '▸'}</span>
-        <span className="font-medium text-sm text-[var(--color-fg)] flex-1">{adj.name}</span>
-        <span className="text-xs text-[var(--color-muted)] mr-2">{adj.volume_liters} L</span>
-        <ResultBadge result={adj.result as WaterResult | undefined} />
-        <div className="flex gap-2 ml-3" onClick={(e) => e.stopPropagation()}>
+      <div className="flex items-center gap-3 px-4 py-3">
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-expanded={expanded}
+          className="flex items-center gap-3 flex-1 text-left cursor-pointer select-none"
+        >
+          <span className="text-[var(--color-muted)] text-xs">{expanded ? '▾' : '▸'}</span>
+          <span className="font-medium text-sm text-[var(--color-fg)] flex-1">{adj.name}</span>
+          <span className="text-xs text-[var(--color-muted)] mr-2">{adj.volume_liters} L</span>
+          <ResultBadge result={adj.result as WaterResult | undefined} />
+        </button>
+        <div className="flex gap-2 ml-3">
           <button
             onClick={onEdit}
             className="text-xs px-2 py-1 rounded border border-[var(--color-border)] text-[var(--color-fg)] hover:bg-[var(--color-accent)] hover:text-white"

@@ -173,7 +173,7 @@ export function WaterProfilesPage() {
             <label className="block text-xs text-[var(--color-muted)] mb-1">
               Name <span className="text-[var(--color-danger)]">*</span>
             </label>
-            <input
+            <input aria-label="Name"
               type="text"
               value={form.name}
               onChange={(e) => set('name', e.target.value)}
@@ -182,7 +182,7 @@ export function WaterProfilesPage() {
           </div>
           <div className="mb-3">
             <label className="block text-xs text-[var(--color-muted)] mb-1">Description</label>
-            <input
+            <input aria-label="Description"
               type="text"
               value={form.description}
               onChange={(e) => set('description', e.target.value)}
@@ -193,7 +193,7 @@ export function WaterProfilesPage() {
           <IonGrid form={form} onChange={set} />
           <div className="mt-3">
             <label className="block text-xs text-[var(--color-muted)] mb-1">Notes</label>
-            <textarea
+            <textarea aria-label="Notes"
               value={form.notes}
               onChange={(e) => set('notes', e.target.value)}
               rows={2}

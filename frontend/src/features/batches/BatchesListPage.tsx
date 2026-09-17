@@ -57,7 +57,7 @@ export function BatchesListPage() {
 
         <div className="flex items-center gap-2">
           <label className="text-xs text-[var(--color-muted)]">Brew date</label>
-          <input
+          <input aria-label="Brew date"
             type="date"
             value={brewDateFrom}
             onChange={(e) => { setBrewDateFrom(e.target.value); setPage(1) }}

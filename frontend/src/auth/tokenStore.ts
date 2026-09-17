@@ -9,6 +9,10 @@ interface TokenState {
   clear: () => void;
 }
 
+/**
+ * Zustand store for auth tokens. Only the refresh token is persisted to sessionStorage;
+ * the access token is memory-only.
+ */
 export const useTokenStore = create<TokenState>()(
   persist(
     (set) => ({
@@ -30,6 +34,9 @@ export const useTokenStore = create<TokenState>()(
   ),
 );
 
+/**
+ * Imperative getter/setter interface for the token store, used by the API client.
+ */
 export const tokenStore = {
   getAccessToken: () => useTokenStore.getState().accessToken,
   getRefreshToken: () => useTokenStore.getState().refreshToken,

@@ -1,5 +1,9 @@
 import { useMemo } from 'react'
-import { useInventoryList } from '../inventory/hooks/useInventory'
+import { useAllPages } from '../../api/allPages'
+import type { components } from '../../api/generated'
+import { aggregateStock } from './optionUtils'
+
+type Ingredient = components['schemas']['Ingredient']
 
 export interface HopOption {
   key: string
@@ -20,15 +24,10 @@ export interface HopGroup {
  * the editor's Custom/Other entry). Auto-fills name + alpha acid %.
  */
 export function useHopOptions() {
-  const stock = useInventoryList({ type: 'hop', page_size: 200 })
+  const stock = useAllPages<Ingredient>(['inventory'], '/api/v1/inventory', { type: 'hop' })
 
   const derived = useMemo(() => {
-    const agg = new Map<string, { alpha?: number; amount: number; unit: string }>()
-    for (const it of stock.data?.items ?? []) {
-      const cur = agg.get(it.name)
-      if (cur) cur.amount += it.amount
-      else agg.set(it.name, { alpha: it.alpha_acid_pct ?? undefined, amount: it.amount, unit: it.unit })
-    }
+    const agg = aggregateStock(stock.data ?? [], (it) => ({ alpha: it.alpha_acid_pct ?? undefined }))
     const options: HopOption[] = [...agg.entries()]
       .map(([name, v]) => ({
         key: `stock:${name}`,

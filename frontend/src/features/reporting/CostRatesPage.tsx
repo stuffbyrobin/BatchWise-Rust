@@ -177,7 +177,7 @@ export const CostRatesPage: React.FC = () => {
 
       <div className="flex items-center space-x-4">
         <label className="text-[var(--color-muted)]">Filter by type:</label>
-        <select value={filterType} onChange={(e) => setFilterType(e.target.value)} className="p-2 rounded border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-fg)] text-sm">
+        <select aria-label="Filter by type:" value={filterType} onChange={(e) => setFilterType(e.target.value)} className="p-2 rounded border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-fg)] text-sm">
           <option value="">All types</option>
           {RATE_TYPES.map((t) => (
             <option key={t} value={t}>{t}</option>
@@ -191,11 +191,11 @@ export const CostRatesPage: React.FC = () => {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm text-[var(--color-muted)]">Name</label>
-              <input type="text" value={editForm.rate_name} onChange={(e) => handleCreateChange('rate_name', e.target.value)} className="w-full p-2 rounded border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-fg)] text-sm" />
+              <input aria-label="Name" type="text" value={editForm.rate_name} onChange={(e) => handleCreateChange('rate_name', e.target.value)} className="w-full p-2 rounded border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-fg)] text-sm" />
             </div>
             <div>
               <label className="block text-sm text-[var(--color-muted)]">Type</label>
-              <select value={editForm.rate_type} onChange={(e) => handleCreateChange('rate_type', e.target.value)} className="w-full p-2 rounded border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-fg)] text-sm">
+              <select aria-label="Type" value={editForm.rate_type} onChange={(e) => handleCreateChange('rate_type', e.target.value)} className="w-full p-2 rounded border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-fg)] text-sm">
                 <option value="">Select type</option>
                 {RATE_TYPES.map((t) => (
                   <option key={t} value={t}>{t}</option>
@@ -204,27 +204,27 @@ export const CostRatesPage: React.FC = () => {
             </div>
             <div>
               <label className="block text-sm text-[var(--color-muted)]">Unit</label>
-              <input type="text" value={editForm.unit} onChange={(e) => handleCreateChange('unit', e.target.value)} className="w-full p-2 rounded border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-fg)] text-sm" />
+              <input aria-label="Unit" type="text" value={editForm.unit} onChange={(e) => handleCreateChange('unit', e.target.value)} className="w-full p-2 rounded border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-fg)] text-sm" />
             </div>
             <div>
               <label className="block text-sm text-[var(--color-muted)]">Rate (pence)</label>
-              <input type="number" value={editForm.rate_value} onChange={(e) => handleCreateChange('rate_value', e.target.value)} className="w-full p-2 rounded border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-fg)] text-sm" />
+              <input aria-label="Rate (pence)" type="number" value={editForm.rate_value} onChange={(e) => handleCreateChange('rate_value', e.target.value)} className="w-full p-2 rounded border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-fg)] text-sm" />
             </div>
             <div>
               <label className="block text-sm text-[var(--color-muted)]">Currency</label>
-              <input type="text" value={editForm.currency} onChange={(e) => handleCreateChange('currency', e.target.value)} className="w-full p-2 rounded border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-fg)] text-sm" />
+              <input aria-label="Currency" type="text" value={editForm.currency} onChange={(e) => handleCreateChange('currency', e.target.value)} className="w-full p-2 rounded border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-fg)] text-sm" />
             </div>
             <div>
               <label className="block text-sm text-[var(--color-muted)]">Effective From</label>
-              <input type="date" value={editForm.effective_from} onChange={(e) => handleCreateChange('effective_from', e.target.value)} className="w-full p-2 rounded border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-fg)] text-sm" />
+              <input aria-label="Effective From" type="date" value={editForm.effective_from} onChange={(e) => handleCreateChange('effective_from', e.target.value)} className="w-full p-2 rounded border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-fg)] text-sm" />
             </div>
             <div>
               <label className="block text-sm text-[var(--color-muted)]">Effective To</label>
-              <input type="date" value={editForm.effective_to} onChange={(e) => handleCreateChange('effective_to', e.target.value)} className="w-full p-2 rounded border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-fg)] text-sm" />
+              <input aria-label="Effective To" type="date" value={editForm.effective_to} onChange={(e) => handleCreateChange('effective_to', e.target.value)} className="w-full p-2 rounded border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-fg)] text-sm" />
             </div>
             <div className="col-span-2">
               <label className="block text-sm text-[var(--color-muted)]">Notes</label>
-              <input type="text" value={editForm.notes} onChange={(e) => handleCreateChange('notes', e.target.value)} className="w-full p-2 rounded border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-fg)] text-sm" />
+              <input aria-label="Notes" type="text" value={editForm.notes} onChange={(e) => handleCreateChange('notes', e.target.value)} className="w-full p-2 rounded border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-fg)] text-sm" />
             </div>
           </div>
           <button onClick={handleCreate} className="px-4 py-2 rounded text-sm bg-[var(--color-accent)] text-white hover:opacity-90">

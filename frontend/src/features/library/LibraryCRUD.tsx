@@ -30,6 +30,9 @@ function blank(fields: FieldDef[]): Record<string, string> {
   return Object.fromEntries(fields.map((f) => [f.key, '']))
 }
 
+/**
+ * Generic CRUD table component with create/edit/delete forms and server-side sorting.
+ */
 export function LibraryCRUD<T extends Record<string, unknown>>({
   title,
   useList,

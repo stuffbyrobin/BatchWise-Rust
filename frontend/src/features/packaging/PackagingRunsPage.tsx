@@ -267,44 +267,44 @@ export default function PackagingRunsPage() {
           <div className="col-span-2 md:col-span-3 font-medium">New Packaging Run</div>
           <div>
             <label className="block text-xs text-[var(--color-muted)] mb-1">Batch ID</label>
-            <input className={inputCls} placeholder="UUID"
+            <input aria-label="Batch ID" className={inputCls} placeholder="UUID"
               value={form.batch_id} onChange={(e) => setForm((f) => ({ ...f, batch_id: e.target.value }))} required />
           </div>
           <div>
             <label className="block text-xs text-[var(--color-muted)] mb-1">Format</label>
-            <select className={inputCls}
+            <select aria-label="Format" className={inputCls}
               value={form.format} onChange={(e) => setForm((f) => ({ ...f, format: e.target.value }))}>
               {FORMATS.map((f) => <option key={f} value={f}>{f}</option>)}
             </select>
           </div>
           <div>
             <label className="block text-xs text-[var(--color-muted)] mb-1">Unit Volume (mL)</label>
-            <input className={inputCls} type="number" min={1} placeholder="330"
+            <input aria-label="Unit Volume (mL)" className={inputCls} type="number" min={1} placeholder="330"
               value={form.unit_volume_ml} onChange={(e) => setForm((f) => ({ ...f, unit_volume_ml: e.target.value }))} required />
           </div>
           <div>
             <label className="block text-xs text-[var(--color-muted)] mb-1">Quantity</label>
-            <input className={inputCls} type="number" min={1}
+            <input aria-label="Quantity" className={inputCls} type="number" min={1}
               value={form.quantity} onChange={(e) => setForm((f) => ({ ...f, quantity: e.target.value }))} required />
           </div>
           <div>
             <label className="block text-xs text-[var(--color-muted)] mb-1">Lot Number</label>
-            <input className={inputCls} placeholder="LOT-001"
+            <input aria-label="Lot Number" className={inputCls} placeholder="LOT-001"
               value={form.lot_number} onChange={(e) => setForm((f) => ({ ...f, lot_number: e.target.value }))} required />
           </div>
           <div>
             <label className="block text-xs text-[var(--color-muted)] mb-1">Packaged At</label>
-            <input className={inputCls} type="date"
+            <input aria-label="Packaged At" className={inputCls} type="date"
               value={form.packaged_at} onChange={(e) => setForm((f) => ({ ...f, packaged_at: e.target.value }))} required />
           </div>
           <div>
             <label className="block text-xs text-[var(--color-muted)] mb-1">Best Before (optional)</label>
-            <input className={inputCls} type="date"
+            <input aria-label="Best Before (optional)" className={inputCls} type="date"
               value={form.best_before_date} onChange={(e) => setForm((f) => ({ ...f, best_before_date: e.target.value }))} />
           </div>
           <div className="col-span-2">
             <label className="block text-xs text-[var(--color-muted)] mb-1">Notes</label>
-            <input className={inputCls}
+            <input aria-label="Notes" className={inputCls}
               value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} />
           </div>
           {formErr && <div className="col-span-2 md:col-span-3 text-xs text-[var(--color-danger)]">{formErr}</div>}

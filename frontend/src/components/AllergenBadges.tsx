@@ -4,6 +4,10 @@ interface Props {
   allergens: string[]
 }
 
+/**
+ * Renders a row of allergen badges. High-priority allergens get a red background.
+ * Returns null if the allergens array is empty.
+ */
 export function AllergenBadges({ allergens }: Props) {
   if (!allergens.length) return null
   return (

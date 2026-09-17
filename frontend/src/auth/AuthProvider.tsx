@@ -18,6 +18,10 @@ _initTokenStore(
   tokenStore.clear,
 );
 
+/**
+ * React provider that exposes user state and auth methods via AuthContext.
+ * Loads the current user on mount; logout always clears the local session.
+ */
 export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<MeResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);

@@ -204,7 +204,7 @@ export const CostReportsPage: React.FC = () => {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm text-[var(--color-muted)]">Report Type</label>
-              <select value={generateForm.report_type} onChange={(e) => handleFormChange('report_type', e.target.value)} className="w-full p-2 rounded border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-fg)] text-sm">
+              <select aria-label="Report Type" value={generateForm.report_type} onChange={(e) => handleFormChange('report_type', e.target.value)} className="w-full p-2 rounded border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-fg)] text-sm">
                 {REPORT_TYPES.map((t) => (
                   <option key={t} value={t}>{t}</option>
                 ))}
@@ -215,24 +215,24 @@ export const CostReportsPage: React.FC = () => {
               <>
                 <div>
                   <label className="block text-sm text-[var(--color-muted)]">Period Start</label>
-                  <input type="date" value={generateForm.period_start} onChange={(e) => handleFormChange('period_start', e.target.value)} className="w-full p-2 rounded border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-fg)] text-sm" />
+                  <input aria-label="Period Start" type="date" value={generateForm.period_start} onChange={(e) => handleFormChange('period_start', e.target.value)} className="w-full p-2 rounded border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-fg)] text-sm" />
                 </div>
                 <div>
                   <label className="block text-sm text-[var(--color-muted)]">Period End</label>
-                  <input type="date" value={generateForm.period_end} onChange={(e) => handleFormChange('period_end', e.target.value)} className="w-full p-2 rounded border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-fg)] text-sm" />
+                  <input aria-label="Period End" type="date" value={generateForm.period_end} onChange={(e) => handleFormChange('period_end', e.target.value)} className="w-full p-2 rounded border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-fg)] text-sm" />
                 </div>
               </>
             )}
             {generateForm.report_type === 'batch' && (
               <div className="col-span-2">
                 <label className="block text-sm text-[var(--color-muted)]">Batch ID</label>
-                <input type="text" value={generateForm.batch_id} onChange={(e) => handleFormChange('batch_id', e.target.value)} className="w-full p-2 rounded border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-fg)] text-sm" />
+                <input aria-label="Batch ID" type="text" value={generateForm.batch_id} onChange={(e) => handleFormChange('batch_id', e.target.value)} className="w-full p-2 rounded border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-fg)] text-sm" />
               </div>
             )}
             {generateForm.report_type === 'recipe' && (
               <div className="col-span-2">
                 <label className="block text-sm text-[var(--color-muted)]">Recipe ID</label>
-                <input type="text" value={generateForm.recipe_id} onChange={(e) => handleFormChange('recipe_id', e.target.value)} className="w-full p-2 rounded border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-fg)] text-sm" />
+                <input aria-label="Recipe ID" type="text" value={generateForm.recipe_id} onChange={(e) => handleFormChange('recipe_id', e.target.value)} className="w-full p-2 rounded border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-fg)] text-sm" />
               </div>
             )}
           </div>

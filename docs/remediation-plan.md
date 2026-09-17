@@ -190,13 +190,13 @@ these).
 
 ## Phase 12 — Recipe editor and forms · L
 
-- [ ] Option hooks request `page_size: 200` but the API clamps to 100 and they never page; fetch until `total_pages` (or raise the cap for reference lists) so large inventories are not silently truncated. Also share `midpoint()`/stock aggregation across the three hooks.
+- [x] Option hooks request `page_size: 200` but the API clamps to 100 and they never page; fetch until `total_pages` (or raise the cap for reference lists) so large inventories are not silently truncated. Also share `midpoint()`/stock aggregation across the three hooks. (`src/api/allPages.ts`: `fetchAllPages`/`useAllPages`, 100 per page. Also used by three other lists that asked for 200 and got 100: suppliers in purchase orders, batches in the fermenter schedule, and calendar events. `midpoint`/`aggregateStock` are in `features/recipes/optionUtils.ts`.)
 - [ ] Extract `features/recipes/editor/`: `<FermentableRow>`, `<HopRow>`, `<YeastRow>`, `<MashStepRow>` (each `React.memo`), a generic `useIngredientRows<T>(numericFields)` hook (add/remove/update/patch/pick + custom-row set), and a shared `<NumberCell>` with `aria-label`.
-- [ ] Hydrate the editor once (`useRef` guard or key on `recipeData.id`), same in `RecipeWaterChemistry.tsx`.
+- [x] Hydrate the editor once (`useRef` guard or key on `recipeData.id`), same in `RecipeWaterChemistry.tsx`. (The editor already had a `hydratedRecipeId` guard. The water panel now hydrates once per adjustment id, so a refetch after saving does not overwrite edits in progress.)
 - [ ] Apply the same row hook to `BatchDetailPage`'s `IngredientsEditor`.
-- [ ] Move the import parsers out of `InventoryImportPage.tsx` into `features/inventory/importers.ts` with unit tests; add file size guards before `FileReader`/upload (logo ≤ 2 MiB, imports ≤ N MB).
-- [ ] Accessibility pass: `htmlFor`/`aria-label` on the ~116 unassociated labels (start with the five worst files); convert the `div onClick` expander in `WaterAdjustmentsPage` to a `<button aria-expanded>`.
-- [ ] Add JSDoc to shared hooks and components.
+- [x] Move the import parsers out of `InventoryImportPage.tsx` into `features/inventory/importers.ts` with unit tests; add file size guards before `FileReader`/upload (logo ≤ 2 MiB, imports ≤ N MB). (`src/utils/files.ts`: logo ≤ 2 MiB, imports ≤ 10 MiB. Checked in the inventory, recipe and batch importers and the brand-profile logo upload.)
+- [x] Accessibility pass: `htmlFor`/`aria-label` on the ~116 unassociated labels (start with the five worst files); convert the `div onClick` expander in `WaterAdjustmentsPage` to a `<button aria-expanded>`. (A codemod gave 172 controls in 29 files an `aria-label` from the label directly before them. `aria-label` is used instead of generated ids, which could collide in per-row components. `RecipeEditorPage` and `BatchDetailPage` are handled with the row components below. One label with dynamic text, in `WaterProfilesPage`, is left.)
+- [x] Add JSDoc to shared hooks and components.
 
 ---
 

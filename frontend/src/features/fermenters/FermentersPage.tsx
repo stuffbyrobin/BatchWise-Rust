@@ -58,7 +58,7 @@ export default function FermentersPage() {
       >
         <div className="flex flex-col gap-1">
           <label className="text-xs text-[var(--color-muted)] uppercase tracking-wide">Name *</label>
-          <input
+          <input aria-label="Name"
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
@@ -68,7 +68,7 @@ export default function FermentersPage() {
         </div>
         <div className="flex flex-col gap-1">
           <label className="text-xs text-[var(--color-muted)] uppercase tracking-wide">Capacity (L)</label>
-          <input
+          <input aria-label="Capacity (L)"
             type="number"
             min="0"
             step="any"
@@ -80,7 +80,7 @@ export default function FermentersPage() {
         </div>
         <div className="flex flex-col gap-1 flex-1 min-w-48">
           <label className="text-xs text-[var(--color-muted)] uppercase tracking-wide">Notes</label>
-          <input
+          <input aria-label="Notes"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             className="px-3 py-1.5 rounded border border-[var(--color-border)] bg-[var(--color-bg)] text-[var(--color-fg)] text-sm w-full"

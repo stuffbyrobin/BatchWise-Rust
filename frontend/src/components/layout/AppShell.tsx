@@ -2,6 +2,9 @@ import { Outlet } from 'react-router-dom'
 import { Sidebar } from './Sidebar'
 import { TopBar } from './TopBar'
 
+/**
+ * App layout shell with Sidebar, TopBar, and main content via Outlet.
+ */
 export function AppShell() {
   return (
     <div className="flex h-screen overflow-hidden" style={{ background: 'var(--color-bg)' }}>

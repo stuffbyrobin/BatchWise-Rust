@@ -1,6 +1,10 @@
 import { useMemo } from 'react'
-import { useFermentables } from '../library/hooks/useLibrary'
-import { useInventoryList } from '../inventory/hooks/useInventory'
+import { useAllPages } from '../../api/allPages'
+import type { components } from '../../api/generated'
+import { midpoint, aggregateStock } from './optionUtils'
+
+type LibraryFermentable = components['schemas']['LibraryFermentable']
+type Ingredient = components['schemas']['Ingredient']
 
 export interface MaltOption {
   /** Unique select value, e.g. "generic:<uuid>" or "stock:<name>". */
@@ -26,10 +30,7 @@ function extractToPpg(lkg?: number | null): number | undefined {
   return Math.round((lkg / 8.3454) * 10) / 10
 }
 
-function midpoint(min?: number | null, max?: number | null): number | undefined {
-  if (min != null && max != null) return Math.round(((min + max) / 2) * 10) / 10
-  return min ?? max ?? undefined
-}
+
 
 // Display generic malts in a sensible order; unknown types fall to the end.
 const GENERIC_TYPE_ORDER = [
@@ -49,11 +50,11 @@ const GENERIC_TYPE_ORDER = [
  * list plus lookup maps and a grouped view for `<optgroup>` rendering.
  */
 export function useMaltOptions() {
-  const generic = useFermentables({ page_size: 200 })
-  const stock = useInventoryList({ type: 'fermentable', page_size: 200 })
+  const generic = useAllPages<LibraryFermentable>(['library', 'fermentables'], '/api/v1/library/fermentables')
+  const stock = useAllPages<Ingredient>(['inventory'], '/api/v1/inventory', { type: 'fermentable' })
 
   const derived = useMemo(() => {
-    const genericOptions: MaltOption[] = (generic.data?.items ?? [])
+    const genericOptions: MaltOption[] = (generic.data ?? [])
       .map((f) => ({
         key: `generic:${f.id}`,
         name: f.name,
@@ -72,12 +73,7 @@ export function useMaltOptions() {
     }
 
     // Inventory is per-lot; collapse to one option per name, summing quantity.
-    const stockAgg = new Map<string, { color?: number; amount: number; unit: string }>()
-    for (const it of stock.data?.items ?? []) {
-      const cur = stockAgg.get(it.name)
-      if (cur) cur.amount += it.amount
-      else stockAgg.set(it.name, { color: it.color_ebc ?? undefined, amount: it.amount, unit: it.unit })
-    }
+    const stockAgg = aggregateStock(stock.data ?? [], (it) => ({ color: it.color_ebc ?? undefined }))
     const stockOptions: MaltOption[] = [...stockAgg.entries()]
       .map(([name, v]) => ({
         key: `stock:${name}`,

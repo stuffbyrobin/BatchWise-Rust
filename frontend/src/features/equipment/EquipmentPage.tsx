@@ -88,17 +88,17 @@ function SchedulesPanel({ equipment }: { equipment: Equipment }) {
         <form onSubmit={handleCreate} className="flex flex-wrap gap-2 items-end text-xs mt-1">
           <div>
             <label className="block text-[var(--color-muted)] mb-0.5">Task *</label>
-            <input className="border rounded px-2 py-1 text-xs" placeholder="Calibrate load cell" required
+            <input aria-label="Task" className="border rounded px-2 py-1 text-xs" placeholder="Calibrate load cell" required
               value={form.task_name} onChange={(e) => setForm((f) => ({ ...f, task_name: e.target.value }))} />
           </div>
           <div>
             <label className="block text-[var(--color-muted)] mb-0.5">Interval (days) *</label>
-            <input className="border rounded px-2 py-1 w-20 text-xs" type="number" min={1} placeholder="90" required
+            <input aria-label="Interval (days)" className="border rounded px-2 py-1 w-20 text-xs" type="number" min={1} placeholder="90" required
               value={form.interval_days} onChange={(e) => setForm((f) => ({ ...f, interval_days: e.target.value }))} />
           </div>
           <div>
             <label className="block text-[var(--color-muted)] mb-0.5">Last performed</label>
-            <input className="border rounded px-2 py-1 text-xs" type="date"
+            <input aria-label="Last performed" className="border rounded px-2 py-1 text-xs" type="date"
               value={form.last_performed_at} onChange={(e) => setForm((f) => ({ ...f, last_performed_at: e.target.value }))} />
           </div>
           <button type="submit"
@@ -215,14 +215,14 @@ function EventsPanel({ equipment }: { equipment: Equipment }) {
         <form onSubmit={handleCreate} className="flex flex-wrap gap-2 items-end text-xs mt-1">
           <div>
             <label className="block text-[var(--color-muted)] mb-0.5">Type *</label>
-            <select className="border rounded px-2 py-1 text-xs" value={form.event_type}
+            <select aria-label="Type" className="border rounded px-2 py-1 text-xs" value={form.event_type}
               onChange={(e) => setForm((f) => ({ ...f, event_type: e.target.value }))}>
               {EVENT_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
             </select>
           </div>
           <div>
             <label className="block text-[var(--color-muted)] mb-0.5">Against schedule</label>
-            <select className="border rounded px-2 py-1 text-xs" value={form.schedule_id}
+            <select aria-label="Against schedule" className="border rounded px-2 py-1 text-xs" value={form.schedule_id}
               onChange={(e) => setForm((f) => ({ ...f, schedule_id: e.target.value }))}>
               <option value="">None (ad-hoc)</option>
               {(schedData?.items ?? []).map((s) => <option key={s.id} value={s.id}>{s.task_name}</option>)}
@@ -230,22 +230,22 @@ function EventsPanel({ equipment }: { equipment: Equipment }) {
           </div>
           <div>
             <label className="block text-[var(--color-muted)] mb-0.5">Performed</label>
-            <input className="border rounded px-2 py-1 text-xs" type="date"
+            <input aria-label="Performed" className="border rounded px-2 py-1 text-xs" type="date"
               value={form.performed_at} onChange={(e) => setForm((f) => ({ ...f, performed_at: e.target.value }))} />
           </div>
           <div>
             <label className="block text-[var(--color-muted)] mb-0.5">By</label>
-            <input className="border rounded px-2 py-1 text-xs w-24" placeholder="Sam"
+            <input aria-label="By" className="border rounded px-2 py-1 text-xs w-24" placeholder="Sam"
               value={form.performed_by} onChange={(e) => setForm((f) => ({ ...f, performed_by: e.target.value }))} />
           </div>
           <div>
             <label className="block text-[var(--color-muted)] mb-0.5">Cost (£)</label>
-            <input className="border rounded px-2 py-1 w-20 text-xs" type="number" min={0} step="0.01" placeholder="45.00"
+            <input aria-label="Cost (£)" className="border rounded px-2 py-1 w-20 text-xs" type="number" min={0} step="0.01" placeholder="45.00"
               value={form.cost_pence} onChange={(e) => setForm((f) => ({ ...f, cost_pence: e.target.value }))} />
           </div>
           <div>
             <label className="block text-[var(--color-muted)] mb-0.5">Notes</label>
-            <input className="border rounded px-2 py-1 text-xs" placeholder="Optional"
+            <input aria-label="Notes" className="border rounded px-2 py-1 text-xs" placeholder="Optional"
               value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} />
           </div>
           <button type="submit"
@@ -422,32 +422,32 @@ export default function EquipmentPage() {
           <div className="col-span-2 md:col-span-3 font-medium">New Equipment</div>
           <div>
             <label className="block text-xs text-[var(--color-muted)] mb-1">Name *</label>
-            <input className={inputCls} placeholder="Fermenter FV3" required
+            <input aria-label="Name" className={inputCls} placeholder="Fermenter FV3" required
               value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
           </div>
           <div>
             <label className="block text-xs text-[var(--color-muted)] mb-1">Type *</label>
-            <input className={inputCls} placeholder="fermenter" required
+            <input aria-label="Type" className={inputCls} placeholder="fermenter" required
               value={form.equipment_type} onChange={(e) => setForm((f) => ({ ...f, equipment_type: e.target.value }))} />
           </div>
           <div>
             <label className="block text-xs text-[var(--color-muted)] mb-1">Serial number</label>
-            <input className={inputCls} placeholder="SS-9001"
+            <input aria-label="Serial number" className={inputCls} placeholder="SS-9001"
               value={form.serial_number} onChange={(e) => setForm((f) => ({ ...f, serial_number: e.target.value }))} />
           </div>
           <div>
             <label className="block text-xs text-[var(--color-muted)] mb-1">Location</label>
-            <input className={inputCls} placeholder="Cellar bay 2"
+            <input aria-label="Location" className={inputCls} placeholder="Cellar bay 2"
               value={form.location} onChange={(e) => setForm((f) => ({ ...f, location: e.target.value }))} />
           </div>
           <div>
             <label className="block text-xs text-[var(--color-muted)] mb-1">Purchased</label>
-            <input className={inputCls} type="date"
+            <input aria-label="Purchased" className={inputCls} type="date"
               value={form.purchased_at} onChange={(e) => setForm((f) => ({ ...f, purchased_at: e.target.value }))} />
           </div>
           <div>
             <label className="block text-xs text-[var(--color-muted)] mb-1">Notes</label>
-            <input className={inputCls}
+            <input aria-label="Notes" className={inputCls}
               value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} />
           </div>
           {formErr && <div className="col-span-2 md:col-span-3 text-xs text-[var(--color-danger)]">{formErr}</div>}

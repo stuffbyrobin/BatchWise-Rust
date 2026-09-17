@@ -7,6 +7,7 @@ import {
   useUploadAsset,
 } from './hooks/useLabelDesign'
 import type { components } from '../../api/generated'
+import { fileTooLarge, MAX_LOGO_BYTES } from '../../utils/files'
 
 type CreateBrandProfileRequest = components['schemas']['CreateBrandProfileRequest']
 
@@ -35,6 +36,12 @@ export function BrandProfilesPage() {
   async function handleLogo(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
+    const tooLarge = fileTooLarge(file, MAX_LOGO_BYTES)
+    if (tooLarge) {
+      setErr(tooLarge)
+      e.target.value = ''
+      return
+    }
     setErr(null)
     try {
       const asset = await upload.mutateAsync(file)

@@ -10,6 +10,9 @@ export class APIError extends Error {
     this.name = 'APIError';
   }
 }
+/**
+ * Parses a server error body into a typed APIError.
+ */
 export function parseAPIError(status: number, body: unknown): APIError {
   if (typeof body === 'object' && body !== null && 'code' in body) {
     const b = body as Record<string, unknown>;

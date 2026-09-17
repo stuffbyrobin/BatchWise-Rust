@@ -207,7 +207,7 @@ export function ContainerAssetDetailPage() {
           <form onSubmit={handleFillSubmit} className="flex gap-2 items-end mb-4">
             <div>
               <label className="block text-[var(--color-muted)] text-sm">Batch ID (optional)</label>
-              <input
+              <input aria-label="Batch ID (optional)"
                 type="text"
                 value={fillForm.batch_id}
                 onChange={(e) => setFillForm({ ...fillForm, batch_id: e.target.value })}
@@ -216,7 +216,7 @@ export function ContainerAssetDetailPage() {
             </div>
             <div>
               <label className="block text-[var(--color-muted)] text-sm">Notes (optional)</label>
-              <input
+              <input aria-label="Notes (optional)"
                 type="text"
                 value={fillForm.notes}
                 onChange={(e) => setFillForm({ ...fillForm, notes: e.target.value })}
@@ -236,7 +236,7 @@ export function ContainerAssetDetailPage() {
           <form onSubmit={handleDeliverSubmit} className="flex gap-2 items-end mb-4">
             <div>
               <label className="block text-[var(--color-muted)] text-sm">Customer Name *</label>
-              <input
+              <input aria-label="Customer Name"
                 type="text"
                 required
                 value={deliverForm.customer_name}
@@ -246,7 +246,7 @@ export function ContainerAssetDetailPage() {
             </div>
             <div>
               <label className="block text-[var(--color-muted)] text-sm">Notes (optional)</label>
-              <input
+              <input aria-label="Notes (optional)"
                 type="text"
                 value={deliverForm.notes}
                 onChange={(e) => setDeliverForm({ ...deliverForm, notes: e.target.value })}
@@ -266,7 +266,7 @@ export function ContainerAssetDetailPage() {
           <form onSubmit={handleReturnSubmit} className="flex gap-2 items-end mb-4">
             <div>
               <label className="block text-[var(--color-muted)] text-sm">Notes (optional)</label>
-              <input
+              <input aria-label="Notes (optional)"
                 type="text"
                 value={returnForm.notes}
                 onChange={(e) => setReturnForm({ ...returnForm, notes: e.target.value })}
@@ -286,7 +286,7 @@ export function ContainerAssetDetailPage() {
           <form onSubmit={handleEditSubmit} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4 border border-[var(--color-border)] rounded bg-[var(--color-surface)] mb-4">
             <div>
               <label className="block text-[var(--color-muted)] text-sm">Asset Number</label>
-              <input
+              <input aria-label="Asset Number"
                 type="text"
                 value={editForm.asset_number}
                 onChange={(e) => setEditForm({ ...editForm, asset_number: e.target.value })}
@@ -295,7 +295,7 @@ export function ContainerAssetDetailPage() {
             </div>
             <div>
               <label className="block text-[var(--color-muted)] text-sm">Type</label>
-              <select
+              <select aria-label="Type"
                 value={editForm.container_type}
                 onChange={(e) => setEditForm({ ...editForm, container_type: e.target.value as ContainerType })}
                 className="w-full p-2 rounded border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-fg)] text-sm"
@@ -307,7 +307,7 @@ export function ContainerAssetDetailPage() {
             </div>
             <div>
               <label className="block text-[var(--color-muted)] text-sm">Capacity (L)</label>
-              <input
+              <input aria-label="Capacity (L)"
                 type="number"
                 value={editForm.capacity_liters}
                 onChange={(e) => setEditForm({ ...editForm, capacity_liters: Number(e.target.value) })}
@@ -316,7 +316,7 @@ export function ContainerAssetDetailPage() {
             </div>
             <div>
               <label className="block text-[var(--color-muted)] text-sm">Deposit (pence)</label>
-              <input
+              <input aria-label="Deposit (pence)"
                 type="number"
                 value={editForm.deposit_pence}
                 onChange={(e) => setEditForm({ ...editForm, deposit_pence: Number(e.target.value) })}
@@ -325,7 +325,7 @@ export function ContainerAssetDetailPage() {
             </div>
             <div className="md:col-span-2 lg:col-span-3">
               <label className="block text-[var(--color-muted)] text-sm">Notes</label>
-              <textarea
+              <textarea aria-label="Notes"
                 value={editForm.notes}
                 onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
                 className="w-full p-2 rounded border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-fg)] text-sm"

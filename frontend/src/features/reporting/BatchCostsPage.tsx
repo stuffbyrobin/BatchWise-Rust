@@ -73,7 +73,7 @@ export const BatchCostsPage: React.FC = () => {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm text-[var(--color-muted)]">Batch ID *</label>
-              <input
+              <input aria-label="Batch ID"
                 type="text"
                 value={computeForm.batch_id}
                 onChange={(e) => handleFormChange('batch_id', e.target.value)}
@@ -83,7 +83,7 @@ export const BatchCostsPage: React.FC = () => {
             </div>
             <div>
               <label className="block text-sm text-[var(--color-muted)]">Energy (kWh)</label>
-              <input
+              <input aria-label="Energy (kWh)"
                 type="number"
                 value={computeForm.energy_kwh}
                 onChange={(e) => handleFormChange('energy_kwh', e.target.value)}
@@ -92,7 +92,7 @@ export const BatchCostsPage: React.FC = () => {
             </div>
             <div>
               <label className="block text-sm text-[var(--color-muted)]">Labor (hours)</label>
-              <input
+              <input aria-label="Labor (hours)"
                 type="number"
                 value={computeForm.labor_hours}
                 onChange={(e) => handleFormChange('labor_hours', e.target.value)}
@@ -101,7 +101,7 @@ export const BatchCostsPage: React.FC = () => {
             </div>
             <div>
               <label className="block text-sm text-[var(--color-muted)]">Water (liters)</label>
-              <input
+              <input aria-label="Water (liters)"
                 type="number"
                 value={computeForm.water_liters}
                 onChange={(e) => handleFormChange('water_liters', e.target.value)}
@@ -110,7 +110,7 @@ export const BatchCostsPage: React.FC = () => {
             </div>
             <div className="col-span-2">
               <label className="block text-sm text-[var(--color-muted)]">Overhead (pence)</label>
-              <input
+              <input aria-label="Overhead (pence)"
                 type="number"
                 value={computeForm.overhead_pence}
                 onChange={(e) => handleFormChange('overhead_pence', e.target.value)}

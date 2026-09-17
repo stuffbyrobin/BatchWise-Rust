@@ -5,6 +5,9 @@ let _getRefresh: () => string | null = () => null
 let _setTokens: (access: string, refresh: string) => void = () => {}
 let _clear: () => void = () => {}
 
+/**
+ * Wires the client to the token store. Called once at module load by AuthProvider.
+ */
 export function _initTokenStore(
   getToken: () => string | null,
   getRefresh: () => string | null,
@@ -113,6 +116,9 @@ async function authFetch(method: string, path: string, body?: BodyInit): Promise
   return fetch(path, { method, headers, body })
 }
 
+/**
+ * JSON HTTP client with bearer auth, single-flight refresh on 401, typed APIError on failure.
+ */
 export const apiClient = {
   get: <T>(path: string, init?: RequestInit) => request<T>('GET', path, undefined, init),
   post: <T>(path: string, body?: unknown, init?: RequestInit) => request<T>('POST', path, body, init),
