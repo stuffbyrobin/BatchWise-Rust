@@ -50,7 +50,7 @@ rand = "0.8"
 base64 = "0.22"
 
 # Validation
-validator = { version = "0.18", features = ["derive"] }
+validator = { version = "0.21", features = ["derive"] }
 
 # IDs & time
 uuid = { version = "1", features = ["v4", "serde"] }
@@ -75,7 +75,8 @@ qrcode = "0.14"
 image = { version = "0.25", default-features = false, features = ["png", "jpeg"] }
 
 # PDF generation (label-design module)
-printpdf = { version = "0.7", features = ["embedded_images"] }
+# Default features pull in an HTML layout engine; logos are decoded with `image`.
+printpdf = { version = "0.12", default-features = false }
 
 [dev-dependencies]
 # Real Postgres in tests (mirrors testcontainers-go)

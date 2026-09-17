@@ -396,7 +396,6 @@ pub async fn render_pdf(state: &AppState, tenant_id: Uuid, id: Uuid) -> Result<V
     // Layout and image decoding are CPU-bound; keep them off the async runtime.
     tokio::task::spawn_blocking(move || labelkit::render_pdf(&model, &logo))
         .await
-        .map_err(ApiError::internal)?
         .map_err(ApiError::internal)
 }
 
