@@ -76,7 +76,7 @@ pub(crate) fn validation_to_api_error(errs: validator::ValidationErrors) -> ApiE
             .map(|e| e.code.to_string())
             .unwrap_or_else(|| "invalid".to_string());
         // Raw identifiers (`r#type`) must be reported by their JSON name.
-        let field = field.strip_prefix("r#").unwrap_or(field);
+        let field = field.strip_prefix("r#").unwrap_or(&field);
         return ApiError::validation(field, &reason);
     }
     ApiError::validation("body", "validation failed")

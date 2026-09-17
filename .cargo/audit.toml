@@ -4,12 +4,6 @@
 # the crate named in each entry.
 [advisories]
 ignore = [
-    # lopdf (via printpdf 0.7): stack overflow when *parsing* deeply nested PDFs.
-    # We only generate PDFs and never parse untrusted ones. Fix: printpdf 0.8+.
-    "RUSTSEC-2026-0187",
-    # idna 0.5 (via validator 0.18): accepts some Punycode labels. Only used to
-    # syntax-check email addresses; no hostnames are resolved. Fix: validator 0.20+.
-    "RUSTSEC-2024-0421",
     # rsa (Marvin attack): present in Cargo.lock through sqlx's MySQL driver,
     # which this Postgres-only build never compiles. No fixed version exists.
     "RUSTSEC-2023-0071",

@@ -23,7 +23,7 @@ refactors start from `main`.
 - [x] Hoist the three `NUMERIC_*_FIELDS` sets to module scope.
 - [x] Fix `openapi.yaml` `Yeast` schema (also added the missing `form`/`strength_pct` mineral-addition fields that PR #42 hand-edited into `generated.ts`) (`lab`/`attenuation_min`/`attenuation_max` → `manufacturer`/`attenuation_min_pct`/`attenuation_max_pct`), run `pnpm types`, delete the `LibYeast` cast in `useYeastOptions.ts`, and fix the same stale names in the library YeastsPage.
 - [x] Use `step_order` (or the new id) as the React key on all four ingredient tables instead of `index`.
-- [ ] Merge.
+- [x] Merge.
 
 ---
 
@@ -141,7 +141,7 @@ Depends on Phase 2 (shared validator helper, 4xx error mapping).
 - [x] Add a comment in `import_beerxml.rs` noting quick-xml does not resolve external entities (so a parser swap doesn't regress XXE).
 - [x] Fix stale comments: `sales/models.rs:225`, config docs (done in Phase 4), batch service header (done in Phase 1).
 - [x] CI: add `cargo audit` (or `cargo deny`) to `backend.yml`. It found 8 advisories: `quick-xml` 0.36 → 0.42 (two DoS issues reachable through BeerXML import), `h2`/`rustls` patch bumps; the other four are ignored in `.cargo/audit.toml`, each with its reason and exit (`lopdf` via printpdf and `idna` via validator need major upgrades, `rsa` is never compiled, `tokio-tar` is test-only).
-- [ ] Follow-up: upgrade `printpdf` to 0.8+ and `validator` to 0.20+, then drop their `.cargo/audit.toml` entries.
+- [x] Follow-up: upgrade `printpdf` to 0.8+ and `validator` to 0.20+, then drop their `.cargo/audit.toml` entries. (printpdf 0.12, without default features so its HTML layout engine is left out, and lopdf 0.44. The renderer is ported to printpdf's op-based API; logos are still decoded with size limits by `image`, and transparency is kept as a soft mask. Characterization tests for page size, fonts and logo embedding were written against 0.7 first and pass unchanged, and sample labels render identically. validator 0.21 (idna 1.1): the only change needed was field names now being `Cow`. Both audit entries are removed.)
 
 ---
 
