@@ -139,11 +139,12 @@ async fn ingredient_names_by_recipe(
     }
 
     let names: Vec<String> = sqlx::query_scalar(
-        "SELECT name FROM recipe_fermentables WHERE recipe_id = $1 \
-         UNION ALL SELECT name FROM recipe_hops WHERE recipe_id = $1 \
-         UNION ALL SELECT name FROM recipe_yeasts WHERE recipe_id = $1",
+        "SELECT name FROM recipe_fermentables WHERE recipe_id = $1 AND tenant_id = $2 \
+         UNION ALL SELECT name FROM recipe_hops WHERE recipe_id = $1 AND tenant_id = $2 \
+         UNION ALL SELECT name FROM recipe_yeasts WHERE recipe_id = $1 AND tenant_id = $2",
     )
     .bind(recipe_id)
+    .bind(tenant_id)
     .fetch_all(&state.pool)
     .await?;
     Ok(names)

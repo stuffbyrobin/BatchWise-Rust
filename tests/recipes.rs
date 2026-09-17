@@ -15,6 +15,7 @@ use testcontainers_modules::postgres::Postgres;
 
 struct TestApp {
     base: String,
+    pool: sqlx::PgPool,
     client: reqwest::Client,
     _node: Option<ContainerAsync<Postgres>>,
 }
@@ -65,7 +66,7 @@ async fn spawn_app() -> TestApp {
     };
     let pool = database::connect(&url).await.expect("connect");
     database::migrate(&pool).await.expect("migrate");
-    let state = AppState::new(pool, test_config(url));
+    let state = AppState::new(pool.clone(), test_config(url));
     let app = batchwise::app::build_router(state);
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let addr = listener.local_addr().unwrap();
@@ -79,6 +80,7 @@ async fn spawn_app() -> TestApp {
     });
     TestApp {
         base: format!("http://{addr}"),
+        pool,
         client: reqwest::Client::new(),
         _node: node,
     }
@@ -104,6 +106,20 @@ impl TestApp {
             .as_str()
             .unwrap()
             .to_string()
+    }
+
+    async fn tenant_id(&self, token: &str) -> uuid::Uuid {
+        let me: Value = self
+            .client
+            .get(format!("{}/api/v1/auth/me", self.base))
+            .bearer_auth(token)
+            .send()
+            .await
+            .unwrap()
+            .json()
+            .await
+            .unwrap();
+        me["tenant_id"].as_str().unwrap().parse().unwrap()
     }
 
     async fn post_json(&self, path: &str, token: &str, body: Value) -> reqwest::Response {
@@ -282,4 +298,97 @@ async fn import_beerxml_and_brewfather() {
     assert_eq!(resp.status(), 201, "brewfather import");
     let rec: Value = resp.json().await.unwrap();
     assert!(!rec["name"].as_str().unwrap().is_empty());
+}
+
+/// Child rows carry the recipe's tenant: under another tenant's id the
+/// repository reads nothing, deletes nothing, and cannot add rows.
+#[tokio::test]
+async fn child_rows_are_scoped_to_the_recipe_tenant() {
+    use batchwise::recipe::repository as repo;
+
+    let app = spawn_app().await;
+    let a = app.token().await;
+    let b = app.token().await;
+    let a_tenant = app.tenant_id(&a).await;
+    let b_tenant = app.tenant_id(&b).await;
+    let resp = app
+        .post_json(
+            "/api/v1/recipes",
+            &a,
+            sample_recipe(&format!("Scoped {}", uniq())),
+        )
+        .await;
+    assert_eq!(resp.status(), 201);
+    let rec: Value = resp.json().await.unwrap();
+    let id: uuid::Uuid = rec["id"].as_str().unwrap().parse().unwrap();
+
+    let yeasts = repo::select_yeasts(&app.pool, a_tenant, id).await.unwrap();
+    assert_eq!(yeasts.len(), 1);
+    assert_eq!(
+        repo::select_fermentables(&app.pool, a_tenant, id)
+            .await
+            .unwrap()
+            .len(),
+        1
+    );
+    assert!(repo::select_fermentables(&app.pool, b_tenant, id)
+        .await
+        .unwrap()
+        .is_empty());
+    assert!(repo::select_hops(&app.pool, b_tenant, id)
+        .await
+        .unwrap()
+        .is_empty());
+    assert!(repo::select_yeasts(&app.pool, b_tenant, id)
+        .await
+        .unwrap()
+        .is_empty());
+    assert!(repo::select_mash_steps(&app.pool, b_tenant, id)
+        .await
+        .unwrap()
+        .is_empty());
+
+    // Replacing under the other tenant deletes nothing.
+    let mut conn = app.pool.acquire().await.unwrap();
+    repo::replace_hops(&mut conn, b_tenant, id, &[])
+        .await
+        .unwrap();
+    assert_eq!(
+        repo::select_hops(&app.pool, a_tenant, id)
+            .await
+            .unwrap()
+            .len(),
+        1
+    );
+
+    // Nor can it add rows: the composite foreign key refuses them.
+    let err = repo::replace_yeasts(&mut conn, b_tenant, id, &yeasts)
+        .await
+        .unwrap_err();
+    assert_eq!(
+        err.as_database_error().and_then(|e| e.code()).as_deref(),
+        Some("23503"),
+        "{err}"
+    );
+    assert_eq!(
+        repo::select_yeasts(&app.pool, a_tenant, id)
+            .await
+            .unwrap()
+            .len(),
+        1
+    );
+
+    // The recipe's own tenant still reads and replaces as before.
+    let got: Value = app
+        .client
+        .get(format!("{}/api/v1/recipes/{id}", app.base))
+        .bearer_auth(&a)
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    assert_eq!(got["yeasts"].as_array().unwrap().len(), 1);
+    assert_eq!(got["mash_steps"].as_array().unwrap().len(), 1);
 }
