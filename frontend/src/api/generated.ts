@@ -104,7 +104,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Invalidate a refresh token */
+        /**
+         * Invalidate a refresh token and the access token sent with it
+         * @description Needs no authentication. When the request also carries an `Authorization: Bearer` access token that is still valid, that token is revoked at once; a missing, invalid or expired one is ignored.
+         */
         post: operations["logout"];
         delete?: never;
         options?: never;
