@@ -12,6 +12,7 @@ use crate::auth::jwt::Jwt;
 use crate::platform::config::Config;
 use crate::platform::features::FeatureCache;
 use crate::platform::middleware::RateLimiter;
+use crate::platform::roles::RoleCache;
 
 /// Cloneable, shared-by-`Arc` application state.
 #[derive(Clone)]
@@ -24,6 +25,8 @@ pub struct AppState {
     pub login_failures: Arc<RateLimiter>,
     /// Cached tenant feature flags for the tier gate.
     pub features: Arc<FeatureCache>,
+    /// Cached user roles and active flags for route authorisation.
+    pub roles: Arc<RoleCache>,
 }
 
 impl AppState {
@@ -43,6 +46,7 @@ impl AppState {
                 crate::auth::service::MAX_FAILED_LOGINS_PER_MINUTE,
             )),
             features: Arc::new(FeatureCache::default()),
+            roles: Arc::new(RoleCache::default()),
         }
     }
 }

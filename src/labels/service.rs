@@ -15,6 +15,7 @@ use uuid::Uuid;
 use super::models::{CreateRequest, LabelRecord, ListFilter, Page, PatchRequest};
 use super::repository::{self as repo, LabelInsert};
 use crate::pkg::{allergen, nutrition};
+use crate::platform::authz::Role;
 use crate::platform::errors::ApiError;
 use crate::state::AppState;
 use crate::{allergens, audit, tenant};
@@ -137,12 +138,14 @@ pub async fn latest_approved_for_batch(
 }
 
 /// Applies a partial update to a label record. Approved records cannot be
-/// modified; transitioning to `approved` requires all mandatory fields.
+/// modified; transitioning to `approved` requires all mandatory fields and an
+/// Owner or Manager.
 pub async fn patch(
     state: &AppState,
     tenant_id: Uuid,
     id: Uuid,
     actor_id: Option<Uuid>,
+    role: Role,
     req: PatchRequest,
 ) -> Result<LabelRecord, ApiError> {
     let mut rec = repo::select_by_id(&state.pool, tenant_id, id)
@@ -161,6 +164,11 @@ pub async fn patch(
     let changed_fields = changed_fields(&req);
     let patch_values = patch_values(&req);
     let approving = req.status.as_deref() == Some("approved");
+    if approving && !role.is_manager() {
+        return Err(ApiError::forbidden(
+            "Only an Owner or Manager can approve a label record.",
+        ));
+    }
 
     if let Some(v) = req.product_name {
         rec.product_name = v;

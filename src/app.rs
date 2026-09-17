@@ -357,12 +357,8 @@ mod tests {
         assert_eq!(html.matches("integrity=\"sha384-").count(), 2);
     }
 
-    /// Every operation in openapi.yaml must reach a route: an unrouted request is
-    /// a 404 (unknown path) or 405 (unknown method). Requests carry no token and
-    /// no body, so they stop at auth or body extraction and never touch the
-    /// database. Guards against the router drifting from the published contract.
-    #[tokio::test]
-    async fn every_openapi_operation_is_routed() {
+    /// `(METHOD, path)` for every operation in openapi.yaml.
+    fn openapi_operations() -> Vec<(String, String)> {
         let spec = include_str!("../openapi.yaml");
         let mut operations = Vec::new();
         let mut current: Option<String> = None;
@@ -392,6 +388,42 @@ mod tests {
             "parsed only {} operations",
             operations.len()
         );
+
+        operations
+    }
+
+    /// Every authenticated operation has a permission rule. Routes without one
+    /// are refused for every role, so a missing rule would lock everyone out.
+    #[test]
+    fn every_openapi_operation_has_a_permission_rule() {
+        const PUBLIC: [&str; 3] = [
+            "/api/v1/auth/register",
+            "/api/v1/auth/login",
+            "/api/v1/auth/refresh",
+        ];
+        let missing: Vec<String> = openapi_operations()
+            .into_iter()
+            .filter(|(_, path)| !PUBLIC.contains(&path.as_str()))
+            .filter(|(method, path)| {
+                let method = Method::from_bytes(method.as_bytes()).expect("http method");
+                crate::platform::authz::requirement(&method, path).is_none()
+            })
+            .map(|(method, path)| format!("{method} {path}"))
+            .collect();
+        assert!(
+            missing.is_empty(),
+            "operations without a permission rule:\n{}",
+            missing.join("\n")
+        );
+    }
+
+    /// Every operation in openapi.yaml must reach a route: an unrouted request is
+    /// a 404 (unknown path) or 405 (unknown method). Requests carry no token and
+    /// no body, so they stop at auth or body extraction and never touch the
+    /// database. Guards against the router drifting from the published contract.
+    #[tokio::test]
+    async fn every_openapi_operation_is_routed() {
+        let operations = openapi_operations();
 
         let app = app(config("test", 100_000));
         let mut unrouted = Vec::new();

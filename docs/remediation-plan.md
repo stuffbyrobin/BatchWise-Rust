@@ -268,7 +268,7 @@ on top, to every role including Owner.
 
 | Area | Owner | Manager | Brewer | Sales | Viewer |
 |---|---|---|---|---|---|
-| Tenant settings, tier, ownership transfer | W | R | — | — | R |
+| Tenant settings, tier, ownership transfer | W | R | R | R | R |
 | Users: invite, remove, change role | W (all roles) | W (Brewer, Sales, Viewer) | — | — | — |
 | Recipes, library, water, yeast bank | W | W | W | R | R |
 | Inventory, stock movements, suppliers, purchase orders | W | W | W | R | R |
@@ -287,15 +287,17 @@ on top, to every role including Owner.
 
 Nobody can delete audit log entries or submitted duty returns.
 
+Tenant settings are readable by every role (changed from the first draft): the editors need them, for example the recipe editor reads the IBU method.
+
 ### Implementation
 
-- [ ] Migration: `role TEXT NOT NULL CHECK (role IN ('owner','manager','brewer','sales','viewer'))` on `users`. Existing owners become `owner` and everyone else `manager`, so no one loses access on migration. Drop `is_owner` once nothing reads it.
-- [ ] A `Permission` enum and a single role → permissions table in code, checked through `RequestContext` (for example `ctx.require(Permission::SubmitDutyReturn)?`), replacing the `is_owner` check in `tenant/service.rs`.
-- [ ] Load the role from the database with a short-TTL cache (like `platform::features::FeatureCache`), invalidated when a role changes. Not a JWT claim: a demoted user would keep the old rights until the access token expires.
+- [x] Migration: `role TEXT NOT NULL CHECK (role IN ('owner','manager','brewer','sales','viewer'))` on `users`. Existing owners become `owner` and everyone else `manager`, so no one loses access on migration. Drop `is_owner` once nothing reads it. (`000032_user_roles`. `is_owner` stays until the frontend and members API stop reading it, in 15b.)
+- [x] A `Permission` enum and a single role → permissions table in code, checked through `RequestContext` (for example `ctx.require(Permission::SubmitDutyReturn)?`), replacing the `is_owner` check in `tenant/service.rs`. (Done as route authorisation rather than per-handler calls: `platform::authz` maps each route's first path segment to an area and its method to read or write, and `require_auth` checks the caller's role against the table for every request. Unmapped routes are refused. The two rules that depend on the record, spoiling a completed batch and approving a label record, are checked in their services, and the role is available as `ctx.role()`.)
+- [x] Load the role from the database with a short-TTL cache (like `platform::features::FeatureCache`), invalidated when a role changes. Not a JWT claim: a demoted user would keep the old rights until the access token expires. (`platform::roles::RoleCache`, 30 s TTL. It also refuses deactivated users and tokens whose tenant no longer matches the user; deleting your own account invalidates it at once.)
 - [ ] Guard the last Owner: an Owner cannot be demoted, deactivated or removed if no other Owner remains.
 - [ ] Role changes write a compliance audit entry (actor, user, old role, new role).
-- [ ] Contract test alongside `every_openapi_operation_is_routed`: every mutating route declares a permission, so a new endpoint cannot ship unguarded.
-- [ ] Integration tests per role for the sensitive actions: duty submission, label approval, `completed → spoiled`, user management, cost rates.
+- [x] Contract test alongside `every_openapi_operation_is_routed`: every mutating route declares a permission, so a new endpoint cannot ship unguarded. (`every_openapi_operation_has_a_permission_rule` covers every authenticated operation, reads included.)
+- [x] Integration tests per role for the sensitive actions: duty submission, label approval, `completed → spoiled`, user management, cost rates. (`tests/roles.rs`: one table-driven test calls each route as all five roles; separate tests cover spoiling, label approval and deactivated members. User management tests come with the members API in 15b.)
 - [ ] Frontend: return `role` from `/auth/me`; hide or disable actions the user cannot perform. The server stays the source of truth.
 
 ---

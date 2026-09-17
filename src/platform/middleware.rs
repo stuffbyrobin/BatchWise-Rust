@@ -11,17 +11,20 @@ use std::sync::{
 };
 use std::time::{Duration, Instant};
 
-use axum::extract::{ConnectInfo, Request, State};
+use axum::extract::{ConnectInfo, MatchedPath, Request, State};
 use axum::http::header::AUTHORIZATION;
 use axum::middleware::Next;
 use axum::response::Response;
 
+use super::authz;
 use super::context::RequestContext;
 use super::errors::ApiError;
 use crate::state::AppState;
 
-/// Validates the `Authorization: Bearer <jwt>` header and merges the user and
-/// tenant ids into the request's [`RequestContext`] (preserving the request id).
+/// Validates the `Authorization: Bearer <jwt>` header, checks the account is
+/// still active in the token's tenant, authorises the caller's role for the
+/// matched route ([`authz`]), and merges the user id, tenant id and role into
+/// the request's [`RequestContext`] (preserving the request id).
 pub async fn require_auth(
     State(state): State<AppState>,
     mut req: Request,
@@ -41,6 +44,21 @@ pub async fn require_auth(
         .verify(token)
         .map_err(|_| ApiError::unauthorized("invalid or expired token"))?;
 
+    // Deactivation and role changes apply before the access token expires.
+    let membership = state
+        .roles
+        .get(&state.pool, claims.subject)
+        .await?
+        .filter(|m| m.active && m.tenant_id == claims.tenant_id)
+        .ok_or_else(|| ApiError::unauthorized("account is inactive or no longer exists"))?;
+    // The route template, e.g. `/api/v1/batches/{id}`.
+    let path = req
+        .extensions()
+        .get::<MatchedPath>()
+        .map(|p| p.as_str().to_owned())
+        .unwrap_or_default();
+    authz::authorize(membership.role, req.method(), &path)?;
+
     let mut ctx = req
         .extensions()
         .get::<RequestContext>()
@@ -49,6 +67,7 @@ pub async fn require_auth(
     ctx.user_id = Some(claims.subject);
     ctx.tenant_id = Some(claims.tenant_id);
     ctx.actor_id = Some(claims.subject);
+    ctx.role = Some(membership.role);
     req.extensions_mut().insert(ctx);
 
     Ok(next.run(req).await)
