@@ -45,9 +45,22 @@ pub struct DistributionMovement {
     pub notes: Option<String>,
     pub moved_at: DateTime<Utc>,
     pub created_at: DateTime<Utc>,
+    /// Set when the movement was voided; voided movements do not count towards stock.
+    pub voided_at: Option<DateTime<Utc>>,
+    pub voided_by: Option<Uuid>,
+    pub void_reason: Option<String>,
 }
 
 // ---- request DTOs ----
+
+/// Payload to void a distribution movement.
+#[derive(Debug, Deserialize, Validate)]
+#[serde(deny_unknown_fields)]
+pub struct VoidMovementRequest {
+    /// Why the movement is void, for example a data-entry mistake.
+    #[validate(length(min = 1, max = 1000))]
+    pub reason: String,
+}
 
 #[derive(Debug, Deserialize, Validate)]
 #[serde(deny_unknown_fields)]

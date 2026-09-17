@@ -7,14 +7,14 @@ use axum::extract::{Path, Query, State};
 use axum::http::{header, StatusCode};
 use axum::middleware::from_fn_with_state;
 use axum::response::{IntoResponse, Response};
-use axum::routing::get;
+use axum::routing::{get, post};
 use axum::{Json, Router};
 use serde::Deserialize;
 use uuid::Uuid;
 
 use super::models::{
     CreateMovementRequest, CreatePackagingRunRequest, ListMovementsFilter, ListPackagingRunsFilter,
-    PatchPackagingRunRequest,
+    PatchPackagingRunRequest, VoidMovementRequest,
 };
 use super::service;
 use crate::platform::context::RequestContext;
@@ -31,7 +31,9 @@ pub fn routes(state: AppState) -> Router {
         .route("/{id}", get(get_run).patch(patch_run).delete(delete_run));
     let movements = Router::new()
         .route("/", get(list_movements).post(create_movement))
-        .route("/{id}", get(get_movement).delete(delete_movement));
+        .route("/{id}", get(get_movement))
+        // Movements are traceability records: they are voided, never deleted.
+        .route("/{id}/void", post(void_movement));
 
     let st = state.clone();
     let feature_layer = axum::middleware::from_fn(move |req, next| {
@@ -160,11 +162,12 @@ async fn get_movement(
     Ok(Json(service::get_movement(&state, ctx.tenant_id()?, id).await?).into_response())
 }
 
-async fn delete_movement(
+async fn void_movement(
     State(state): State<AppState>,
     ctx: RequestContext,
     Path(id): Path<Uuid>,
+    ValidatedJson(req): ValidatedJson<VoidMovementRequest>,
 ) -> Result<Response, ApiError> {
-    service::delete_movement(&state, ctx.tenant_id()?, ctx.actor_id, id).await?;
-    Ok(StatusCode::NO_CONTENT.into_response())
+    let m = service::void_movement(&state, ctx.tenant_id()?, ctx.actor_id, id, &req.reason).await?;
+    Ok(Json(m).into_response())
 }

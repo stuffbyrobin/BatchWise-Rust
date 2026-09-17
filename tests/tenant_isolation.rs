@@ -536,9 +536,9 @@ async fn pro_resources_are_isolated() {
         None,
     ));
     probes.push(probe(
-        M::DELETE,
-        format!("/api/v1/distribution-movements/{movement}"),
-        None,
+        M::POST,
+        format!("/api/v1/distribution-movements/{movement}/void"),
+        Some(json!({"reason": "isolation probe"})),
     ));
     probes.push(probe(
         M::GET,

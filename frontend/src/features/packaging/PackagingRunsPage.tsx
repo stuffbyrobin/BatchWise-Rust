@@ -3,11 +3,12 @@ import { APIError } from '../../api/error'
 import { SortableHeader } from '../../components/ui/SortableHeader'
 import {
   usePackagingRuns, useCreatePackagingRun, usePatchPackagingRun, useDeletePackagingRun,
-  useDistributionMovements, useCreateDistributionMovement, useDeleteDistributionMovement,
+  useDistributionMovements, useCreateDistributionMovement,
 } from './hooks/usePackaging'
 import type { components } from '../../api/generated'
 import { fmtDate } from '../../utils/format'
 import { inputCls } from '../../components/ui/styles'
+import { MovementVoidCell } from './MovementVoidCell'
 
 type PackagingRun = components['schemas']['PackagingRun']
 type DistributionMovement = components['schemas']['DistributionMovement']
@@ -18,7 +19,6 @@ const MOVEMENT_TYPES = ['sale', 'taproom_transfer', 'internal_transfer', 'sample
 function MovementsPanel({ run }: { run: PackagingRun }) {
   const { data, isLoading } = useDistributionMovements({ packaging_run_id: run.id })
   const createMov = useCreateDistributionMovement()
-  const deleteMov = useDeleteDistributionMovement()
   const [showForm, setShowForm] = React.useState(false)
   const [form, setForm] = React.useState({ movement_type: 'sale', quantity: '', to_location: '', order_id: '' })
   const [err, setErr] = React.useState<string | null>(null)
@@ -54,22 +54,21 @@ function MovementsPanel({ run }: { run: PackagingRun }) {
             </tr>
           </thead>
           <tbody>
-            {data.items.map((m) => (
-              <tr key={m.id}>
-                <td className="pr-3">{m.movement_type}</td>
-                <td className="pr-3">{m.quantity}</td>
-                <td className="pr-3">{m.to_location}</td>
-                <td className="pr-3">{fmtDate(m.moved_at)}</td>
-                <td>
-                  <button
-                    className="text-[var(--color-danger)] hover:underline text-xs"
-                    onClick={() => deleteMov.mutate(m.id ?? '')}
-                  >
-                    Delete
-                  </button>
-                </td>
-              </tr>
-            ))}
+            {data.items.map((m) => {
+              // Voided movements stay listed but are struck through.
+              const cell = m.voided_at ? 'pr-3 line-through text-[var(--color-muted)]' : 'pr-3'
+              return (
+                <tr key={m.id}>
+                  <td className={cell}>{m.movement_type}</td>
+                  <td className={cell}>{m.quantity}</td>
+                  <td className={cell}>{m.to_location}</td>
+                  <td className={cell}>{fmtDate(m.moved_at)}</td>
+                  <td>
+                    <MovementVoidCell movement={m} />
+                  </td>
+                </tr>
+              )
+            })}
           </tbody>
         </table>
       ) : (

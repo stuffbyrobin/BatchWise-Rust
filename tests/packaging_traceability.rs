@@ -313,3 +313,130 @@ async fn packaging_runs_of_a_finished_batch_cannot_be_deleted() {
         .await;
     assert_eq!(resp.status(), 200);
 }
+
+#[tokio::test]
+async fn voided_movements_stay_on_record_but_leave_stock_and_recalls() {
+    let app = spawn_app().await;
+    let (token, tid) = app.register().await;
+    app.enable(tid, "{\"packaging\":true,\"traceability\":true}")
+        .await;
+    let (bid, lot, _name) = app.brewed_batch(&token).await;
+    let run_id = app.packaging_run(&token, &bid).await;
+
+    let resp = app
+        .post("/api/v1/distribution-movements", &token, json!({"packaging_run_id": run_id, "movement_type": "sample", "quantity": 10, "to_location": "Taproom"}))
+        .await;
+    assert_eq!(resp.status(), 201);
+    let mid = resp.json::<Value>().await.unwrap()["id"]
+        .as_str()
+        .unwrap()
+        .to_string();
+    let void_path = format!("/api/v1/distribution-movements/{mid}/void");
+
+    // A reason is required.
+    for body in [json!({}), json!({"reason": "   "})] {
+        assert_eq!(app.post(&void_path, &token, body).await.status(), 400);
+    }
+
+    let reason = "Recorded against the wrong run";
+    let resp = app
+        .post(&void_path, &token, json!({"reason": reason}))
+        .await;
+    assert_eq!(resp.status(), 200);
+    let voided: Value = resp.json().await.unwrap();
+    assert!(voided["voided_at"].is_string());
+    assert_eq!(voided["void_reason"], json!(reason));
+
+    // Still listed, but no longer counted: the run is back to its full 100.
+    let list: Value = app
+        .get(
+            &format!("/api/v1/distribution-movements?packaging_run_id={run_id}"),
+            &token,
+        )
+        .await
+        .json()
+        .await
+        .unwrap();
+    assert_eq!(list["total"].as_i64().unwrap(), 1);
+    let run: Value = app
+        .get(&format!("/api/v1/packaging-runs/{run_id}"), &token)
+        .await
+        .json()
+        .await
+        .unwrap();
+    assert_eq!(run["stock_remaining"].as_i64().unwrap(), 100);
+
+    // Voiding twice is refused, and movements cannot be deleted at all.
+    let resp = app
+        .post(&void_path, &token, json!({"reason": "again"}))
+        .await;
+    assert_eq!(resp.status(), 422);
+    let body: Value = resp.json().await.unwrap();
+    assert_eq!(body["details"]["rule"], json!("movement_already_voided"));
+    let resp = app
+        .client
+        .delete(format!("{}/api/v1/distribution-movements/{mid}", app.base))
+        .bearer_auth(&token)
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), 405);
+
+    // Forward traces leave the voided movement out.
+    let fwd: Value = app
+        .get(
+            &format!("/api/v1/traceability/ingredient-lots/{lot}"),
+            &token,
+        )
+        .await
+        .json()
+        .await
+        .unwrap();
+    assert!(!fwd.to_string().contains(&mid));
+
+    // The void is in the compliance audit log.
+    let pool = sqlx::PgPool::connect(&app.db_url).await.unwrap();
+    let logged: Value = sqlx::query_scalar(
+        "SELECT event_data FROM compliance_audit_log \
+         WHERE entity_id = $1 AND event_type = 'distribution_movement.voided'",
+    )
+    .bind(Uuid::parse_str(&mid).unwrap())
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert_eq!(logged["reason"], json!(reason));
+}
+
+#[tokio::test]
+async fn a_return_cannot_be_voided_once_its_units_have_left_stock() {
+    let app = spawn_app().await;
+    let (token, tid) = app.register().await;
+    app.enable(tid, "{\"packaging\":true}").await;
+    let (bid, _lot, _name) = app.brewed_batch(&token).await;
+    let run_id = app.packaging_run(&token, &bid).await;
+
+    let mut return_id = String::new();
+    for (movement_type, quantity) in [("sample", 100), ("return", 10), ("sample", 10)] {
+        let resp = app
+            .post("/api/v1/distribution-movements", &token, json!({"packaging_run_id": run_id, "movement_type": movement_type, "quantity": quantity, "to_location": "Taproom"}))
+            .await;
+        assert_eq!(resp.status(), 201, "{movement_type}");
+        if movement_type == "return" {
+            return_id = resp.json::<Value>().await.unwrap()["id"]
+                .as_str()
+                .unwrap()
+                .to_string();
+        }
+    }
+
+    let resp = app
+        .post(
+            &format!("/api/v1/distribution-movements/{return_id}/void"),
+            &token,
+            json!({"reason": "Duplicate entry"}),
+        )
+        .await;
+    assert_eq!(resp.status(), 422);
+    let body: Value = resp.json().await.unwrap();
+    assert_eq!(body["details"]["rule"], json!("insufficient_stock"));
+}

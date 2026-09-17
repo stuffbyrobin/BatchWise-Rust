@@ -68,10 +68,12 @@ export function useCreateDistributionMovement() {
   })
 }
 
-export function useDeleteDistributionMovement() {
+/** Voids a movement with a reason; movements are never deleted. */
+export function useVoidDistributionMovement() {
   const qc = useQueryClient()
-  return useMutation<void, Error, string>({
-    mutationFn: (id) => apiClient.delete<void>(`/api/v1/distribution-movements/${id}`),
+  return useMutation<DistributionMovement, Error, { id: string; reason: string }>({
+    mutationFn: ({ id, reason }) =>
+      apiClient.post<DistributionMovement>(`/api/v1/distribution-movements/${id}/void`, { reason }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['distribution-movements'] })
       qc.invalidateQueries({ queryKey: ['packaging-runs'] })

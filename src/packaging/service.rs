@@ -272,36 +272,76 @@ pub async fn list_movements(
     repo::select_movements(&state.pool, tenant_id, &filter).await
 }
 
-pub async fn delete_movement(
+/// Voids a distribution movement. It stays on record with who voided it, when
+/// and why, and no longer counts towards stock or recalls. Voiding a return
+/// whose units have since left stock is refused.
+pub async fn void_movement(
     state: &AppState,
     tenant_id: Uuid,
     actor_id: Option<Uuid>,
     id: Uuid,
-) -> Result<(), ApiError> {
-    // Ensure the movement exists (and is tenant-owned) before deleting.
-    let m = get_movement(state, tenant_id, id).await?;
-    let mut tx = state.pool.begin().await?;
-    if !repo::delete_movement(&mut *tx, tenant_id, id).await? {
-        return Err(ApiError::not_found("distribution_movement"));
+    reason: &str,
+) -> Result<DistributionMovement, ApiError> {
+    let reason = reason.trim();
+    if reason.is_empty() {
+        return Err(ApiError::validation("reason", "required"));
     }
+    let m = get_movement(state, tenant_id, id).await?;
+    if m.voided_at.is_some() {
+        return Err(already_voided());
+    }
+
+    let mut tx = state.pool.begin().await?;
+    // The same per-run lock as create_movement, so stock checks cannot interleave.
+    if !repo::lock_run(&mut *tx, tenant_id, m.packaging_run_id).await? {
+        return Err(ApiError::not_found("packaging_run"));
+    }
+    if m.movement_type == "return" {
+        let stock = repo::stock_remaining(&mut *tx, tenant_id, m.packaging_run_id)
+            .await?
+            .ok_or_else(|| ApiError::not_found("packaging_run"))?;
+        if i64::from(m.quantity) > stock {
+            let mut details = BTreeMap::new();
+            details.insert("returned".to_string(), json!(m.quantity));
+            details.insert("available".to_string(), json!(stock));
+            return Err(ApiError::business_rule(
+                "insufficient_stock",
+                "Voiding this return would leave negative stock.",
+                details,
+            ));
+        }
+    }
+    // `None` here means a concurrent request voided it first.
+    let voided = repo::void_movement(&mut *tx, tenant_id, id, actor_id, reason)
+        .await?
+        .ok_or_else(already_voided)?;
 
     audit::service::write(
         &mut *tx,
         audit::models::WriteRequest {
             tenant_id,
-            event_type: audit::models::EVENT_MOVEMENT_DELETED,
+            event_type: audit::models::EVENT_MOVEMENT_VOIDED,
             entity_type: "distribution_movement",
             entity_id: Some(id),
             actor_user_id: actor_id,
             event_data: json!({
-                "packaging_run_id": m.packaging_run_id,
-                "movement_type": m.movement_type,
-                "quantity": m.quantity,
-                "to_location": m.to_location,
+                "packaging_run_id": voided.packaging_run_id,
+                "movement_type": voided.movement_type,
+                "quantity": voided.quantity,
+                "to_location": voided.to_location,
+                "reason": reason,
             }),
         },
     )
     .await?;
     tx.commit().await?;
-    Ok(())
+    Ok(voided)
+}
+
+fn already_voided() -> ApiError {
+    ApiError::business_rule(
+        "movement_already_voided",
+        "This movement is already void.",
+        Default::default(),
+    )
 }

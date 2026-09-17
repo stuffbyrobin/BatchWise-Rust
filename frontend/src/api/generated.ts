@@ -1460,8 +1460,27 @@ export interface paths {
         get: operations["getDistributionMovement"];
         put?: never;
         post?: never;
-        /** Delete a distribution movement */
-        delete: operations["deleteDistributionMovement"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/distribution-movements/{id}/void": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Void a distribution movement
+         * @description Movements are traceability records and cannot be deleted. A voided movement stays on record with who voided it, when and why, and no longer counts towards stock or recalls. Voiding a return whose units have since left stock is refused.
+         */
+        post: operations["voidDistributionMovement"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -3802,6 +3821,17 @@ export interface components {
             moved_at?: string;
             /** Format: date-time */
             created_at?: string;
+            /**
+             * Format: date-time
+             * @description Set when the movement was voided. Voided movements do not count towards stock or recalls.
+             */
+            voided_at?: string | null;
+            /** Format: uuid */
+            voided_by?: string | null;
+            void_reason?: string | null;
+        };
+        VoidDistributionMovementRequest: {
+            reason: string;
         };
         DistributionMovementList: {
             items?: components["schemas"]["DistributionMovement"][];
@@ -8763,7 +8793,7 @@ export interface operations {
             404: components["responses"]["NotFound"];
         };
     };
-    deleteDistributionMovement: {
+    voidDistributionMovement: {
         parameters: {
             query?: never;
             header?: never;
@@ -8772,18 +8802,26 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VoidDistributionMovementRequest"];
+            };
+        };
         responses: {
-            /** @description No Content */
-            204: {
+            /** @description OK */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["DistributionMovement"];
+                };
             };
+            400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["UnprocessableEntity"];
         };
     };
     traceIngredientLot: {

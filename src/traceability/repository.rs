@@ -122,7 +122,8 @@ const RUN_SELECT: &str = "SELECT pr.id, pr.batch_id, pr.lot_number, pr.format, p
         to_char(pr.packaged_at, 'YYYY-MM-DD') AS packaged_at, \
         to_char(pr.best_before_date, 'YYYY-MM-DD') AS best_before_date \
      FROM packaging_runs pr \
-     LEFT JOIN distribution_movements dm ON dm.packaging_run_id = pr.id";
+     LEFT JOIN distribution_movements dm \
+        ON dm.packaging_run_id = pr.id AND dm.voided_at IS NULL";
 
 type RunRow = (
     Uuid,
@@ -202,6 +203,7 @@ pub async fn movements_by_packaging_runs(
          FROM distribution_movements dm \
          LEFT JOIN orders o ON o.id = dm.order_id AND o.tenant_id = dm.tenant_id \
          WHERE dm.tenant_id = $1 AND dm.packaging_run_id = ANY($2::uuid[]) \
+           AND dm.voided_at IS NULL \
          ORDER BY dm.moved_at DESC",
     )
     .bind(tenant_id)
@@ -342,6 +344,7 @@ pub async fn affected_customers(
          JOIN customers c ON c.id = o.customer_id \
          WHERE dm.packaging_run_id = ANY($1::uuid[]) \
            AND dm.order_id IS NOT NULL \
+           AND dm.voided_at IS NULL \
            AND c.tenant_id = $2 \
          GROUP BY c.id, c.name, c.email, c.phone \
          ORDER BY c.name",
