@@ -25,7 +25,7 @@ pub const EVENT_PACKAGING_RUN_CREATED: &str = "packaging_run.created";
 pub const EVENT_PACKAGING_RUN_DELETED: &str = "packaging_run.deleted";
 
 pub const EVENT_MOVEMENT_CREATED: &str = "distribution_movement.created";
-pub const EVENT_MOVEMENT_DELETED: &str = "distribution_movement.deleted";
+pub const EVENT_MOVEMENT_VOIDED: &str = "distribution_movement.voided";
 
 pub const EVENT_RECALL_QUERIED: &str = "recall.queried";
 

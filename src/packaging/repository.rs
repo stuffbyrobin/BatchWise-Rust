@@ -3,7 +3,7 @@
 //! Port of the Go `internal/packaging/repository.go`. `packaged_at` and
 //! `best_before_date` are `DATE` columns rendered with `to_char` and bound back
 //! via `::date`. `stock_remaining` is computed from movements (outbound types
-//! reduce stock, `return` adds it back).
+//! reduce stock, `return` adds it back); voided movements are ignored.
 
 use chrono::{DateTime, Utc};
 use sqlx::{PgExecutor, PgPool, Postgres, QueryBuilder};
@@ -27,12 +27,12 @@ const RUN_COLS: &str = "pr.id, pr.tenant_id, pr.batch_id, pr.format, pr.unit_vol
         AS stock_remaining, \
     pr.created_at, pr.updated_at";
 
-const RUN_FROM: &str =
-    "FROM packaging_runs pr LEFT JOIN distribution_movements dm ON dm.packaging_run_id = pr.id";
+const RUN_FROM: &str = "FROM packaging_runs pr LEFT JOIN distribution_movements dm \
+    ON dm.packaging_run_id = pr.id AND dm.voided_at IS NULL";
 
 const MOV_COLS: &str = "dm.id, dm.tenant_id, dm.packaging_run_id, dm.movement_type, dm.quantity, \
     dm.from_location, dm.to_location, dm.order_id, dm.reference, dm.notes, dm.moved_at, \
-    dm.created_at";
+    dm.created_at, dm.voided_at, dm.voided_by, dm.void_reason";
 
 // ---- packaging runs ----
 
@@ -109,7 +109,8 @@ pub async fn update_run(
                 - COALESCE(SUM(dm.quantity) FILTER (WHERE dm.movement_type IN \
                     ('sale','taproom_transfer','internal_transfer','sample','disposal')), 0) \
                 + COALESCE(SUM(dm.quantity) FILTER (WHERE dm.movement_type = 'return'), 0) \
-                FROM distribution_movements dm WHERE dm.packaging_run_id = upd.id) AS stock_remaining, \
+                FROM distribution_movements dm \
+                WHERE dm.packaging_run_id = upd.id AND dm.voided_at IS NULL) AS stock_remaining, \
             upd.created_at, upd.updated_at \
         FROM upd";
     sqlx::query_as::<_, PackagingRun>(sql)
@@ -195,7 +196,8 @@ pub async fn stock_remaining<'e, E: PgExecutor<'e>>(
                 ('sale','taproom_transfer','internal_transfer','sample','disposal')), 0) \
             + COALESCE(SUM(dm.quantity) FILTER (WHERE dm.movement_type = 'return'), 0) \
          FROM packaging_runs pr \
-         LEFT JOIN distribution_movements dm ON dm.packaging_run_id = pr.id \
+         LEFT JOIN distribution_movements dm \
+            ON dm.packaging_run_id = pr.id AND dm.voided_at IS NULL \
          WHERE pr.id = $1 AND pr.tenant_id = $2 \
          GROUP BY pr.quantity",
     )
@@ -279,7 +281,8 @@ pub async fn insert_movement<'e, E: PgExecutor<'e>>(
         quantity, from_location, to_location, order_id, reference, notes, moved_at) \
         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) \
         RETURNING id, tenant_id, packaging_run_id, movement_type, quantity, from_location, \
-            to_location, order_id, reference, notes, moved_at, created_at";
+            to_location, order_id, reference, notes, moved_at, created_at, voided_at, voided_by, \
+            void_reason";
     sqlx::query_as::<_, DistributionMovement>(sql)
         .bind(tenant_id)
         .bind(packaging_run_id)
@@ -311,18 +314,27 @@ pub async fn select_movement_by_id(
         .await
 }
 
-/// Deletes a movement; returns true if a row was removed.
-pub async fn delete_movement<'e, E: PgExecutor<'e>>(
+/// Marks a movement void; `None` if it does not exist or is already void.
+pub async fn void_movement<'e, E: PgExecutor<'e>>(
     exec: E,
     tenant_id: Uuid,
     id: Uuid,
-) -> Result<bool, sqlx::Error> {
-    let r = sqlx::query("DELETE FROM distribution_movements WHERE id = $1 AND tenant_id = $2")
+    voided_by: Option<Uuid>,
+    reason: &str,
+) -> Result<Option<DistributionMovement>, sqlx::Error> {
+    let sql = format!(
+        "UPDATE distribution_movements dm \
+         SET voided_at = now(), voided_by = $3, void_reason = $4 \
+         WHERE dm.id = $1 AND dm.tenant_id = $2 AND dm.voided_at IS NULL \
+         RETURNING {MOV_COLS}"
+    );
+    sqlx::query_as::<_, DistributionMovement>(&sql)
         .bind(id)
         .bind(tenant_id)
-        .execute(exec)
-        .await?;
-    Ok(r.rows_affected() > 0)
+        .bind(voided_by)
+        .bind(reason)
+        .fetch_optional(exec)
+        .await
 }
 
 /// Lists distribution movements with filters.

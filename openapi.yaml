@@ -1653,6 +1653,15 @@ components:
         notes: { type: string }
         moved_at: { type: string, format: date-time }
         created_at: { type: string, format: date-time }
+        voided_at: { type: ["string", "null"], format: date-time, description: Set when the movement was voided. Voided movements do not count towards stock or recalls. }
+        voided_by: { type: ["string", "null"], format: uuid }
+        void_reason: { type: ["string", "null"] }
+
+    VoidDistributionMovementRequest:
+      type: object
+      required: [reason]
+      properties:
+        reason: { type: string, minLength: 1, maxLength: 1000 }
 
     DistributionMovementList:
       type: object
@@ -4575,18 +4584,26 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
-    delete:
-      operationId: deleteDistributionMovement
-      summary: Delete a distribution movement
+
+  /api/v1/distribution-movements/{id}/void:
+    post:
+      operationId: voidDistributionMovement
+      summary: Void a distribution movement
+      description: Movements are traceability records and cannot be deleted. A voided movement stays on record with who voided it, when and why, and no longer counts towards stock or recalls. Voiding a return whose units have since left stock is refused.
       tags: [packaging]
       security: [{ bearerAuth: [] }]
       parameters:
         - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/VoidDistributionMovementRequest" } } }
       responses:
-        "204": { description: No Content }
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/DistributionMovement" } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/UnprocessableEntity" }
 
   # ── Traceability ───────────────────────────────────────────────────────────
   /api/v1/traceability/ingredient-lots/{lot_number}:
