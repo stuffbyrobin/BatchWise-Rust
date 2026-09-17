@@ -12,7 +12,8 @@ use axum::routing::{get, post};
 use axum::{Json, Router};
 
 use super::models::{
-    LoginRequest, LogoutRequest, RefreshRequest, RegisterRequest, UpdateMeRequest,
+    AcceptInvitationRequest, InvitationTokenRequest, LoginRequest, LogoutRequest, RefreshRequest,
+    RegisterRequest, UpdateMeRequest,
 };
 use super::service;
 use crate::platform::context::RequestContext;
@@ -40,6 +41,19 @@ pub fn routes(state: AppState) -> Router {
             "/refresh",
             post(refresh),
             state.config.rate_limit_refresh_per_minute,
+            state.config.trust_proxy_headers,
+        ))
+        // Invitation links are public; they share the registration limit.
+        .merge(rate_limited(
+            "/invitation",
+            post(preview_invitation),
+            state.config.rate_limit_register_per_minute,
+            state.config.trust_proxy_headers,
+        ))
+        .merge(rate_limited(
+            "/accept-invitation",
+            post(accept_invitation),
+            state.config.rate_limit_register_per_minute,
             state.config.trust_proxy_headers,
         ))
         .route("/logout", post(logout));
@@ -77,6 +91,21 @@ async fn register(
         Json(resp),
     )
         .into_response())
+}
+
+async fn preview_invitation(
+    State(state): State<AppState>,
+    ValidatedJson(req): ValidatedJson<InvitationTokenRequest>,
+) -> Result<Response, ApiError> {
+    Ok(Json(service::preview_invitation(&state, &req.token).await?).into_response())
+}
+
+async fn accept_invitation(
+    State(state): State<AppState>,
+    ValidatedJson(req): ValidatedJson<AcceptInvitationRequest>,
+) -> Result<Response, ApiError> {
+    let resp = service::accept_invitation(&state, req).await?;
+    Ok((StatusCode::CREATED, Json(resp)).into_response())
 }
 
 async fn login(

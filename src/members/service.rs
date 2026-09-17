@@ -1,15 +1,23 @@
 //! Member management rules: who may change whom, and the last-Owner guard.
 
+use chrono::{Duration, Utc};
 use serde_json::json;
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use super::models::{Member, MemberList, PatchMemberRequest};
+use super::models::{
+    CreateInvitationRequest, CreatedInvitation, InvitationList, Member, MemberList,
+    PatchMemberRequest,
+};
 use super::repository as repo;
 use crate::audit;
+use crate::auth::refresh::generate_refresh_token;
 use crate::platform::authz::Role;
-use crate::platform::errors::ApiError;
+use crate::platform::errors::{is_unique_violation, ApiError};
 use crate::state::AppState;
+
+/// How long an invitation link stays valid.
+pub const INVITATION_TTL_DAYS: i64 = 7;
 
 /// Every member of the tenant.
 pub async fn list(state: &AppState, tenant_id: Uuid) -> Result<MemberList, ApiError> {
@@ -124,6 +132,116 @@ pub fn last_owner() -> ApiError {
         "A tenant must keep an active Owner. Make another member an Owner first.",
         Default::default(),
     )
+}
+
+/// Every open invitation of the tenant (expired ones included, so they can be
+/// revoked or replaced).
+pub async fn list_invitations(
+    state: &AppState,
+    tenant_id: Uuid,
+) -> Result<InvitationList, ApiError> {
+    Ok(InvitationList {
+        items: repo::select_open_invitations(&state.pool, tenant_id).await?,
+    })
+}
+
+/// Invites someone to the tenant with a role and returns the one-time token,
+/// which is stored only as a hash. Managers may only invite Brewer, Sales and
+/// Viewer members. Emails that already have an account are refused, since an
+/// account belongs to one tenant; so is a second open invitation for the same
+/// email (an expired one is replaced).
+pub async fn invite(
+    state: &AppState,
+    tenant_id: Uuid,
+    actor_id: Option<Uuid>,
+    actor_role: Role,
+    req: CreateInvitationRequest,
+) -> Result<CreatedInvitation, ApiError> {
+    let role = parse_role(&req.role)?;
+    if actor_role != Role::Owner && !is_staff(role) {
+        return Err(ApiError::forbidden(
+            "A Manager can only invite Brewer, Sales and Viewer members.",
+        ));
+    }
+    let email = req.email.trim().to_lowercase();
+
+    let mut tx = state.pool.begin().await?;
+    if repo::email_registered(&mut *tx, &email).await? {
+        return Err(ApiError::conflict("email", "already has an account"));
+    }
+    repo::revoke_expired_invitation(&mut *tx, tenant_id, &email).await?;
+    let (token, token_hash) = generate_refresh_token();
+    let expires_at = Utc::now() + Duration::days(INVITATION_TTL_DAYS);
+    let invitation = match repo::insert_invitation(
+        &mut *tx,
+        tenant_id,
+        &email,
+        role.as_str(),
+        &token_hash,
+        actor_id,
+        expires_at,
+    )
+    .await
+    {
+        Ok(invitation) => invitation,
+        Err(e) if is_unique_violation(&e) => {
+            return Err(ApiError::conflict(
+                "email",
+                "already has an open invitation",
+            ));
+        }
+        Err(e) => return Err(e.into()),
+    };
+    audit::service::write(
+        &mut *tx,
+        audit::models::WriteRequest {
+            tenant_id,
+            event_type: audit::models::EVENT_MEMBER_INVITED,
+            entity_type: "invitation",
+            entity_id: Some(invitation.id),
+            actor_user_id: actor_id,
+            event_data: json!({"email": email, "role": role.as_str()}),
+        },
+    )
+    .await?;
+    tx.commit().await?;
+    Ok(CreatedInvitation { invitation, token })
+}
+
+/// Revokes an open invitation. Managers may only revoke Brewer, Sales and
+/// Viewer invitations.
+pub async fn revoke_invitation(
+    state: &AppState,
+    tenant_id: Uuid,
+    actor_id: Option<Uuid>,
+    actor_role: Role,
+    id: Uuid,
+) -> Result<(), ApiError> {
+    let mut tx = state.pool.begin().await?;
+    let invitation = repo::select_open_invitation_for_update(&mut *tx, tenant_id, id)
+        .await?
+        .ok_or_else(|| ApiError::not_found("invitation"))?;
+    let role = parse_role(&invitation.role)?;
+    if actor_role != Role::Owner && !is_staff(role) {
+        return Err(ApiError::forbidden(
+            "A Manager can only manage Brewer, Sales and Viewer members.",
+        ));
+    }
+    repo::revoke_invitation(&mut *tx, tenant_id, id).await?;
+    audit::service::write(
+        &mut *tx,
+        audit::models::WriteRequest {
+            tenant_id,
+            event_type: audit::models::EVENT_MEMBER_INVITATION_REVOKED,
+            entity_type: "invitation",
+            entity_id: Some(id),
+            actor_user_id: actor_id,
+            event_data: json!({"email": invitation.email, "role": role.as_str()}),
+        },
+    )
+    .await?;
+    tx.commit().await?;
+    Ok(())
 }
 
 /// Brewer, Sales and Viewer: the members a Manager may manage.

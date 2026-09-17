@@ -83,6 +83,20 @@ export function AuthProvider({ children }: AuthProviderProps) {
     [],
   );
 
+  const acceptInvitation = useCallback(
+    async (token: string, displayName: string, password: string) => {
+      const response = await apiClient.post<{
+        access_token: string;
+        refresh_token: string;
+        expires_in: number;
+      }>('/api/v1/auth/accept-invitation', { token, display_name: displayName, password });
+      tokenStore.setTokens(response.access_token, response.refresh_token);
+      const userData = await apiClient.get<MeResponse>('/api/v1/auth/me');
+      setUser(userData);
+    },
+    [],
+  );
+
   // Always clears the local session, even when the server call fails (offline,
   // token already expired): logging out must never leave the user signed in.
   const logout = useCallback(async () => {
@@ -110,8 +124,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, []);
 
   const value = React.useMemo(
-    () => ({ user, isLoading, login, register, logout, updateMe, deleteMe }),
-    [user, isLoading, login, register, logout, updateMe, deleteMe],
+    () => ({ user, isLoading, login, register, acceptInvitation, logout, updateMe, deleteMe }),
+    [user, isLoading, login, register, acceptInvitation, logout, updateMe, deleteMe],
   );
 
   return (

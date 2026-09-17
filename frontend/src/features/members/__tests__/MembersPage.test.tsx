@@ -7,6 +7,9 @@ import { MembersPage } from '../MembersPage'
 
 type PatchArgs = { id: string; body: Record<string, unknown> }
 const patchCalls: PatchArgs[] = []
+const inviteCalls: Record<string, unknown>[] = []
+const revokeCalls: string[] = []
+let invitations: Record<string, unknown>[] = []
 let currentUser = { user_id: 'u-owner', role: 'owner' }
 
 const members = [
@@ -22,6 +25,20 @@ vi.mock('../hooks/useMembers', () => ({
     // A plain function rather than vi.fn (see MovementVoidCell.test.tsx).
     mutateAsync: async (args: PatchArgs) => {
       patchCalls.push(args)
+    },
+    isPending: false,
+  }),
+  useInvitations: () => ({ data: { items: invitations } }),
+  useCreateInvitation: () => ({
+    mutateAsync: async (body: Record<string, unknown>) => {
+      inviteCalls.push(body)
+      return { id: 'inv-1', email: body.email, role: body.role, expires_at: '2026-09-24T10:00:00Z', created_at: '2026-09-17T10:00:00Z', token: 'tok-1' }
+    },
+    isPending: false,
+  }),
+  useRevokeInvitation: () => ({
+    mutateAsync: async (id: string) => {
+      revokeCalls.push(id)
     },
     isPending: false,
   }),
@@ -42,6 +59,9 @@ const row = (name: string) => screen.getByText(name).closest('tr') as HTMLElemen
 describe('MembersPage', () => {
   beforeEach(() => {
     patchCalls.length = 0
+    inviteCalls.length = 0
+    revokeCalls.length = 0
+    invitations = []
     currentUser = { user_id: 'u-owner', role: 'owner' }
   })
 
@@ -79,5 +99,34 @@ describe('MembersPage', () => {
     expect(patchCalls).toHaveLength(0)
     await user.click(within(dialog).getByRole('button', { name: 'Deactivate' }))
     await waitFor(() => expect(patchCalls).toEqual([{ id: 'u-brewer', body: { is_active: false } }]))
+  })
+
+  it('creates an invite link to share', async () => {
+    const user = userEvent.setup()
+    renderPage()
+    await user.type(screen.getByLabelText('Email'), 'new@example.com')
+    await user.selectOptions(screen.getByLabelText('Role'), 'sales')
+    await user.click(screen.getByRole('button', { name: 'Create invite link' }))
+
+    expect(inviteCalls).toEqual([{ email: 'new@example.com', role: 'sales' }])
+    const link = await screen.findByLabelText('Invite link')
+    expect((link as HTMLInputElement).value).toBe(`${window.location.origin}/invite#tok-1`)
+  })
+
+  it('lets a Manager invite only Brewer, Sales and Viewer members', () => {
+    currentUser = { user_id: 'u-manager', role: 'manager' }
+    renderPage()
+    const role = screen.getByLabelText('Role')
+    expect(within(role).getAllByRole('option').map((o) => o.textContent)).toEqual(['Brewer', 'Sales', 'Viewer'])
+  })
+
+  it('revokes an open invitation after confirming', async () => {
+    const user = userEvent.setup()
+    invitations = [{ id: 'inv-9', email: 'pending@example.com', role: 'viewer', expires_at: '2999-01-01T00:00:00Z', created_at: '2026-09-17T10:00:00Z' }]
+    renderPage()
+    await user.click(within(row('pending@example.com')).getByRole('button', { name: 'Revoke' }))
+    const dialog = await screen.findByRole('alertdialog', { name: 'Revoke the invitation for pending@example.com?' })
+    await user.click(within(dialog).getByRole('button', { name: 'Revoke' }))
+    await waitFor(() => expect(revokeCalls).toEqual(['inv-9']))
   })
 })

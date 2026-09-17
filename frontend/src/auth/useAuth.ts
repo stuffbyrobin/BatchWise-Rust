@@ -14,6 +14,8 @@ interface AuthContextValue {
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, displayName: string, tenantName: string) => Promise<void>;
+  /** Creates the invitee's account from an invitation token and signs them in. */
+  acceptInvitation: (token: string, displayName: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   updateMe: (payload: UpdateMePayload) => Promise<MeResponse>;
   deleteMe: () => Promise<void>;

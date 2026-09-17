@@ -4,10 +4,11 @@ import { AppShell } from '../components/layout/AppShell'
 import { ProtectedRoute } from '../auth/ProtectedRoute'
 import { LoginPage } from '../features/auth/LoginPage'
 import { RegisterPage } from '../features/auth/RegisterPage'
+import { AcceptInvitationPage } from '../features/auth/AcceptInvitationPage'
 import { LandingPage } from '../features/marketing/LandingPage'
 
 // Protected pages are split into their own chunks and load on first visit;
-// the public landing, login and register pages stay in the entry chunk.
+// the public landing, login, register and invite pages stay in the entry chunk.
 function named<K extends string, M extends Record<K, ComponentType>>(load: () => Promise<M>, name: K) {
   return lazy(() => load().then((m) => ({ default: m[name] })))
 }
@@ -105,6 +106,7 @@ const router = createBrowserRouter([
   { path: '/', element: <LandingPage /> },
   { path: '/login', element: <LoginPage /> },
   { path: '/register', element: <RegisterPage /> },
+  { path: '/invite', element: <AcceptInvitationPage /> },
   {
     element: (
       <ProtectedRoute>
