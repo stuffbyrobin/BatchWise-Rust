@@ -304,7 +304,7 @@ Tenant settings are readable by every role (changed from the first draft): the e
 
 ## Deferred / roadmap (not defects, but decide before multi-seat sales)
 
-- [ ] Role-based access: designed in Phase 15.
-- [ ] User invite flow (a tenant cannot gain a second member via the API). Depends on Phase 15: an invitation carries the role, and only roles allowed to manage users can send one.
+- [x] Role-based access: designed and built in Phase 15.
+- [x] User invite flow (a tenant cannot gain a second member via the API). Depends on Phase 15: an invitation carries the role, and only roles allowed to manage users can send one. (Owners and Managers create an invitation with a role and get a one-time link, shown once, valid for 7 days; only a hash of the token is stored. The invitee opens `/invite#<token>`, sees the brewery and role, and sets a name and password; the account is created in that tenant with that role. Managers invite only Brewer, Sales and Viewer members; an email that already has an account is refused, since an account belongs to one tenant. Open invitations can be revoked; inviting, revoking and joining are audited. Email delivery can be added later without changing the flow.)
 - [ ] Distributed rate limiting (Redis) once there is more than one replica.
 - [ ] Access-token revocation (`jti` denylist) if `JWT_EXPIRY_MINUTES` is ever raised above ~15.

@@ -35,6 +35,9 @@ pub const EVENT_BATCH_SPOILED: &str = "batch.spoiled";
 pub const EVENT_MEMBER_ROLE_CHANGED: &str = "member.role_changed";
 pub const EVENT_MEMBER_DEACTIVATED: &str = "member.deactivated";
 pub const EVENT_MEMBER_REACTIVATED: &str = "member.reactivated";
+pub const EVENT_MEMBER_INVITED: &str = "member.invited";
+pub const EVENT_MEMBER_INVITATION_REVOKED: &str = "member.invitation_revoked";
+pub const EVENT_MEMBER_JOINED: &str = "member.joined";
 
 /// A single compliance audit log entry.
 #[derive(Debug, Clone, Serialize, FromRow)]

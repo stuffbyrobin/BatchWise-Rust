@@ -8,13 +8,16 @@ use chrono::{Duration, Utc};
 use uuid::Uuid;
 
 use super::models::{
-    AuthResponse, LoginRequest, MeResponse, RegisterRequest, UpdateMeRequest, User,
+    AcceptInvitationRequest, AuthResponse, InvitationPreview, LoginRequest, MeResponse,
+    RegisterRequest, UpdateMeRequest, User,
 };
 use super::password::{
     check_password_policy, dummy_hash, hash_password_async, verify_password_async,
 };
 use super::refresh::{generate_refresh_token, hash_refresh_token};
 use super::repository as repo;
+use crate::audit;
+use crate::members::repository::{self as members_repo, InvitationByToken};
 use crate::members::service as members_svc;
 use crate::platform::authz::Role;
 use crate::platform::errors::is_unique_violation;
@@ -100,6 +103,93 @@ pub async fn register(state: &AppState, req: RegisterRequest) -> Result<AuthResp
         Err(e) => return Err(e.into()),
     };
 
+    tx.commit().await?;
+
+    issue_token_pair(state, &user).await
+}
+
+/// An invitation that can still be used: not accepted, revoked or expired.
+/// `lock` locks it for acceptance. Unknown, accepted and revoked tokens look
+/// the same (404); an expired one says so, so the invitee can ask again.
+async fn usable_invitation<'e, E: sqlx::PgExecutor<'e>>(
+    exec: E,
+    token: &str,
+    lock: bool,
+) -> Result<InvitationByToken, ApiError> {
+    let invitation =
+        members_repo::select_invitation_by_token_hash(exec, &hash_refresh_token(token), lock)
+            .await?
+            .filter(|i| i.accepted_at.is_none() && i.revoked_at.is_none())
+            .ok_or_else(|| ApiError::not_found("invitation"))?;
+    if invitation.expires_at <= Utc::now() {
+        return Err(ApiError::business_rule(
+            "invitation_expired",
+            "This invitation has expired. Ask for a new one.",
+            Default::default(),
+        ));
+    }
+    Ok(invitation)
+}
+
+/// Shows the invitation behind a token to the person holding it.
+pub async fn preview_invitation(
+    state: &AppState,
+    token: &str,
+) -> Result<InvitationPreview, ApiError> {
+    let invitation = usable_invitation(&state.pool, token, false).await?;
+    Ok(InvitationPreview {
+        tenant_name: invitation.tenant_name,
+        email: invitation.email,
+        role: invitation.role,
+        expires_at: invitation.expires_at,
+    })
+}
+
+/// Creates the invitee's account in the inviting tenant, with the invited role,
+/// and signs them in. The token works once.
+pub async fn accept_invitation(
+    state: &AppState,
+    req: AcceptInvitationRequest,
+) -> Result<AuthResponse, ApiError> {
+    check_password_policy(&req.password)?;
+    let hash = hash_password_async(req.password.clone()).await?;
+
+    let mut tx = state.pool.begin().await?;
+    let invitation = usable_invitation(&mut *tx, &req.token, true).await?;
+    let user = match repo::create_user(
+        &mut *tx,
+        invitation.tenant_id,
+        &invitation.email,
+        &hash,
+        &req.display_name,
+        &invitation.role,
+        true,
+    )
+    .await
+    {
+        Ok(u) => u,
+        Err(e) if is_unique_violation(&e) => {
+            return Err(ApiError::conflict("email", "already has an account"));
+        }
+        Err(e) => return Err(e.into()),
+    };
+    members_repo::mark_invitation_accepted(&mut *tx, invitation.id, user.id).await?;
+    audit::service::write(
+        &mut *tx,
+        audit::models::WriteRequest {
+            tenant_id: invitation.tenant_id,
+            event_type: audit::models::EVENT_MEMBER_JOINED,
+            entity_type: "user",
+            entity_id: Some(user.id),
+            actor_user_id: Some(user.id),
+            event_data: serde_json::json!({
+                "email": invitation.email,
+                "role": invitation.role,
+                "invitation_id": invitation.id,
+            }),
+        },
+    )
+    .await?;
     tx.commit().await?;
 
     issue_token_pair(state, &user).await

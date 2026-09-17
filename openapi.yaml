@@ -214,6 +214,61 @@ components:
         role: { type: string, enum: [owner, manager, brewer, sales, viewer] }
         is_active: { type: boolean, description: Deactivating signs the member out and revokes their refresh tokens. }
 
+    Invitation:
+      type: object
+      required: [id, email, role, expires_at, created_at]
+      properties:
+        id: { type: string, format: uuid }
+        email: { type: string, format: email }
+        role: { type: string, enum: [owner, manager, brewer, sales, viewer] }
+        invited_by: { type: ["string", "null"], format: uuid }
+        expires_at: { type: string, format: date-time }
+        created_at: { type: string, format: date-time }
+
+    InvitationList:
+      type: object
+      required: [items]
+      properties:
+        items: { type: array, items: { $ref: "#/components/schemas/Invitation" } }
+
+    CreatedInvitation:
+      allOf:
+        - $ref: "#/components/schemas/Invitation"
+        - type: object
+          required: [token]
+          properties:
+            token: { type: string, description: "One-time token for the invite link. Only a hash is stored, so it is returned once." }
+
+    CreateInvitationRequest:
+      type: object
+      required: [email, role]
+      properties:
+        email: { type: string, format: email, maxLength: 254 }
+        role: { type: string, enum: [owner, manager, brewer, sales, viewer] }
+
+    InvitationTokenRequest:
+      type: object
+      required: [token]
+      properties:
+        token: { type: string, maxLength: 128 }
+
+    InvitationPreview:
+      type: object
+      required: [tenant_name, email, role, expires_at]
+      properties:
+        tenant_name: { type: string }
+        email: { type: string, format: email }
+        role: { type: string, enum: [owner, manager, brewer, sales, viewer] }
+        expires_at: { type: string, format: date-time }
+
+    AcceptInvitationRequest:
+      type: object
+      required: [token, password, display_name]
+      properties:
+        token: { type: string, maxLength: 128 }
+        password: { type: string, maxLength: 128 }
+        display_name: { type: string, minLength: 1, maxLength: 100 }
+
     AuthResponse:
       type: object
       required: [user_id, tenant_id, email, display_name, role, access_token, refresh_token, token_type, expires_in]
@@ -2330,6 +2385,39 @@ paths:
         "400": { $ref: "#/components/responses/BadRequest" }
         "409": { $ref: "#/components/responses/Conflict" }
 
+  /api/v1/auth/invitation:
+    post:
+      operationId: previewInvitation
+      summary: Show the invitation behind a one-time token
+      description: Unknown, accepted and revoked tokens are 404; an expired invitation is 422 `invitation_expired`.
+      security: []
+      tags: [auth]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/InvitationTokenRequest" } } }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/InvitationPreview" } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/UnprocessableEntity" }
+
+  /api/v1/auth/accept-invitation:
+    post:
+      operationId: acceptInvitation
+      summary: Accept an invitation by creating the invitee's account
+      description: Creates the account in the inviting tenant with the invited role and signs the new member in. The token works once.
+      security: []
+      tags: [auth]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/AcceptInvitationRequest" } } }
+      responses:
+        "201": { description: Account created, content: { application/json: { schema: { $ref: "#/components/schemas/AuthResponse" } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/UnprocessableEntity" }
+
   /api/v1/auth/login:
     post:
       operationId: login
@@ -2435,6 +2523,43 @@ paths:
         "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/MemberList" } } } }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/v1/members/invitations:
+    get:
+      operationId: listInvitations
+      summary: List open invitations (Owners and Managers)
+      tags: [members]
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/InvitationList" } } } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      operationId: createInvitation
+      summary: Invite someone to the tenant
+      description: Returns a one-time token for the invite link, valid for 7 days. Managers may only invite Brewer, Sales and Viewer members. An email that already has an account, or already has an open invitation, is 409.
+      tags: [members]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/CreateInvitationRequest" } } }
+      responses:
+        "201": { description: Created, content: { application/json: { schema: { $ref: "#/components/schemas/CreatedInvitation" } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /api/v1/members/invitations/{id}:
+    delete:
+      operationId: revokeInvitation
+      summary: Revoke an open invitation
+      tags: [members]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "204": { description: Revoked }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
 
   /api/v1/members/{id}:
     patch:

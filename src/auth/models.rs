@@ -105,6 +105,36 @@ pub struct UpdateMeRequest {
     pub new_password: Option<String>,
 }
 
+/// Identifies an invitation by its one-time token.
+#[derive(Debug, Deserialize, Validate)]
+#[serde(deny_unknown_fields)]
+pub struct InvitationTokenRequest {
+    #[validate(length(min = 1, max = 128))]
+    pub token: String,
+}
+
+/// What the invitee sees before accepting.
+#[derive(Debug, Serialize)]
+pub struct InvitationPreview {
+    pub tenant_name: String,
+    pub email: String,
+    pub role: String,
+    pub expires_at: DateTime<Utc>,
+}
+
+/// Accepts an invitation by creating the invitee's account.
+#[derive(Debug, Deserialize, Validate)]
+#[serde(deny_unknown_fields)]
+pub struct AcceptInvitationRequest {
+    #[validate(length(min = 1, max = 128))]
+    pub token: String,
+    /// The password policy is enforced by `password::check_password_policy`.
+    #[validate(length(min = 1, max = 128))]
+    pub password: String,
+    #[validate(length(min = 1, max = 100))]
+    pub display_name: String,
+}
+
 /// Returned from register, login, and refresh.
 #[derive(Debug, Serialize)]
 pub struct AuthResponse {
