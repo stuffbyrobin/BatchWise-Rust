@@ -201,7 +201,7 @@ pub async fn login(state: &AppState, req: LoginRequest) -> Result<AuthResponse, 
     let invalid = || ApiError::unauthorized("Invalid email or password.");
     let email = req.email.to_lowercase();
 
-    if let Some(retry) = state.login_failures.is_limited(&email) {
+    if let Some(retry) = state.login_failures.is_limited(&email).await {
         return Err(ApiError::rate_limited(retry));
     }
 
@@ -210,7 +210,7 @@ pub async fn login(state: &AppState, req: LoginRequest) -> Result<AuthResponse, 
     match user {
         Some(user) => {
             if !verify_password_async(req.password.clone(), user.password_hash.clone()).await {
-                let _ = state.login_failures.check(&email);
+                let _ = state.login_failures.check(&email).await;
                 return Err(invalid());
             }
             if !user.is_active {

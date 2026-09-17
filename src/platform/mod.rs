@@ -24,6 +24,7 @@ pub mod features;
 pub mod logger;
 pub mod middleware;
 pub mod pagination;
+pub mod redis_limits;
 pub mod refs;
 pub mod roles;
 pub mod seed;

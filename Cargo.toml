@@ -49,6 +49,9 @@ sha2 = "0.6"
 rand = "0.8"
 base64 = "0.22"
 
+# Shared rate-limit windows (optional; only used when REDIS_URL is set)
+redis = { version = "1.7", default-features = false, features = ["tokio-comp", "connection-manager", "script"] }
+
 # Validation
 validator = { version = "0.21", features = ["derive"] }
 
