@@ -5,6 +5,8 @@ Source: security and efficiency review, 2026-09-15. Each phase is one PR off
 that shared infrastructure is built **before** the modules that depend on it,
 so nothing gets fixed twice. Backend phases (1–8) and frontend phases (9–13)
 are independent of each other and can be interleaved or split between people.
+Phases 14 (compliance record locks) and 15 (roles and permissions) were added
+after the review, on 2026-09-17; do Phase 14 first.
 
 Size key: S = under an hour, M = half a day, L = a day or more.
 
@@ -209,9 +211,98 @@ these).
 
 ---
 
+## Phase 14 — Compliance record locks · M
+
+Records behind duty returns and traceability must not be deleted or rewritten
+once they are final, **whatever the caller's role**. Roles (Phase 15) decide who
+may act; the record's lifecycle decides whether anyone may. This phase does not
+depend on roles and protects single-user breweries today.
+
+Principles:
+
+- A finished record is corrected by an append-only entry with a reason and an
+  audit log entry, never by editing or deleting it.
+- Duty corrections go on the next return; a submitted return is never changed.
+- No path (API, service or tenant closure) deletes compliance records within
+  the retention period. HMRC generally requires alcohol duty records to be kept
+  for 6 years; confirm the exact period with HMRC guidance or an accountant and
+  record it here.
+
+Already enforced: terminal batches (`completed`, `cancelled`, `spoiled`) reject
+edits and ingredient changes; submitted duty returns are final; only draft sales
+orders can be deleted; approved label records cannot be deleted; deleting your
+own account only deactivates it, so audit entries keep their actor.
+
+- [ ] Batches: allow `DELETE` only while `planned`. Today `cancelled` batches can be deleted too, but a batch can be cancelled after brewing started, when stock has been deducted. Deleting it cascades `batch_ingredients` (lot traceability), `fermentation_readings`, `label_records` and `batch_costs`, and sets `batch_id` to null on `duty_events` and `order_items`. Cancelled batches stay as records. Integration test.
+- [ ] Distribution movements: remove `DELETE` (one-step-forward traceability). Quantities must be positive, so a mistake cannot be reversed with a negative entry; add `voided_at`, `voided_by` and `void_reason` instead. Voided movements stay visible and are excluded from totals.
+- [ ] Packaging runs: not deletable once their batch is `completed` (today they are only protected once they have movements).
+- [ ] Fermentation readings: read-only (no create, update or delete) once the batch is terminal.
+- [ ] `completed → spoiled`: require a `reason` in the transition request and write it to the compliance audit log. Phase 15 limits this transition to Manager and Owner.
+- [ ] Retention: `duty_returns`, `duty_events` and `compliance_audit_log` cascade on tenant delete. There is no tenant-delete endpoint today; switch these foreign keys to `RESTRICT` so any future account closure has to deactivate the tenant and purge only after the retention period.
+- [ ] Audit log: add a database trigger that rejects `UPDATE` and `DELETE` on `compliance_audit_log`, so it stays append-only even against a code bug.
+
+---
+
+## Phase 15 — Roles and permissions · L
+
+Design agreed 2026-09-17. Today the only check is `is_owner` on tenant settings;
+every other member can do everything.
+
+### Roles
+
+A fixed set, not custom permissions: most breweries have 1–10 staff, and a
+fixed set is easy to test, explain and audit.
+
+| Role | Typical person | Purpose |
+|---|---|---|
+| **Owner** | Brewery owner | Everything, including subscription tier, tenant settings and ownership transfer. A tenant always has at least one Owner. |
+| **Manager** | Head brewer, ops lead | All operational data; manages Brewer, Sales and Viewer users; compliance sign-off. |
+| **Brewer** | Production staff | Recipes, stock and batches up to `completed`. No compliance sign-off, costs or user management. |
+| **Sales** | Office, dispatch | Customers, orders, distribution and containers; reads production and stock. |
+| **Viewer** | Accountant, auditor | Reads everything, exports duty reports and the audit log; changes nothing. |
+
+### Permissions
+
+W = create and update, R = read, — = no access. Record locks (Phase 14) apply
+on top, to every role including Owner.
+
+| Area | Owner | Manager | Brewer | Sales | Viewer |
+|---|---|---|---|---|---|
+| Tenant settings, tier, ownership transfer | W | R | — | — | R |
+| Users: invite, remove, change role | W (all roles) | W (Brewer, Sales, Viewer) | — | — | — |
+| Recipes, library, water, yeast bank | W | W | W | R | R |
+| Inventory, stock movements, suppliers, purchase orders | W | W | W | R | R |
+| Batches: create, edit, transition up to `completed`, delete while `planned` | W | W | W | R | R |
+| Batch `completed → spoiled` (reason required) | W | W | — | — | R |
+| Fermentation readings, fermenters, equipment, maintenance | W | W | W | R | R |
+| Packaging runs | W | W | W | R | R |
+| Distribution movements (void with reason) | W | W | W | W | R |
+| Customers, sales orders | W | W | R | W | R |
+| Containers | W | W | W | W | R |
+| Label designs, brand profiles | W | W | W | R | R |
+| Label records: approve | W | W | — | — | R |
+| Cost rates, batch costs, cost reports | W | W | R | — | R |
+| Duty returns: compile and submit | W | W | — | — | R |
+| Compliance audit log | R | R | — | — | R |
+
+Nobody can delete audit log entries or submitted duty returns.
+
+### Implementation
+
+- [ ] Migration: `role TEXT NOT NULL CHECK (role IN ('owner','manager','brewer','sales','viewer'))` on `users`. Existing owners become `owner` and everyone else `manager`, so no one loses access on migration. Drop `is_owner` once nothing reads it.
+- [ ] A `Permission` enum and a single role → permissions table in code, checked through `RequestContext` (for example `ctx.require(Permission::SubmitDutyReturn)?`), replacing the `is_owner` check in `tenant/service.rs`.
+- [ ] Load the role from the database with a short-TTL cache (like `platform::features::FeatureCache`), invalidated when a role changes. Not a JWT claim: a demoted user would keep the old rights until the access token expires.
+- [ ] Guard the last Owner: an Owner cannot be demoted, deactivated or removed if no other Owner remains.
+- [ ] Role changes write a compliance audit entry (actor, user, old role, new role).
+- [ ] Contract test alongside `every_openapi_operation_is_routed`: every mutating route declares a permission, so a new endpoint cannot ship unguarded.
+- [ ] Integration tests per role for the sensitive actions: duty submission, label approval, `completed → spoiled`, user management, cost rates.
+- [ ] Frontend: return `role` from `/auth/me`; hide or disable actions the user cannot perform. The server stays the source of truth.
+
+---
+
 ## Deferred / roadmap (not defects, but decide before multi-seat sales)
 
-- [ ] Role-based access: add a `role` column and a `require_role` layer; today the only check is `is_owner` on tenant settings, and every member can delete everything.
-- [ ] User invite flow (a tenant cannot gain a second member via the API).
+- [ ] Role-based access: designed in Phase 15.
+- [ ] User invite flow (a tenant cannot gain a second member via the API). Depends on Phase 15: an invitation carries the role, and only roles allowed to manage users can send one.
 - [ ] Distributed rate limiting (Redis) once there is more than one replica.
 - [ ] Access-token revocation (`jti` denylist) if `JWT_EXPIRY_MINUTES` is ever raised above ~15.
