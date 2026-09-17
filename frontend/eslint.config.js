@@ -39,6 +39,17 @@ export default defineConfig([
           ignoreRestSiblings: true,
         },
       ],
+      // Blocking browser dialogs: use useConfirm() and useToast() instead.
+      'no-restricted-globals': [
+        'error',
+        { name: 'confirm', message: 'Use useConfirm() from components/feedback/ConfirmDialog.' },
+        { name: 'alert', message: 'Use useToast() from components/feedback/Toast.' },
+      ],
+      'no-restricted-properties': [
+        'error',
+        { object: 'window', property: 'confirm', message: 'Use useConfirm() from components/feedback/ConfirmDialog.' },
+        { object: 'window', property: 'alert', message: 'Use useToast() from components/feedback/Toast.' },
+      ],
     },
   },
 ])

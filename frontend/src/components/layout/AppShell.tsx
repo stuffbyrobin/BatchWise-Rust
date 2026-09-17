@@ -1,9 +1,12 @@
+import { Suspense } from 'react'
 import { Outlet } from 'react-router-dom'
 import { Sidebar } from './Sidebar'
 import { TopBar } from './TopBar'
+import { Spinner } from '../feedback/Spinner'
 
 /**
- * App layout shell with Sidebar, TopBar, and main content via Outlet.
+ * App layout shell with Sidebar, TopBar, and the routed page via Outlet.
+ * Pages are lazily loaded, so the Outlet sits in a Suspense boundary that shows a spinner while a page chunk loads.
  */
 export function AppShell() {
   return (
@@ -12,7 +15,15 @@ export function AppShell() {
       <div className="flex flex-col flex-1 overflow-hidden">
         <TopBar />
         <main className="flex-1 overflow-y-auto p-6">
-          <Outlet />
+          <Suspense
+            fallback={
+              <div className="flex justify-center py-12">
+                <Spinner />
+              </div>
+            }
+          >
+            <Outlet />
+          </Suspense>
         </main>
       </div>
     </div>

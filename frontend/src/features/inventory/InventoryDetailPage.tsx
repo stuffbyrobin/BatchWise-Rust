@@ -7,11 +7,13 @@ import {
   useStockIn,
 } from './hooks/useInventory'
 import { APIError } from '../../api/error'
+import { useConfirm } from '../../components/feedback/ConfirmDialog'
 
 const INGREDIENT_TYPES = ['fermentable', 'hop', 'yeast', 'adjunct', 'chemical', 'other'] as const
 const UNITS = ['kg', 'g', 'L', 'mL', 'count'] as const
 
 export function InventoryDetailPage() {
+  const confirm = useConfirm()
   const navigate = useNavigate()
   const { id } = useParams<{ id: string }>()
 
@@ -91,13 +93,11 @@ export function InventoryDetailPage() {
     })
   }
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!id) return
-    if (window.confirm('Are you sure you want to delete this lot? This action cannot be undone.')) {
-      deleteLot(undefined, {
-        onSuccess: () => navigate('/inventory'),
-      })
-    }
+    const ok = await confirm({ title: 'Delete this lot?', description: 'This action cannot be undone.', confirmLabel: 'Delete', destructive: true })
+    if (!ok) return
+    deleteLot(undefined, { onSuccess: () => navigate('/inventory') })
   }
 
   if (isLoadError) {

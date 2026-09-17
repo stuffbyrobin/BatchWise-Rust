@@ -1,9 +1,13 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
 import { APIError } from '../../api/error'
+import { useConfirm } from '../../components/feedback/ConfirmDialog'
+import { useToast } from '../../components/feedback/Toast'
 import { useFermenters, useCreateFermenter, useDeleteFermenter } from './hooks/useFermenters'
 
 export default function FermentersPage() {
+  const confirm = useConfirm()
+  const { toast } = useToast()
   const { data, isLoading, error } = useFermenters({ sort: 'name', page_size: 100 })
   const createMut = useCreateFermenter()
   const deleteMut = useDeleteFermenter()
@@ -29,11 +33,11 @@ export default function FermentersPage() {
   }
 
   async function handleDelete(id: string, fName: string) {
-    if (!window.confirm(`Delete fermenter "${fName}"? Any assigned batches will be unassigned.`)) return
+    if (!(await confirm({ title: `Delete fermenter "${fName}"?`, description: 'Any assigned batches will be unassigned.', confirmLabel: 'Delete', destructive: true }))) return
     try {
       await deleteMut.mutateAsync(id)
     } catch (err) {
-      alert(err instanceof APIError ? err.message : 'Delete failed')
+      toast({ title: 'Delete failed', description: err instanceof APIError ? err.message : undefined, variant: 'destructive' })
     }
   }
 

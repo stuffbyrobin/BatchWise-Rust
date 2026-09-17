@@ -202,10 +202,10 @@ these).
 
 ## Phase 13 — Frontend delivery polish · S/M
 
-- [ ] Route-level code splitting: `React.lazy` for every protected page, `<Suspense fallback={<Spinner/>}>`; verify the landing-page chunk shrinks.
-- [ ] Replace `window.confirm`/`alert` with the existing toast/dialog primitives (or drop `ToastProvider`); memoize the toast context value.
-- [ ] `LabelDesignEditorPage`: revoke the previous blob URL before replacing it; add `noopener` unless the handle is needed.
-- [ ] Plan the react-router v7 and zustand v5 upgrades. (react-router v7 is done, in Phase 10; zustand v5 remains.)
+- [x] Route-level code splitting: `React.lazy` for every protected page, `<Suspense fallback={<Spinner/>}>`; verify the landing-page chunk shrinks. (48 protected pages are lazy; the Suspense boundary wraps the `Outlet` in `AppShell`, so the sidebar and top bar stay visible. The entry chunk goes from 829.8 kB (193.0 kB gzip) to 411.1 kB (127.2 kB gzip), and the build's over-500 kB warning is gone. `Spinner` now has `role="status"`.)
+- [x] Replace `window.confirm`/`alert` with the existing toast/dialog primitives (or drop `ToastProvider`); memoize the toast context value. (There was no dialog primitive, so `components/feedback/ConfirmDialog.tsx` adds one on `@radix-ui/react-alert-dialog`: a controlled `ConfirmDialog` plus a promise-based `useConfirm()`. It traps focus, focuses Cancel first and closes on Escape. All 8 `window.confirm` calls use it, the 5 `alert` calls are destructive toasts, and the hand-rolled brewing confirmation modal in `BatchDetailPage` uses `ConfirmDialog`. ESLint now rejects `confirm`/`alert`. The toast context value is memoized. Both have tests.)
+- [x] `LabelDesignEditorPage`: revoke the previous blob URL before replacing it; add `noopener` unless the handle is needed. (`features/labels/usePdfWindow.ts`, with tests, revokes the previous URL when a new PDF replaces it and the last one on unmount. It sets `opener = null` on the new tab instead of passing `noopener`: `noopener` makes `window.open` return null, but printing needs the window handle, and cutting `opener` gives the same protection for both view and print.)
+- [x] Plan the react-router v7 and zustand v5 upgrades. (react-router v7 is done, in Phase 10. zustand is upgraded to v5 (5.0.15) here: `tokenStore` uses only `create`, `persist` and `subscribe`, which v5 keeps unchanged, and the auth and token store tests pass.)
 
 ---
 

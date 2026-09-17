@@ -3,6 +3,8 @@ import type { components } from '../../api/generated'
 import { APIError } from '../../api/error'
 import { SortableHeader } from '../../components/ui/SortableHeader'
 import { Skeleton } from '../../components/ui/Skeleton'
+import { useConfirm } from '../../components/feedback/ConfirmDialog'
+import { useToast } from '../../components/feedback/Toast'
 import {
   useFermentables,
   useCreateFermentable,
@@ -50,6 +52,8 @@ function num(v: string): number | undefined {
 }
 
 export function LibraryFermentablesPage() {
+  const confirm = useConfirm()
+  const { toast } = useToast()
   const [search, setSearch] = React.useState('')
   const [typeFilter, setTypeFilter] = React.useState('')
   const [sort, setSort] = React.useState('')
@@ -107,11 +111,11 @@ export function LibraryFermentablesPage() {
   }
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm('Delete this fermentable?')) return
+    if (!(await confirm({ title: 'Delete this fermentable?', confirmLabel: 'Delete', destructive: true }))) return
     try {
       await deleteMut.mutateAsync(id)
     } catch (e) {
-      alert(e instanceof APIError ? e.message : 'Delete failed')
+      toast({ title: 'Delete failed', description: e instanceof APIError ? e.message : undefined, variant: 'destructive' })
     }
   }
 

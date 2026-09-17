@@ -3,6 +3,8 @@ import type { UseMutationResult, UseQueryResult } from '@tanstack/react-query'
 import { APIError } from '../../api/error'
 import { SortableHeader } from '../../components/ui/SortableHeader'
 import { Skeleton } from '../../components/ui/Skeleton'
+import { useConfirm } from '../../components/feedback/ConfirmDialog'
+import { useToast } from '../../components/feedback/Toast'
 
 export interface FieldDef {
   key: string
@@ -43,6 +45,8 @@ export function LibraryCRUD<T extends Record<string, unknown>>({
   idField = 'id',
   extraCols = [],
 }: Props<T>) {
+  const confirm = useConfirm()
+  const { toast } = useToast()
   const [sort, setSort] = React.useState('')
   const { data, isLoading, isError, error, refetch } = useList({ sort: sort || undefined })
   const createMut = useCreate()
@@ -72,11 +76,11 @@ export function LibraryCRUD<T extends Record<string, unknown>>({
   }
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm('Delete this item?')) return
+    if (!(await confirm({ title: 'Delete this item?', confirmLabel: 'Delete', destructive: true }))) return
     try {
       await deleteMut.mutateAsync(id)
     } catch (e) {
-      alert(e instanceof APIError ? e.message : 'Delete failed')
+      toast({ title: 'Delete failed', description: e instanceof APIError ? e.message : undefined, variant: 'destructive' })
     }
   }
 
