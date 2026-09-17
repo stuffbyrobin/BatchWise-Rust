@@ -1,15 +1,17 @@
 import { NavLink } from 'react-router-dom'
 import { useAuth } from '../../auth/useAuth'
+import { useCan } from '../../auth/useCan'
+import type { Area } from '../../auth/permissions'
 
-const BASE_NAV = [
-  { to: '/app', label: 'Dashboard', end: true },
-  { to: '/inventory', label: 'Inventory', end: false },
-  { to: '/recipes', label: 'Recipes', end: false },
-  { to: '/batches', label: 'Batches', end: false },
-  { to: '/fermenters', label: 'Fermenters', end: true },
-  { to: '/fermenters/schedule', label: 'Schedule', end: false },
-  { to: '/calendar', label: 'Calendar', end: false },
-  { to: '/yeast-kinetics', label: 'Yeast Kinetics', end: false },
+const BASE_NAV: { to: string; label: string; end: boolean; area: Area }[] = [
+  { to: '/app', label: 'Dashboard', end: true, area: 'dashboard' },
+  { to: '/inventory', label: 'Inventory', end: false, area: 'production' },
+  { to: '/recipes', label: 'Recipes', end: false, area: 'production' },
+  { to: '/batches', label: 'Batches', end: false, area: 'production' },
+  { to: '/fermenters', label: 'Fermenters', end: true, area: 'production' },
+  { to: '/fermenters/schedule', label: 'Schedule', end: false, area: 'production' },
+  { to: '/calendar', label: 'Calendar', end: false, area: 'production' },
+  { to: '/yeast-kinetics', label: 'Yeast Kinetics', end: false, area: 'production' },
 ]
 
 const LIBRARY_NAV = [
@@ -26,22 +28,22 @@ const WATER_NAV = [
   { to: '/water/adjustments', label: 'Adjustments' },
 ]
 
-const COMMERCIAL_NAV: { flag: string; to: string; label: string }[] = [
-  { flag: 'yeast_banking', to: '/yeast-bank', label: 'Yeast Bank' },
-  { flag: 'tracking', to: '/container-assets', label: 'Container Assets' },
-  { flag: 'reporting', to: '/cost-rates', label: 'Cost Rates' },
-  { flag: 'reporting', to: '/batch-costs', label: 'Batch Costs' },
-  { flag: 'reporting', to: '/cost-reports', label: 'Cost Reports' },
-  { flag: 'duty', to: '/duty', label: 'Beer Duty' },
-  { flag: 'labels', to: '/labels', label: 'Label Records' },
-  { flag: 'label_design', to: '/label-design', label: 'Label Design' },
-  { flag: 'packaging', to: '/packaging-runs', label: 'Packaging Runs' },
-  { flag: 'packaging', to: '/distribution-movements', label: 'Distribution' },
-  { flag: 'traceability', to: '/traceability', label: 'Traceability' },
-  { flag: 'procurement', to: '/suppliers', label: 'Suppliers' },
-  { flag: 'procurement', to: '/purchase-orders', label: 'Purchase Orders' },
-  { flag: 'equipment_maintenance', to: '/equipment', label: 'Equipment' },
-  { flag: 'equipment_maintenance', to: '/maintenance-due', label: 'Maintenance Due' },
+const COMMERCIAL_NAV: { flag: string; to: string; label: string; area: Area }[] = [
+  { flag: 'yeast_banking', to: '/yeast-bank', label: 'Yeast Bank', area: 'production' },
+  { flag: 'tracking', to: '/container-assets', label: 'Container Assets', area: 'distribution' },
+  { flag: 'reporting', to: '/cost-rates', label: 'Cost Rates', area: 'costs' },
+  { flag: 'reporting', to: '/batch-costs', label: 'Batch Costs', area: 'costs' },
+  { flag: 'reporting', to: '/cost-reports', label: 'Cost Reports', area: 'costs' },
+  { flag: 'duty', to: '/duty', label: 'Beer Duty', area: 'duty' },
+  { flag: 'labels', to: '/labels', label: 'Label Records', area: 'production' },
+  { flag: 'label_design', to: '/label-design', label: 'Label Design', area: 'production' },
+  { flag: 'packaging', to: '/packaging-runs', label: 'Packaging Runs', area: 'production' },
+  { flag: 'packaging', to: '/distribution-movements', label: 'Distribution', area: 'distribution' },
+  { flag: 'traceability', to: '/traceability', label: 'Traceability', area: 'production' },
+  { flag: 'procurement', to: '/suppliers', label: 'Suppliers', area: 'production' },
+  { flag: 'procurement', to: '/purchase-orders', label: 'Purchase Orders', area: 'production' },
+  { flag: 'equipment_maintenance', to: '/equipment', label: 'Equipment', area: 'production' },
+  { flag: 'equipment_maintenance', to: '/maintenance-due', label: 'Maintenance Due', area: 'production' },
 ]
 
 /**
@@ -49,7 +51,10 @@ const COMMERCIAL_NAV: { flag: string; to: string; label: string }[] = [
  */
 export function Sidebar() {
   const { user } = useAuth()
+  const can = useCan()
   const flags = user?.feature_flags ?? {}
+  // Only show what the user's role may open.
+  const commercial = COMMERCIAL_NAV.filter((item) => flags[item.flag] === true && can(item.area))
 
   const linkClass = ({ isActive }: { isActive: boolean }) =>
     `block px-3 py-1.5 rounded text-sm transition-colors ${
@@ -59,7 +64,7 @@ export function Sidebar() {
     }`
 
   const hasWater = flags['water'] === true
-  const hasCommercial = COMMERCIAL_NAV.some((item) => flags[item.flag] === true)
+  const hasCommercial = commercial.length > 0
 
   return (
     <nav
@@ -70,7 +75,7 @@ export function Sidebar() {
         Batchwise
       </div>
 
-      {BASE_NAV.map((item) => (
+      {BASE_NAV.filter((item) => can(item.area)).map((item) => (
         <NavLink key={item.to} to={item.to} end={item.end} className={linkClass}>
           {item.label}
         </NavLink>
@@ -103,7 +108,7 @@ export function Sidebar() {
           <div className="px-3 pt-3 pb-1 text-xs font-semibold uppercase tracking-wider text-[var(--color-muted)]">
             Commercial
           </div>
-          {COMMERCIAL_NAV.filter((item) => flags[item.flag] === true).map((item) => (
+          {commercial.map((item) => (
             <NavLink key={item.to} to={item.to} className={linkClass}>
               {item.label}
             </NavLink>
@@ -115,9 +120,16 @@ export function Sidebar() {
       <div className="px-3 pt-3 pb-1 text-xs font-semibold uppercase tracking-wider text-[var(--color-muted)]">
         Settings
       </div>
-      <NavLink to="/compliance-audit" className={linkClass}>
-        Audit Log
-      </NavLink>
+      {can('audit') && (
+        <NavLink to="/compliance-audit" className={linkClass}>
+          Audit Log
+        </NavLink>
+      )}
+      {can('members') && (
+        <NavLink to="/members" className={linkClass}>
+          Members
+        </NavLink>
+      )}
       <NavLink to="/account" className={linkClass}>
         Account
       </NavLink>

@@ -14,7 +14,7 @@ use uuid::Uuid;
 use super::models::{RefreshToken, User};
 
 const USER_COLS: &str = "id, tenant_id, email::text AS email, password_hash, display_name, \
-                         is_owner, role, is_active, created_at, updated_at";
+                         role, is_active, created_at, updated_at";
 
 /// Inserts a new user, returning the created row.
 #[allow(clippy::too_many_arguments)]
@@ -24,20 +24,19 @@ pub async fn create_user<'e, E: PgExecutor<'e>>(
     email: &str,
     password_hash: &str,
     display_name: &str,
-    is_owner: bool,
+    role: &str,
     is_active: bool,
 ) -> Result<User, sqlx::Error> {
     let sql = format!(
-        "INSERT INTO users (tenant_id, email, password_hash, display_name, is_owner, role, is_active) \
-         VALUES ($1, $2::citext, $3, $4, $5, CASE WHEN $5 THEN 'owner' ELSE 'manager' END, $6) \
-         RETURNING {USER_COLS}"
+        "INSERT INTO users (tenant_id, email, password_hash, display_name, role, is_active) \
+         VALUES ($1, $2::citext, $3, $4, $5, $6) RETURNING {USER_COLS}"
     );
     sqlx::query_as::<_, User>(&sql)
         .bind(tenant_id)
         .bind(email)
         .bind(password_hash)
         .bind(display_name)
-        .bind(is_owner)
+        .bind(role)
         .bind(is_active)
         .fetch_one(exec)
         .await

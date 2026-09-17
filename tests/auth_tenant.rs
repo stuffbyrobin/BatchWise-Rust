@@ -131,7 +131,7 @@ async fn register_login_refresh_and_me_flow() {
     let email = format!("owner-{}@example.com", uniq());
     let tenant = format!("Hoppy Brewing {}", uniq());
     let reg = app.register(&email, Some(&tenant)).await;
-    assert_eq!(reg["is_owner"], json!(true));
+    assert_eq!(reg["role"], json!("owner"));
     assert_eq!(reg["token_type"], json!("Bearer"));
     let access = reg["access_token"].as_str().unwrap().to_string();
     let refresh = reg["refresh_token"].as_str().unwrap().to_string();
@@ -266,7 +266,7 @@ async fn tenant_read_and_owner_only_update() {
     let member = app
         .register(&format!("member-{}@example.com", uniq()), None)
         .await;
-    assert_eq!(member["is_owner"], json!(false));
+    assert_eq!(member["role"], json!("manager"));
     let member_token = member["access_token"].as_str().unwrap().to_string();
     let resp = app
         .client

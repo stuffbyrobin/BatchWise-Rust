@@ -30,8 +30,8 @@ use crate::platform::middleware::{rate_limit, RateLimit};
 use crate::state::AppState;
 use crate::{
     allergens, audit, auth, batch, calendar, dashboard, duty, equipment, fermentation, fermenter,
-    inventory, labeldesign, labels, library, openapi, packaging, procurement, recipe, reporting,
-    sales, tenant, traceability, tracking, water, yeastbanking, yeastkinetics,
+    inventory, labeldesign, labels, library, members, openapi, packaging, procurement, recipe,
+    reporting, sales, tenant, traceability, tracking, water, yeastbanking, yeastkinetics,
 };
 
 /// Wall-clock budget for one request; slower requests get 503.
@@ -49,6 +49,7 @@ pub fn build_router(state: AppState) -> Router {
     let api = Router::new()
         .nest("/auth", auth::routes(state.clone()))
         .nest("/tenants", tenant::routes(state.clone()))
+        .nest("/members", members::routes(state.clone()))
         .nest("/inventory", inventory::routes(state.clone()))
         .nest("/library", library::routes(state.clone()))
         .nest(

@@ -22,6 +22,7 @@ pub mod inventory;
 pub mod labeldesign;
 pub mod labels;
 pub mod library;
+pub mod members;
 pub mod openapi;
 pub mod packaging;
 pub mod pkg;

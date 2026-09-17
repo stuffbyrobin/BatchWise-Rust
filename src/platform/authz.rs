@@ -91,6 +91,10 @@ pub enum Area {
     Duty,
     /// The compliance audit log.
     Audit,
+    /// Tenant members. Owners and Managers manage them (Managers only Brewer,
+    /// Sales and Viewer members, checked in the members service); nobody else
+    /// sees the list.
+    Members,
 }
 
 /// How much a role may do in an area. Ordered: `Write` includes `Read`.
@@ -137,6 +141,10 @@ pub fn granted(role: Role, area: Area) -> Access {
             Role::Owner | Role::Manager | Role::Viewer => Read,
             Role::Brewer | Role::Sales => None,
         },
+        Area::Members => match role {
+            Role::Owner | Role::Manager => Write,
+            Role::Brewer | Role::Sales | Role::Viewer => None,
+        },
     }
 }
 
@@ -161,6 +169,7 @@ pub fn requirement(method: &Method, path: &str) -> Option<(Area, Access)> {
         "cost-rates" | "batch-costs" | "cost-reports" => Area::Costs,
         "duty-returns" | "duty-events" => Area::Duty,
         "compliance-audit" => Area::Audit,
+        "members" => Area::Members,
         _ => return None,
     };
     // A calculation that changes nothing is a read.
@@ -195,7 +204,7 @@ mod tests {
     /// Columns: Owner, Manager, Brewer, Sales, Viewer.
     #[test]
     fn grants_match_the_agreed_table() {
-        let table: [(Area, [Access; 5]); 9] = [
+        let table: [(Area, [Access; 5]); 10] = [
             (Area::Account, [W, W, W, W, W]),
             (Area::Tenant, [W, R, R, R, R]),
             (Area::Dashboard, [R, R, R, R, R]),
@@ -205,6 +214,7 @@ mod tests {
             (Area::Costs, [W, W, R, N, R]),
             (Area::Duty, [W, W, N, N, R]),
             (Area::Audit, [R, R, N, N, R]),
+            (Area::Members, [W, W, N, N, N]),
         ];
         for (area, row) in table {
             for (role, expected) in Role::ALL.into_iter().zip(row) {
@@ -245,6 +255,11 @@ mod tests {
                 Method::POST,
                 "/api/v1/distribution-movements/{id}/void",
                 Some((Area::Distribution, W)),
+            ),
+            (
+                Method::PATCH,
+                "/api/v1/members/{id}",
+                Some((Area::Members, W)),
             ),
             (Method::GET, "/api/v1/not-a-route", None),
             (Method::GET, "/healthz", None),

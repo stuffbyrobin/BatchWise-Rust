@@ -191,15 +191,37 @@ components:
         display_name: { type: string, minLength: 1, maxLength: 100 }
         current_password: { type: string }
         new_password: { type: string, minLength: 12, maxLength: 128 }
+    Member:
+      type: object
+      required: [id, email, display_name, role, is_active, created_at]
+      properties:
+        id: { type: string, format: uuid }
+        email: { type: string, format: email }
+        display_name: { type: string }
+        role: { type: string, enum: [owner, manager, brewer, sales, viewer] }
+        is_active: { type: boolean }
+        created_at: { type: string, format: date-time }
+
+    MemberList:
+      type: object
+      required: [items]
+      properties:
+        items: { type: array, items: { $ref: "#/components/schemas/Member" } }
+
+    PatchMemberRequest:
+      type: object
+      properties:
+        role: { type: string, enum: [owner, manager, brewer, sales, viewer] }
+        is_active: { type: boolean, description: Deactivating signs the member out and revokes their refresh tokens. }
+
     AuthResponse:
       type: object
-      required: [user_id, tenant_id, email, display_name, is_owner, role, access_token, refresh_token, token_type, expires_in]
+      required: [user_id, tenant_id, email, display_name, role, access_token, refresh_token, token_type, expires_in]
       properties:
         user_id: { type: string, format: uuid }
         tenant_id: { type: string, format: uuid }
         email: { type: string, format: email }
         display_name: { type: string }
-        is_owner: { type: boolean }
         role: { type: string, enum: [owner, manager, brewer, sales, viewer], description: "What the user may do; see docs/remediation-plan.md, Phase 15." }
         access_token: { type: string }
         refresh_token: { type: string }
@@ -207,13 +229,12 @@ components:
         expires_in: { type: integer, description: "Access token TTL in seconds" }
     MeResponse:
       type: object
-      required: [user_id, tenant_id, email, display_name, is_owner, role, tenant_name, tier, country, feature_flags, created_at]
+      required: [user_id, tenant_id, email, display_name, role, tenant_name, tier, country, feature_flags, created_at]
       properties:
         user_id: { type: string, format: uuid }
         tenant_id: { type: string, format: uuid }
         email: { type: string, format: email }
         display_name: { type: string }
-        is_owner: { type: boolean }
         role: { type: string, enum: [owner, manager, brewer, sales, viewer], description: "What the user may do; see docs/remediation-plan.md, Phase 15." }
         tenant_name: { type: string }
         tier: { type: string, enum: [home, pro, enterprise] }
@@ -2405,6 +2426,35 @@ paths:
         "204": { description: Account deactivated }
         "401": { $ref: "#/components/responses/Unauthorized" }
 
+  /api/v1/members:
+    get:
+      operationId: listMembers
+      summary: List the tenant's members (Owners and Managers)
+      tags: [members]
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/MemberList" } } } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/v1/members/{id}:
+    patch:
+      operationId: patchMember
+      summary: Change a member's role or active flag
+      description: Owners manage every member; Managers only Brewer, Sales and Viewer members, and only to one of those roles. A tenant must keep an active Owner (422 `last_owner`). Changes are audited and apply from the member's next request.
+      tags: [members]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/PatchMemberRequest" } } }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/Member" } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/UnprocessableEntity" }
+
   /api/v1/tenants/current:
     get:
       operationId: getCurrentTenant
@@ -2419,7 +2469,7 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
     patch:
       operationId: updateCurrentTenant
-      summary: Update tenant name, country, or region (owner only)
+      summary: Update tenant name, country, or region (Owner only)
       tags: [tenants]
       requestBody:
         required: true
