@@ -1,6 +1,7 @@
 import React from 'react'
-import { useCalendarEvents, useCreateCalendarEvent, useUpdateCalendarEvent, useDeleteCalendarEvent, useCompleteCalendarEvent } from './hooks/useCalendar'
+import { useCreateCalendarEvent, useUpdateCalendarEvent, useDeleteCalendarEvent, useCompleteCalendarEvent } from './hooks/useCalendar'
 import { APIError } from '../../api/error'
+import { useAllPages } from '../../api/allPages'
 import type { components } from '../../api/generated'
 
 type CalendarEvent = components['schemas']['CalendarEvent']
@@ -47,13 +48,13 @@ export function CalendarPage() {
   const monthStart = new Date(year, month, 1).toISOString()
   const monthEnd = new Date(year, month + 1, 0, 23, 59, 59).toISOString()
 
-  const { data, refetch } = useCalendarEvents({ from: monthStart, to: monthEnd, page_size: 200 })
+  const { data, refetch } = useAllPages<CalendarEvent>(['calendar-events'], '/api/v1/calendar-events', { from: monthStart, to: monthEnd })
   const { mutate: createEvent, isPending: isCreating, isError: isCreateError, error: createError } = useCreateCalendarEvent()
   const { mutate: updateEvent, isPending: isUpdating } = useUpdateCalendarEvent(selectedEvent?.id ?? '')
   const { mutate: deleteEvent, isPending: isDeleting } = useDeleteCalendarEvent(selectedEvent?.id ?? '')
   const { mutate: completeEvent, isPending: isCompleting } = useCompleteCalendarEvent(selectedEvent?.id ?? '')
 
-  const events = React.useMemo(() => data?.items ?? [], [data])
+  const events = React.useMemo(() => data ?? [], [data])
 
   const eventsByDate = React.useMemo(() => {
     const map: Record<string, CalendarEvent[]> = {}
@@ -354,7 +355,7 @@ export function CalendarPage() {
                 <div className="space-y-3">
                   <div className="flex flex-col gap-1">
                     <label className="text-xs text-[var(--color-muted)] uppercase tracking-wide">Title *</label>
-                    <input
+                    <input aria-label="Title"
                       type="text"
                       value={formTitle}
                       onChange={(e) => setFormTitle(e.target.value)}
@@ -363,7 +364,7 @@ export function CalendarPage() {
                   </div>
                   <div className="flex flex-col gap-1">
                     <label className="text-xs text-[var(--color-muted)] uppercase tracking-wide">Type</label>
-                    <select
+                    <select aria-label="Type"
                       value={formEventType}
                       onChange={(e) => setFormEventType(e.target.value as typeof EVENT_TYPE_OPTIONS[number])}
                       className="p-2 rounded border border-[var(--color-border)] bg-[var(--color-bg)] text-[var(--color-fg)]"
@@ -373,7 +374,7 @@ export function CalendarPage() {
                   </div>
                   <div className="flex flex-col gap-1">
                     <label className="text-xs text-[var(--color-muted)] uppercase tracking-wide">Start *</label>
-                    <input
+                    <input aria-label="Start"
                       type="datetime-local"
                       value={formStartTime}
                       onChange={(e) => setFormStartTime(e.target.value)}
@@ -382,7 +383,7 @@ export function CalendarPage() {
                   </div>
                   <div className="flex flex-col gap-1">
                     <label className="text-xs text-[var(--color-muted)] uppercase tracking-wide">End</label>
-                    <input
+                    <input aria-label="End"
                       type="datetime-local"
                       value={formEndTime}
                       onChange={(e) => setFormEndTime(e.target.value)}
@@ -391,7 +392,7 @@ export function CalendarPage() {
                   </div>
                   <div className="flex flex-col gap-1">
                     <label className="text-xs text-[var(--color-muted)] uppercase tracking-wide">Notes</label>
-                    <textarea
+                    <textarea aria-label="Notes"
                       value={formNotes}
                       onChange={(e) => setFormNotes(e.target.value)}
                       rows={2}

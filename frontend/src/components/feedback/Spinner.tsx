@@ -1,3 +1,6 @@
+/**
+ * Inline spinning loading indicator.
+ */
 export function Spinner({ size = 24 }: { size?: number }) {
   return (
     <div

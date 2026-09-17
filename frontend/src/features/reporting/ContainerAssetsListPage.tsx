@@ -55,7 +55,7 @@ export function ContainerAssetsListPage() {
 
       <div className="flex gap-4 items-center">
         <label className="text-[var(--color-muted)] text-sm">Type:</label>
-        <select
+        <select aria-label="Type:"
           value={containerType}
           onChange={(e) => setContainerType(e.target.value)}
           className="p-2 rounded border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-fg)] text-sm"

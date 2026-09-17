@@ -55,32 +55,32 @@ function SupplierRow({ supplier }: { supplier: Supplier }) {
           <form onSubmit={handlePatch} className="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm p-3 border rounded bg-[var(--color-surface)]">
             <div>
               <label className="block text-xs text-[var(--color-muted)] mb-1">Name *</label>
-              <input className={inputCls} value={form.name}
+              <input aria-label="Name" className={inputCls} value={form.name}
                 onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} required />
             </div>
             <div>
               <label className="block text-xs text-[var(--color-muted)] mb-1">Contact</label>
-              <input className={inputCls} value={form.contact_name}
+              <input aria-label="Contact" className={inputCls} value={form.contact_name}
                 onChange={(e) => setForm((f) => ({ ...f, contact_name: e.target.value }))} />
             </div>
             <div>
               <label className="block text-xs text-[var(--color-muted)] mb-1">Email</label>
-              <input className={inputCls} type="email" value={form.email}
+              <input aria-label="Email" className={inputCls} type="email" value={form.email}
                 onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} />
             </div>
             <div>
               <label className="block text-xs text-[var(--color-muted)] mb-1">Phone</label>
-              <input className={inputCls} value={form.phone}
+              <input aria-label="Phone" className={inputCls} value={form.phone}
                 onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} />
             </div>
             <div>
               <label className="block text-xs text-[var(--color-muted)] mb-1">Website</label>
-              <input className={inputCls} value={form.website}
+              <input aria-label="Website" className={inputCls} value={form.website}
                 onChange={(e) => setForm((f) => ({ ...f, website: e.target.value }))} />
             </div>
             <div>
               <label className="block text-xs text-[var(--color-muted)] mb-1">Notes</label>
-              <input className={inputCls} value={form.notes}
+              <input aria-label="Notes" className={inputCls} value={form.notes}
                 onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} />
             </div>
             {err && <div className="col-span-2 md:col-span-3 text-xs text-[var(--color-danger)]">{err}</div>}
@@ -162,32 +162,32 @@ export default function SuppliersPage() {
           <div className="col-span-2 md:col-span-3 font-medium">New Supplier</div>
           <div>
             <label className="block text-xs text-[var(--color-muted)] mb-1">Name *</label>
-            <input className={inputCls} placeholder="Hop Valley Ltd"
+            <input aria-label="Name" className={inputCls} placeholder="Hop Valley Ltd"
               value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} required />
           </div>
           <div>
             <label className="block text-xs text-[var(--color-muted)] mb-1">Contact</label>
-            <input className={inputCls} placeholder="Jane Smith"
+            <input aria-label="Contact" className={inputCls} placeholder="Jane Smith"
               value={form.contact_name} onChange={(e) => setForm((f) => ({ ...f, contact_name: e.target.value }))} />
           </div>
           <div>
             <label className="block text-xs text-[var(--color-muted)] mb-1">Email</label>
-            <input className={inputCls} type="email" placeholder="jane@supplier.com"
+            <input aria-label="Email" className={inputCls} type="email" placeholder="jane@supplier.com"
               value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} />
           </div>
           <div>
             <label className="block text-xs text-[var(--color-muted)] mb-1">Phone</label>
-            <input className={inputCls} placeholder="+44 …"
+            <input aria-label="Phone" className={inputCls} placeholder="+44 …"
               value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} />
           </div>
           <div>
             <label className="block text-xs text-[var(--color-muted)] mb-1">Website</label>
-            <input className={inputCls} placeholder="https://…"
+            <input aria-label="Website" className={inputCls} placeholder="https://…"
               value={form.website} onChange={(e) => setForm((f) => ({ ...f, website: e.target.value }))} />
           </div>
           <div>
             <label className="block text-xs text-[var(--color-muted)] mb-1">Notes</label>
-            <input className={inputCls}
+            <input aria-label="Notes" className={inputCls}
               value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} />
           </div>
           {formErr && <div className="col-span-2 md:col-span-3 text-xs text-[var(--color-danger)]">{formErr}</div>}

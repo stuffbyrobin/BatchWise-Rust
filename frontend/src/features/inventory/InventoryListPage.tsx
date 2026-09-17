@@ -100,7 +100,7 @@ export function InventoryListPage() {
       <div className="flex flex-col md:flex-row gap-4 mb-6">
         <div className="flex flex-col gap-1">
           <label className="text-xs text-[var(--color-muted)] uppercase tracking-wide">Type</label>
-          <select
+          <select aria-label="Type"
             value={typeFilter}
             onChange={(e) => { setTypeFilter(e.target.value); setPage(1) }}
             className="p-2 rounded border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-fg)]"
@@ -114,7 +114,7 @@ export function InventoryListPage() {
         </div>
         <div className="flex flex-col gap-1">
           <label className="text-xs text-[var(--color-muted)] uppercase tracking-wide">Name</label>
-          <input
+          <input aria-label="Name"
             type="text"
             value={nameFilter}
             onChange={(e) => { setNameFilter(e.target.value); setPage(1) }}
@@ -126,7 +126,7 @@ export function InventoryListPage() {
           <label className="text-xs text-[var(--color-muted)] uppercase tracking-wide">
             Expiring within (days)
           </label>
-          <input
+          <input aria-label="Expiring within (days)"
             type="number"
             value={expiringWithinDays}
             onChange={(e) => { setExpiringWithinDays(e.target.value === '' ? '' : Number(e.target.value)); setPage(1) }}

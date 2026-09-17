@@ -90,7 +90,7 @@ export function DutyReturnsPage() {
         <form onSubmit={handleCompile} className="flex flex-wrap items-end gap-3">
           <div>
             <label className="block text-xs text-[var(--color-muted)] mb-1">Period Start</label>
-            <input
+            <input aria-label="Period Start"
               type="date"
               required
               className={inputCls}
@@ -100,7 +100,7 @@ export function DutyReturnsPage() {
           </div>
           <div>
             <label className="block text-xs text-[var(--color-muted)] mb-1">Period End</label>
-            <input
+            <input aria-label="Period End"
               type="date"
               required
               className={inputCls}

@@ -1,6 +1,9 @@
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../auth/useAuth'
 
+/**
+ * Top bar showing tenant name, user email, and logout button. Requires useAuth.
+ */
 export function TopBar() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()

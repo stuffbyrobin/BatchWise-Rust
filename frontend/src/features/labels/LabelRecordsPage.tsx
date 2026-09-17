@@ -118,7 +118,7 @@ function CreateForm({ onCreated }: { onCreated: () => void }) {
       <form onSubmit={handleSubmit} className="flex flex-wrap items-end gap-3">
         <div className="flex-1 min-w-[200px]">
           <label className="block text-xs text-[var(--color-muted)] mb-1">Batch ID (UUID)</label>
-          <input
+          <input aria-label="Batch ID (UUID)"
             type="text"
             required
             className={inputCls}
@@ -129,7 +129,7 @@ function CreateForm({ onCreated }: { onCreated: () => void }) {
         </div>
         <div>
           <label className="block text-xs text-[var(--color-muted)] mb-1">Net Volume (mL)</label>
-          <input
+          <input aria-label="Net Volume (mL)"
             type="number"
             required
             min={1}
@@ -141,7 +141,7 @@ function CreateForm({ onCreated }: { onCreated: () => void }) {
         </div>
         <div>
           <label className="block text-xs text-[var(--color-muted)] mb-1">Serving Volume (mL, optional)</label>
-          <input
+          <input aria-label="Serving Volume (mL, optional)"
             type="number"
             min={1}
             className={inputCls + ' w-40'}
@@ -195,7 +195,7 @@ export function LabelRecordsPage() {
       {/* Filters */}
       <div className="flex items-center gap-3 mb-4">
         <label className="text-xs text-[var(--color-muted)]">Status:</label>
-        <select
+        <select aria-label="Status:"
           className="p-1.5 rounded border text-sm bg-[var(--color-bg)] border-[var(--color-border)]"
           value={statusFilter}
           onChange={(e) => { setStatusFilter(e.target.value); setPage(1) }}

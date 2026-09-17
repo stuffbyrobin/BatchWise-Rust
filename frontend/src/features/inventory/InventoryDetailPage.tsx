@@ -165,7 +165,7 @@ export function InventoryDetailPage() {
       <div className="space-y-4 max-w-2xl mb-8">
         <div className="flex flex-col gap-1">
           <label className="text-xs text-[var(--color-muted)] uppercase tracking-wide">Type</label>
-          <select
+          <select aria-label="Type"
             value={type}
             onChange={(e) => setType(e.target.value as typeof INGREDIENT_TYPES[number])}
             className="p-2 rounded border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-fg)]"
@@ -178,7 +178,7 @@ export function InventoryDetailPage() {
 
         <div className="flex flex-col gap-1">
           <label className="text-xs text-[var(--color-muted)] uppercase tracking-wide">Name</label>
-          <input
+          <input aria-label="Name"
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -188,7 +188,7 @@ export function InventoryDetailPage() {
 
         <div className="flex flex-col gap-1">
           <label className="text-xs text-[var(--color-muted)] uppercase tracking-wide">Lot Number</label>
-          <input
+          <input aria-label="Lot Number"
             type="text"
             value={lotNumber}
             onChange={(e) => setLotNumber(e.target.value)}
@@ -199,7 +199,7 @@ export function InventoryDetailPage() {
         <div className="grid grid-cols-2 gap-4">
           <div className="flex flex-col gap-1">
             <label className="text-xs text-[var(--color-muted)] uppercase tracking-wide">Amount</label>
-            <input
+            <input aria-label="Amount"
               type="number"
               value={amount}
               onChange={(e) => setAmount(e.target.value === '' ? '' : Number(e.target.value))}
@@ -210,7 +210,7 @@ export function InventoryDetailPage() {
           </div>
           <div className="flex flex-col gap-1">
             <label className="text-xs text-[var(--color-muted)] uppercase tracking-wide">Unit</label>
-            <select
+            <select aria-label="Unit"
               value={unit}
               onChange={(e) => setUnit(e.target.value as typeof UNITS[number])}
               className="p-2 rounded border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-fg)]"
@@ -225,7 +225,7 @@ export function InventoryDetailPage() {
         <div className="grid grid-cols-2 gap-4">
           <div className="flex flex-col gap-1">
             <label className="text-xs text-[var(--color-muted)] uppercase tracking-wide">Best Before Date</label>
-            <input
+            <input aria-label="Best Before Date"
               type="date"
               value={bestBeforeDate}
               onChange={(e) => setBestBeforeDate(e.target.value)}
@@ -234,7 +234,7 @@ export function InventoryDetailPage() {
           </div>
           <div className="flex flex-col gap-1">
             <label className="text-xs text-[var(--color-muted)] uppercase tracking-wide">Cost (pence)</label>
-            <input
+            <input aria-label="Cost (pence)"
               type="number"
               value={costPence}
               onChange={(e) => setCostPence(e.target.value === '' ? '' : Number(e.target.value))}
@@ -246,7 +246,7 @@ export function InventoryDetailPage() {
 
         <div className="flex flex-col gap-1">
           <label className="text-xs text-[var(--color-muted)] uppercase tracking-wide">Supplier</label>
-          <input
+          <input aria-label="Supplier"
             type="text"
             value={supplier}
             onChange={(e) => setSupplier(e.target.value)}
@@ -257,7 +257,7 @@ export function InventoryDetailPage() {
         {type === 'fermentable' && (
           <div className="flex flex-col gap-1">
             <label className="text-xs text-[var(--color-muted)] uppercase tracking-wide">Colour (EBC)</label>
-            <input
+            <input aria-label="Colour (EBC)"
               type="number"
               value={colorEbc}
               onChange={(e) => setColorEbc(e.target.value === '' ? '' : Number(e.target.value))}
@@ -272,7 +272,7 @@ export function InventoryDetailPage() {
         {type === 'hop' && (
           <div className="flex flex-col gap-1">
             <label className="text-xs text-[var(--color-muted)] uppercase tracking-wide">Alpha Acid %</label>
-            <input
+            <input aria-label="Alpha Acid %"
               type="number"
               value={alphaAcidPct}
               onChange={(e) => setAlphaAcidPct(e.target.value === '' ? '' : Number(e.target.value))}
@@ -288,7 +288,7 @@ export function InventoryDetailPage() {
         {type === 'yeast' && (
           <div className="flex flex-col gap-1">
             <label className="text-xs text-[var(--color-muted)] uppercase tracking-wide">Attenuation %</label>
-            <input
+            <input aria-label="Attenuation %"
               type="number"
               value={attenuationPct}
               onChange={(e) => setAttenuationPct(e.target.value === '' ? '' : Number(e.target.value))}
@@ -303,7 +303,7 @@ export function InventoryDetailPage() {
 
         <div className="flex flex-col gap-1">
           <label className="text-xs text-[var(--color-muted)] uppercase tracking-wide">Allergens</label>
-          <input
+          <input aria-label="Allergens"
             type="text"
             value={allergens.join(', ')}
             onChange={(e) => setAllergens(e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
@@ -313,7 +313,7 @@ export function InventoryDetailPage() {
 
         <div className="flex flex-col gap-1">
           <label className="text-xs text-[var(--color-muted)] uppercase tracking-wide">Notes</label>
-          <textarea
+          <textarea aria-label="Notes"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             rows={3}
@@ -344,7 +344,7 @@ export function InventoryDetailPage() {
         <div className="flex items-center gap-4 max-w-md">
           <div className="flex-1 flex flex-col gap-1">
             <label className="text-xs text-[var(--color-muted)] uppercase tracking-wide">Amount</label>
-            <input
+            <input aria-label="Amount"
               type="number"
               value={stockInAmount}
               onChange={(e) => setStockInAmount(e.target.value === '' ? '' : Number(e.target.value))}

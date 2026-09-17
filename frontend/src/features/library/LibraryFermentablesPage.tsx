@@ -175,7 +175,7 @@ export function LibraryFermentablesPage() {
             <div className="col-span-2 grid grid-cols-3 gap-3">
               <div>
                 <label className={labelClass}>Name *</label>
-                <input
+                <input aria-label="Name"
                   type="text"
                   value={form.name ?? ''}
                   onChange={(e) => setField('name', e.target.value)}
@@ -184,7 +184,7 @@ export function LibraryFermentablesPage() {
               </div>
               <div>
                 <label className={labelClass}>Supplier</label>
-                <input
+                <input aria-label="Supplier"
                   type="text"
                   value={form.supplier ?? ''}
                   onChange={(e) => setField('supplier', e.target.value)}
@@ -193,7 +193,7 @@ export function LibraryFermentablesPage() {
               </div>
               <div>
                 <label className={labelClass}>Type</label>
-                <select
+                <select aria-label="Type"
                   value={form.type ?? ''}
                   onChange={(e) => setField('type', e.target.value)}
                   className={inputClass}
@@ -218,7 +218,7 @@ export function LibraryFermentablesPage() {
             </div>
             <div>
               <label className={labelClass}>EBC min</label>
-              <input
+              <input aria-label="EBC min"
                 type="number"
                 step="0.1"
                 value={form.colour_ebc_min ?? ''}
@@ -228,7 +228,7 @@ export function LibraryFermentablesPage() {
             </div>
             <div>
               <label className={labelClass}>EBC max</label>
-              <input
+              <input aria-label="EBC max"
                 type="number"
                 step="0.1"
                 value={form.colour_ebc_max ?? ''}
@@ -238,7 +238,7 @@ export function LibraryFermentablesPage() {
             </div>
             <div>
               <label className={labelClass}>Extract (L°/kg)</label>
-              <input
+              <input aria-label="Extract (L°/kg)"
                 type="number"
                 step="0.1"
                 value={form.extract_litres_per_kg ?? ''}
@@ -248,7 +248,7 @@ export function LibraryFermentablesPage() {
             </div>
             <div>
               <label className={labelClass}>Moisture % max</label>
-              <input
+              <input aria-label="Moisture % max"
                 type="number"
                 step="0.1"
                 value={form.moisture_pct_max ?? ''}
@@ -258,7 +258,7 @@ export function LibraryFermentablesPage() {
             </div>
             <div>
               <label className={labelClass}>TN% min</label>
-              <input
+              <input aria-label="TN% min"
                 type="number"
                 step="0.001"
                 value={form.tn_min ?? ''}
@@ -268,7 +268,7 @@ export function LibraryFermentablesPage() {
             </div>
             <div>
               <label className={labelClass}>TN% max</label>
-              <input
+              <input aria-label="TN% max"
                 type="number"
                 step="0.001"
                 value={form.tn_max ?? ''}
@@ -278,7 +278,7 @@ export function LibraryFermentablesPage() {
             </div>
             <div>
               <label className={labelClass}>SNR min</label>
-              <input
+              <input aria-label="SNR min"
                 type="number"
                 step="0.1"
                 value={form.snr_min ?? ''}
@@ -288,7 +288,7 @@ export function LibraryFermentablesPage() {
             </div>
             <div>
               <label className={labelClass}>SNR max</label>
-              <input
+              <input aria-label="SNR max"
                 type="number"
                 step="0.1"
                 value={form.snr_max ?? ''}
@@ -298,7 +298,7 @@ export function LibraryFermentablesPage() {
             </div>
             <div className="col-span-2">
               <label className={labelClass}>Flavour attributes</label>
-              <input
+              <input aria-label="Flavour attributes"
                 type="text"
                 value={form.attributes ?? ''}
                 onChange={(e) => setField('attributes', e.target.value)}
@@ -307,7 +307,7 @@ export function LibraryFermentablesPage() {
             </div>
             <div className="col-span-2">
               <label className={labelClass}>Notes</label>
-              <textarea
+              <textarea aria-label="Notes"
                 value={form.notes ?? ''}
                 onChange={(e) => setField('notes', e.target.value)}
                 rows={2}

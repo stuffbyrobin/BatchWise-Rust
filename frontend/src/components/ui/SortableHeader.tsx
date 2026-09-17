@@ -3,6 +3,9 @@
 
 export type SortDir = 'asc' | 'desc'
 
+/**
+ * Parses a backend sort string (e.g. "-name") into {col, dir}.
+ */
 export function parseSort(sort: string | undefined): { col: string; dir: SortDir } | null {
   if (!sort) return null
   return sort.startsWith('-') ? { col: sort.slice(1), dir: 'desc' } : { col: sort, dir: 'asc' }
@@ -18,6 +21,9 @@ export function nextSort(current: string | undefined, col: string): string {
   return col
 }
 
+/**
+ * Clickable table header that sorts by column. onSort is called with the next sort spec.
+ */
 export function SortableHeader({
   column,
   label,

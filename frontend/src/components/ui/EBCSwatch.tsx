@@ -1,5 +1,8 @@
 import { formatEbc } from '../../utils/ebc'
 
+/**
+ * Color swatch for a beer's EBC value.
+ */
 export function EBCSwatch({ ebc }: { ebc: number }) {
   const step = Math.min(10, Math.max(1, Math.round((ebc / 80) * 9) + 1))
   return (

@@ -84,7 +84,7 @@ export default function RecipesListPage() {
         <div className="flex gap-4 items-center">
           <div>
             <label className="block text-sm font-medium text-[var(--color-fg)] mb-1">Name</label>
-            <input
+            <input aria-label="Name"
               type="text"
               value={nameFilter}
               onChange={handleNameChange}
@@ -94,7 +94,7 @@ export default function RecipesListPage() {
           </div>
           <div>
             <label className="block text-sm font-medium text-[var(--color-fg)] mb-1">Type</label>
-            <select
+            <select aria-label="Type"
               value={typeFilter}
               onChange={handleTypeChange}
               className="border border-[var(--color-border)] rounded px-3 py-2 w-48 bg-[var(--color-surface)] text-[var(--color-fg)]"

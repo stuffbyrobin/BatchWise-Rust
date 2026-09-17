@@ -80,10 +80,15 @@ export function RecipeWaterChemistry({
 
   const updateMut = useUpdateWaterAdjustment(existingId || '')
 
+  const hydratedAdjustmentId = React.useRef<string | null>(null)
+
   React.useEffect(() => {
     if (!recipeId) return
     if (adjustmentsData?.items && adjustmentsData.items.length > 0) {
       const adj = adjustmentsData.items[0]
+      // Refetches (e.g. after saving) must not overwrite in-progress edits.
+      if (adj.id != null && hydratedAdjustmentId.current === adj.id) return
+      hydratedAdjustmentId.current = adj.id ?? null
       setName(adj.name || 'Recipe water')
       setSourceMode('profile')
       setProfileId(adj.source_profile_id || '')
@@ -221,7 +226,7 @@ export function RecipeWaterChemistry({
 
       <div className={sectionCls} style={{ maxWidth: 300 }}>
         <label className={labelCls}>Adjustment name</label>
-        <input
+        <input aria-label="Adjustment name"
           type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
@@ -294,7 +299,7 @@ export function RecipeWaterChemistry({
         <label className={labelCls}>
           Strike / total volume (litres) <span className="text-[var(--color-danger)]">*</span>
         </label>
-        <input
+        <input aria-label="Strike / total volume (litres)"
           type="number"
           min="0"
           step="0.5"

@@ -1,7 +1,8 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
 import { useFermenters } from './hooks/useFermenters'
-import { useBatchesList, STATUS_COLORS, STATUS_LABELS, type BatchStatus } from '../batches/hooks/useBatches'
+import { STATUS_COLORS, STATUS_LABELS, type BatchStatus } from '../batches/hooks/useBatches'
+import { useAllPages } from '../../api/allPages'
 import type { components } from '../../api/generated'
 
 type Batch = components['schemas']['Batch']
@@ -34,10 +35,10 @@ interface Bar {
 
 export default function FermenterSchedulePage() {
   const { data: fermData, isLoading: fLoading } = useFermenters({ sort: 'name', page_size: 100 })
-  const { data: batchData, isLoading: bLoading } = useBatchesList({ page_size: 200, sort: '-brew_date' })
+  const { data: batchData, isLoading: bLoading } = useAllPages<Batch>(['batches'], '/api/v1/batches', { sort: '-brew_date' })
 
   const fermenters = React.useMemo(() => fermData?.items ?? [], [fermData])
-  const batches = React.useMemo(() => batchData?.items ?? [], [batchData])
+  const batches = React.useMemo(() => batchData ?? [], [batchData])
 
   // Batches assigned to a fermenter, with a usable start date → timeline bars.
   const { barsByFermenter, unscheduled, rangeStart, totalDays, months } = React.useMemo(() => {

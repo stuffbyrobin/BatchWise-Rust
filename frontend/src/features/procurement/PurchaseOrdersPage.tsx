@@ -4,11 +4,13 @@ import {
   usePurchaseOrders, useCreatePO, usePatchPO, useDeletePO,
   useAddLine, useDeleteLine, useReceivePO,
 } from './hooks/useProcurement'
-import { useSuppliers } from './hooks/useProcurement'
 import { SortableHeader } from '../../components/ui/SortableHeader'
+import { useAllPages } from '../../api/allPages'
 import type { components } from '../../api/generated'
 import { fmtDate } from '../../utils/format'
 import { inputCls } from '../../components/ui/styles'
+
+type Supplier = components['schemas']['Supplier']
 
 type PurchaseOrder = components['schemas']['PurchaseOrder']
 type PurchaseOrderLine = components['schemas']['PurchaseOrderLine']
@@ -341,7 +343,7 @@ function PORow({ po }: { po: PurchaseOrder }) {
 }
 
 export default function PurchaseOrdersPage() {
-  const { data: suppliersData } = useSuppliers({ page_size: 200 })
+  const { data: suppliersData } = useAllPages<Supplier>(['suppliers'], '/api/v1/suppliers')
   const [statusFilter, setStatusFilter] = React.useState('')
   const [sort, setSort] = React.useState('')
   const { data, isLoading, error } = usePurchaseOrders({ status: statusFilter || undefined, sort: sort || undefined })
@@ -350,7 +352,7 @@ export default function PurchaseOrdersPage() {
   const [form, setForm] = React.useState({ supplier_id: '', expected_delivery: '', notes: '' })
   const [formErr, setFormErr] = React.useState<string | null>(null)
 
-  const suppliers = suppliersData?.items ?? []
+  const suppliers = suppliersData ?? []
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault()
@@ -386,7 +388,7 @@ export default function PurchaseOrdersPage() {
           <div className="col-span-2 md:col-span-3 font-medium">New Purchase Order</div>
           <div>
             <label className="block text-xs text-[var(--color-muted)] mb-1">Supplier *</label>
-            <select className={inputCls}
+            <select aria-label="Supplier" className={inputCls}
               value={form.supplier_id}
               onChange={(e) => setForm((f) => ({ ...f, supplier_id: e.target.value }))}
               required>
@@ -396,13 +398,13 @@ export default function PurchaseOrdersPage() {
           </div>
           <div>
             <label className="block text-xs text-[var(--color-muted)] mb-1">Expected Delivery</label>
-            <input className={inputCls} type="date"
+            <input aria-label="Expected Delivery" className={inputCls} type="date"
               value={form.expected_delivery}
               onChange={(e) => setForm((f) => ({ ...f, expected_delivery: e.target.value }))} />
           </div>
           <div>
             <label className="block text-xs text-[var(--color-muted)] mb-1">Notes</label>
-            <input className={inputCls}
+            <input aria-label="Notes" className={inputCls}
               value={form.notes}
               onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} />
           </div>

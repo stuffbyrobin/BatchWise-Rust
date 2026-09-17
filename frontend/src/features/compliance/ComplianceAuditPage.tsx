@@ -108,7 +108,7 @@ export default function ComplianceAuditPage() {
       <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg p-4 mb-6 flex flex-wrap gap-3 items-end">
         <div>
           <label className="block text-xs text-[var(--color-muted)] mb-1">Event Type</label>
-          <select
+          <select aria-label="Event Type"
             className={fieldClass}
             value={filters.event_type ?? ''}
             onChange={(e) => setFilters((f) => ({ ...f, event_type: e.target.value || undefined, page: 1 }))}
@@ -122,7 +122,7 @@ export default function ComplianceAuditPage() {
 
         <div>
           <label className="block text-xs text-[var(--color-muted)] mb-1">Entity Type</label>
-          <select
+          <select aria-label="Entity Type"
             className={fieldClass}
             value={filters.entity_type ?? ''}
             onChange={(e) => setFilters((f) => ({ ...f, entity_type: e.target.value || undefined, page: 1 }))}
@@ -136,7 +136,7 @@ export default function ComplianceAuditPage() {
 
         <div>
           <label className="block text-xs text-[var(--color-muted)] mb-1">From</label>
-          <input
+          <input aria-label="From"
             type="datetime-local"
             className={fieldClass}
             value={fromInput}
@@ -146,7 +146,7 @@ export default function ComplianceAuditPage() {
 
         <div>
           <label className="block text-xs text-[var(--color-muted)] mb-1">To</label>
-          <input
+          <input aria-label="To"
             type="datetime-local"
             className={fieldClass}
             value={toInput}

@@ -19,6 +19,10 @@ const NOT_READY = new Proxy({} as Physics, {
   get: () => () => NaN,
 })
 
+/**
+ * React hook that loads the brewing-physics WASM module once and provides its
+ * calculation methods. Before ready, methods return NaN.
+ */
 export function useBrewingPhysics(): UseBrewingPhysics {
   const [physics, setPhysics] = useState<Physics | null>(null)
   const [error, setError] = useState<Error | null>(null)

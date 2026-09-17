@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useImportRecipe } from './hooks/useRecipes'
 import { APIError } from '../../api/error'
+import { fileTooLarge, MAX_IMPORT_BYTES } from '../../utils/files'
 
 type ImportFormat = 'beerxml' | 'brewfather'
 
@@ -80,6 +81,11 @@ export default function RecipeImportPage() {
     setRecipeList(null)
 
     if (!file) return
+    const tooLarge = fileTooLarge(file, MAX_IMPORT_BYTES)
+    if (tooLarge) {
+      setErrorMsg(tooLarge)
+      return
+    }
     const reader = new FileReader()
     reader.onload = (ev) => {
       const text = ev.target?.result as string

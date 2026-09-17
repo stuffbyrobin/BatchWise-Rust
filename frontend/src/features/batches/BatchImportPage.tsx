@@ -4,6 +4,7 @@ import { useImportRecipe } from '../recipes/hooks/useRecipes'
 import { useCreateBatch } from './hooks/useBatches'
 import { APIError } from '../../api/error'
 import type { components } from '../../api/generated'
+import { fileTooLarge, MAX_IMPORT_BYTES } from '../../utils/files'
 
 type ItemStatus = 'pending' | 'importing' | 'done' | 'error'
 
@@ -132,6 +133,11 @@ export function BatchImportPage() {
     setStatuses({})
     setStatusErrors({})
     setSearch('')
+    const tooLarge = fileTooLarge(file, MAX_IMPORT_BYTES)
+    if (tooLarge) {
+      setFileError(tooLarge)
+      return
+    }
     const reader = new FileReader()
     reader.onload = (ev) => {
       const result = parseBrewfatherFile(ev.target?.result as string)
@@ -278,7 +284,7 @@ export function BatchImportPage() {
               <label className="text-xs text-[var(--color-muted)] uppercase tracking-wide">
                 Batch Number <span className="text-[var(--color-danger)]">*</span>
               </label>
-              <input
+              <input aria-label="Batch Number"
                 type="text"
                 value={batchNumber}
                 onChange={(e) => setBatchNumber(e.target.value)}
@@ -291,7 +297,7 @@ export function BatchImportPage() {
               <label className="text-xs text-[var(--color-muted)] uppercase tracking-wide">
                 Batch Name <span className="text-[var(--color-danger)]">*</span>
               </label>
-              <input
+              <input aria-label="Batch Name"
                 type="text"
                 value={batchName}
                 onChange={(e) => setBatchName(e.target.value)}
@@ -303,7 +309,7 @@ export function BatchImportPage() {
 
           <div className="flex flex-col gap-1">
             <label className="text-xs text-[var(--color-muted)] uppercase tracking-wide">Brew Date</label>
-            <input
+            <input aria-label="Brew Date"
               type="date"
               value={brewDate}
               onChange={(e) => setBrewDate(e.target.value)}

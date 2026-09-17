@@ -14,6 +14,9 @@ interface ToastContextValue {
 
 const ToastContext = React.createContext<ToastContextValue | null>(null)
 
+/**
+ * Provider for toast notifications. Must wrap the app tree where toasts are used.
+ */
 export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = React.useState<ToastItem[]>([])
 
@@ -55,6 +58,9 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   )
 }
 
+/**
+ * Hook to show toasts. Must be used within a ToastProvider.
+ */
 export function useToast(): ToastContextValue {
   const ctx = React.useContext(ToastContext)
   if (!ctx) throw new Error('useToast must be used within ToastProvider')

@@ -151,7 +151,7 @@ export function BatchCreatePage() {
 
         <div className="flex flex-col gap-1">
           <label className="text-xs text-[var(--color-muted)] uppercase tracking-wide">Notes</label>
-          <textarea
+          <textarea aria-label="Notes"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             rows={3}

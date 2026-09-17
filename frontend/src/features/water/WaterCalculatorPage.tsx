@@ -198,7 +198,7 @@ export function WaterCalculatorPage() {
         <label className={labelCls}>
           Strike / total volume (litres) <span className="text-[var(--color-danger)]">*</span>
         </label>
-        <input
+        <input aria-label="Strike / total volume (litres)"
           type="number"
           min="0"
           step="0.5"

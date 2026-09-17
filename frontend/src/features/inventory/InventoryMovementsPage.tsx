@@ -70,7 +70,7 @@ export function InventoryMovementsPage() {
       <div className="flex flex-col md:flex-row gap-4 mb-6">
         <div className="flex flex-col gap-1">
           <label className="text-xs text-[var(--color-muted)] uppercase tracking-wide">Ingredient ID</label>
-          <input
+          <input aria-label="Ingredient ID"
             type="text"
             value={ingredientId}
             onChange={(e) => { setIngredientId(e.target.value); setPage(1) }}
@@ -80,7 +80,7 @@ export function InventoryMovementsPage() {
         </div>
         <div className="flex flex-col gap-1">
           <label className="text-xs text-[var(--color-muted)] uppercase tracking-wide">Reference Type</label>
-          <select
+          <select aria-label="Reference Type"
             value={referenceType}
             onChange={(e) => { setReferenceType(e.target.value); setPage(1) }}
             className="p-2 rounded border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-fg)]"

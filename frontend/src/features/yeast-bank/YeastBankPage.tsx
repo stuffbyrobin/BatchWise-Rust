@@ -86,22 +86,22 @@ function PropagationsPanel({ entry }: { entry: YeastBankEntry }) {
         <form onSubmit={handleCreate} className="flex flex-wrap gap-2 items-end text-xs mt-1">
           <div>
             <label className="block text-[var(--color-muted)] mb-0.5">Started</label>
-            <input className="border rounded px-2 py-1 text-xs" type="date"
+            <input aria-label="Started" className="border rounded px-2 py-1 text-xs" type="date"
               value={form.started_at} onChange={(e) => setForm((f) => ({ ...f, started_at: e.target.value }))} />
           </div>
           <div>
             <label className="block text-[var(--color-muted)] mb-0.5">Completed</label>
-            <input className="border rounded px-2 py-1 text-xs" type="date"
+            <input aria-label="Completed" className="border rounded px-2 py-1 text-xs" type="date"
               value={form.completed_at} onChange={(e) => setForm((f) => ({ ...f, completed_at: e.target.value }))} />
           </div>
           <div>
             <label className="block text-[var(--color-muted)] mb-0.5">Volume (mL)</label>
-            <input className="border rounded px-2 py-1 w-20 text-xs" type="number" min={1} placeholder="1000"
+            <input aria-label="Volume (mL)" className="border rounded px-2 py-1 w-20 text-xs" type="number" min={1} placeholder="1000"
               value={form.volume_ml} onChange={(e) => setForm((f) => ({ ...f, volume_ml: e.target.value }))} />
           </div>
           <div>
             <label className="block text-[var(--color-muted)] mb-0.5">Notes</label>
-            <input className="border rounded px-2 py-1 text-xs" placeholder="Optional"
+            <input aria-label="Notes" className="border rounded px-2 py-1 text-xs" placeholder="Optional"
               value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} />
           </div>
           <button type="submit"
@@ -189,17 +189,17 @@ function HarvestForm({ entry, onDone }: { entry: YeastBankEntry; onDone: () => v
       <span className="w-full font-medium text-sm">Harvest (Gen {(entry.generation ?? 1) + 1})</span>
       <div>
         <label className="block text-[var(--color-muted)] mb-0.5">Viability %</label>
-        <input className="border rounded px-2 py-1 w-16 text-xs" type="number" min={0} max={100} placeholder="95"
+        <input aria-label="Viability %" className="border rounded px-2 py-1 w-16 text-xs" type="number" min={0} max={100} placeholder="95"
           value={form.viability_percent} onChange={(e) => setForm((f) => ({ ...f, viability_percent: e.target.value }))} />
       </div>
       <div>
         <label className="block text-[var(--color-muted)] mb-0.5">Quantity (mL)</label>
-        <input className="border rounded px-2 py-1 w-20 text-xs" type="number" min={0} placeholder="500"
+        <input aria-label="Quantity (mL)" className="border rounded px-2 py-1 w-20 text-xs" type="number" min={0} placeholder="500"
           value={form.quantity_ml} onChange={(e) => setForm((f) => ({ ...f, quantity_ml: e.target.value }))} />
       </div>
       <div>
         <label className="block text-[var(--color-muted)] mb-0.5">Notes</label>
-        <input className="border rounded px-2 py-1 text-xs" placeholder="Optional"
+        <input aria-label="Notes" className="border rounded px-2 py-1 text-xs" placeholder="Optional"
           value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} />
       </div>
       <button type="submit"
@@ -368,42 +368,42 @@ export default function YeastBankPage() {
           <div className="col-span-2 md:col-span-3 font-medium">New Yeast Bank Entry</div>
           <div className="col-span-2 md:col-span-1">
             <label className="block text-xs text-[var(--color-muted)] mb-1">Name *</label>
-            <input className={inputCls} placeholder="WY1056 Batch A"
+            <input aria-label="Name" className={inputCls} placeholder="WY1056 Batch A"
               value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} required />
           </div>
           <div>
             <label className="block text-xs text-[var(--color-muted)] mb-1">Generation</label>
-            <input className={inputCls} type="number" min={1} placeholder="1"
+            <input aria-label="Generation" className={inputCls} type="number" min={1} placeholder="1"
               value={form.generation} onChange={(e) => setForm((f) => ({ ...f, generation: e.target.value }))} />
           </div>
           <div>
             <label className="block text-xs text-[var(--color-muted)] mb-1">Last Harvested</label>
-            <input className={inputCls} type="date"
+            <input aria-label="Last Harvested" className={inputCls} type="date"
               value={form.harvested_at} onChange={(e) => setForm((f) => ({ ...f, harvested_at: e.target.value }))} />
           </div>
           <div>
             <label className="block text-xs text-[var(--color-muted)] mb-1">Viability %</label>
-            <input className={inputCls} type="number" min={0} max={100} placeholder="95"
+            <input aria-label="Viability %" className={inputCls} type="number" min={0} max={100} placeholder="95"
               value={form.viability_percent} onChange={(e) => setForm((f) => ({ ...f, viability_percent: e.target.value }))} />
           </div>
           <div>
             <label className="block text-xs text-[var(--color-muted)] mb-1">Quantity (mL)</label>
-            <input className={inputCls} type="number" min={0} placeholder="500"
+            <input aria-label="Quantity (mL)" className={inputCls} type="number" min={0} placeholder="500"
               value={form.quantity_ml} onChange={(e) => setForm((f) => ({ ...f, quantity_ml: e.target.value }))} />
           </div>
           <div>
             <label className="block text-xs text-[var(--color-muted)] mb-1">Storage Temp (&deg;C)</label>
-            <input className={inputCls} type="number" placeholder="2"
+            <input aria-label="Storage Temp (&amp;deg;C)" className={inputCls} type="number" placeholder="2"
               value={form.storage_temp_c} onChange={(e) => setForm((f) => ({ ...f, storage_temp_c: e.target.value }))} />
           </div>
           <div>
             <label className="block text-xs text-[var(--color-muted)] mb-1">Location</label>
-            <input className={inputCls} placeholder="Fridge 2, shelf A"
+            <input aria-label="Location" className={inputCls} placeholder="Fridge 2, shelf A"
               value={form.location} onChange={(e) => setForm((f) => ({ ...f, location: e.target.value }))} />
           </div>
           <div className="col-span-2">
             <label className="block text-xs text-[var(--color-muted)] mb-1">Notes</label>
-            <input className={inputCls}
+            <input aria-label="Notes" className={inputCls}
               value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} />
           </div>
           {formErr && <div className="col-span-2 md:col-span-3 text-xs text-[var(--color-danger)]">{formErr}</div>}

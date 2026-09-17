@@ -44,6 +44,9 @@ const COMMERCIAL_NAV: { flag: string; to: string; label: string }[] = [
   { flag: 'equipment_maintenance', to: '/maintenance-due', label: 'Maintenance Due' },
 ]
 
+/**
+ * Left navigation sidebar with feature-flagged sections. Requires useAuth.
+ */
 export function Sidebar() {
   const { user } = useAuth()
   const flags = user?.feature_flags ?? {}
