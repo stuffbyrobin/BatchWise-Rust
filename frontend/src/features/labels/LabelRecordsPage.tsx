@@ -4,6 +4,7 @@ import { useLabelRecords, useCreateLabelRecord, usePatchLabelRecord, useDeleteLa
 import { AllergenBadges } from '../../components/AllergenBadges'
 import type { components } from '../../api/generated'
 import { fmtDate } from '../../utils/format'
+import { useCanWrite, useIsManager } from '../../auth/useCan'
 
 type LabelRecord = components['schemas']['LabelRecord']
 
@@ -18,6 +19,7 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 function ApproveButton({ rec }: { rec: LabelRecord }) {
+  const canApprove = useIsManager()
   const patch = usePatchLabelRecord(rec.id ?? '')
   const [err, setErr] = React.useState<string | null>(null)
 
@@ -27,26 +29,29 @@ function ApproveButton({ rec }: { rec: LabelRecord }) {
 
   return (
     <div className="flex items-center gap-2">
-      <button
-        className="px-2 py-1 text-xs rounded bg-[var(--color-accent)] text-white hover:opacity-90 disabled:opacity-50"
-        disabled={patch.isPending}
-        onClick={async () => {
-          setErr(null)
-          try {
-            await patch.mutateAsync({ status: 'approved' })
-          } catch (e) {
-            setErr(e instanceof APIError ? e.message : 'Approve failed.')
-          }
-        }}
-      >
-        {patch.isPending ? 'Approving…' : 'Approve'}
-      </button>
+      {canApprove && (
+        <button
+          className="px-2 py-1 text-xs rounded bg-[var(--color-accent)] text-white hover:opacity-90 disabled:opacity-50"
+          disabled={patch.isPending}
+          onClick={async () => {
+            setErr(null)
+            try {
+              await patch.mutateAsync({ status: 'approved' })
+            } catch (e) {
+              setErr(e instanceof APIError ? e.message : 'Approve failed.')
+            }
+          }}
+        >
+          {patch.isPending ? 'Approving…' : 'Approve'}
+        </button>
+      )}
       {err && <span className="text-xs text-[var(--color-danger)]">{err}</span>}
     </div>
   )
 }
 
 function DeleteButton({ id, status }: { id: string; status: string }) {
+  const canWrite = useCanWrite('production')
   const del = useDeleteLabelRecord(id)
   const [err, setErr] = React.useState<string | null>(null)
 
@@ -54,20 +59,22 @@ function DeleteButton({ id, status }: { id: string; status: string }) {
 
   return (
     <div className="flex items-center gap-2">
-      <button
-        className="px-2 py-1 text-xs rounded text-[var(--color-danger)] border border-[var(--color-danger)] hover:opacity-80 disabled:opacity-50"
-        disabled={del.isPending}
-        onClick={async () => {
-          setErr(null)
-          try {
-            await del.mutateAsync()
-          } catch (e) {
-            setErr(e instanceof APIError ? e.message : 'Delete failed.')
-          }
-        }}
-      >
-        {del.isPending ? 'Deleting…' : 'Delete'}
-      </button>
+      {canWrite && (
+        <button
+          className="px-2 py-1 text-xs rounded text-[var(--color-danger)] border border-[var(--color-danger)] hover:opacity-80 disabled:opacity-50"
+          disabled={del.isPending}
+          onClick={async () => {
+            setErr(null)
+            try {
+              await del.mutateAsync()
+            } catch (e) {
+              setErr(e instanceof APIError ? e.message : 'Delete failed.')
+            }
+          }}
+        >
+          {del.isPending ? 'Deleting…' : 'Delete'}
+        </button>
+      )}
       {err && <span className="text-xs text-[var(--color-danger)]">{err}</span>}
     </div>
   )
@@ -164,6 +171,7 @@ function CreateForm({ onCreated }: { onCreated: () => void }) {
 }
 
 export function LabelRecordsPage() {
+  const canWrite = useCanWrite('production')
   const [statusFilter, setStatusFilter] = React.useState<string>('')
   const [page, setPage] = React.useState(1)
   const [showCreate, setShowCreate] = React.useState(false)
@@ -180,15 +188,17 @@ export function LabelRecordsPage() {
         <h1 className="text-xl font-bold" style={{ color: 'var(--color-fg)' }}>
           Label Records
         </h1>
-        <button
-          className="px-4 py-2 rounded text-sm bg-[var(--color-accent)] text-white hover:opacity-90"
-          onClick={() => setShowCreate((v) => !v)}
-        >
-          {showCreate ? 'Cancel' : 'New Label Record'}
-        </button>
+        {canWrite && (
+          <button
+            className="px-4 py-2 rounded text-sm bg-[var(--color-accent)] text-white hover:opacity-90"
+            onClick={() => setShowCreate((v) => !v)}
+          >
+            {showCreate ? 'Cancel' : 'New Label Record'}
+          </button>
+        )}
       </div>
 
-      {showCreate && (
+      {canWrite && showCreate && (
         <CreateForm onCreated={() => setShowCreate(false)} />
       )}
 

@@ -1,5 +1,6 @@
 import React from 'react'
 import { APIError } from '../../api/error'
+import { useCanWrite } from '../../auth/useCan'
 import {
   useWaterProfiles,
   useCreateWaterProfile,
@@ -79,6 +80,7 @@ function IonGrid({
 }
 
 export function WaterProfilesPage() {
+  const canWrite = useCanWrite('production')
   const confirm = useConfirm()
   const { toast } = useToast()
   const { data, isLoading, isError, error, refetch } = useWaterProfiles({ page_size: 100, sort: 'name' })
@@ -152,15 +154,17 @@ export function WaterProfilesPage() {
     <div>
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-xl font-bold text-[var(--color-fg)]">Water Profiles</h1>
-        <button
-          onClick={openCreate}
-          className="px-4 py-2 rounded text-sm bg-[var(--color-accent)] text-white hover:opacity-90"
-        >
-          + New Profile
-        </button>
+        {canWrite && (
+          <button
+            onClick={openCreate}
+            className="px-4 py-2 rounded text-sm bg-[var(--color-accent)] text-white hover:opacity-90"
+          >
+            + New Profile
+          </button>
+        )}
       </div>
 
-      {showForm && (
+      {canWrite && showForm && (
         <div
           className="mb-6 p-4 rounded border"
           style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)' }}
@@ -242,13 +246,13 @@ export function WaterProfilesPage() {
           {tenantProfiles.length > 0 && (
             <ProfileTable
               profiles={tenantProfiles}
-              onEdit={openEdit}
-              onDelete={handleDelete}
+              onEdit={canWrite ? openEdit : undefined}
+              onDelete={canWrite ? handleDelete : undefined}
             />
           )}
           {tenantProfiles.length === 0 && !showForm && (
             <p className="text-sm text-[var(--color-muted)] mb-6">
-              No custom profiles yet. Click + New Profile to create one.
+              No custom profiles yet.{canWrite && ' Click + New Profile to create one.'}
             </p>
           )}
 

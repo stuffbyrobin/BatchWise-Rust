@@ -14,7 +14,8 @@ vi.mock('../hooks/useRecipes', () => ({
 }))
 vi.mock('../hooks/useRecipeAllergens', () => ({ useRecipeAllergens: () => ({ data: undefined }) }))
 vi.mock('../../account/hooks/useTenant', () => ({ useTenant: () => ({ data: { ibu_method: 'tinseth' } }) }))
-vi.mock('../../../auth/useAuth', () => ({ useAuth: () => ({ user: { feature_flags: {} } }) }))
+let authRole = 'owner'
+vi.mock('../../../auth/useAuth', () => ({ useAuth: () => ({ user: { feature_flags: {}, role: authRole } }) }))
 vi.mock('../../../lib/physics/useBrewingPhysics', () => ({
   useBrewingPhysics: () => ({ ready: false, computeRecipeCalcs: vi.fn() }),
 }))
@@ -113,6 +114,7 @@ function save(): Payload {
 }
 
 beforeEach(() => {
+  authRole = 'owner'
   mutate.mockReset()
   recipeQuery.mockReturnValue({ data: makeRecipe(), isLoading: false, isError: false, error: null })
 })
@@ -375,5 +377,17 @@ describe('RecipeEditorPage (characterization)', () => {
     fireEvent.change(numbers(rows(1)[0])[1], { target: { value: '35' } })
     // HopRow computes its IBU on every render; the untouched hop row is memoized.
     expect(ibu).toHaveBeenCalledTimes(1)
+  })
+
+  it('is read-only for a role that cannot change production data', () => {
+    authRole = 'viewer'
+    renderEditor()
+    for (const name of ['Add Fermentable', 'Add Hop', 'Add Yeast', 'Add Mash Step', 'Save']) {
+      expect(screen.queryByRole('button', { name })).toBeNull()
+    }
+    expect(screen.getByLabelText('Name *')).toBeDisabled()
+    expect(screen.getAllByRole('combobox', { name: 'Malt' })[0]).toBeDisabled()
+    expect(screen.getAllByRole('spinbutton', { name: 'Hop amount' })[0]).toBeDisabled()
+    expect(screen.getByRole('spinbutton', { name: 'Infusion volume (L)' })).toBeDisabled()
   })
 })

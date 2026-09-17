@@ -1,4 +1,5 @@
 import React from 'react'
+import { useCanWrite } from '../../auth/useCan'
 import { useCreateCalendarEvent, useUpdateCalendarEvent, useDeleteCalendarEvent, useCompleteCalendarEvent } from './hooks/useCalendar'
 import { APIError } from '../../api/error'
 import { useAllPages } from '../../api/allPages'
@@ -31,6 +32,7 @@ function getFirstDayOfWeek(year: number, month: number) {
 type ModalMode = 'view' | 'create' | 'edit' | null
 
 export function CalendarPage() {
+  const canWrite = useCanWrite('production')
   const today = new Date()
   const [year, setYear] = React.useState(today.getFullYear())
   const [month, setMonth] = React.useState(today.getMonth())
@@ -168,12 +170,14 @@ export function CalendarPage() {
               List
             </button>
           </div>
-          <button
-            onClick={() => openCreate()}
-            className="px-4 py-1.5 rounded text-sm bg-[var(--color-accent)] text-white hover:opacity-90"
-          >
-            + New event
-          </button>
+          {canWrite && (
+            <button
+              onClick={() => openCreate()}
+              className="px-4 py-1.5 rounded text-sm bg-[var(--color-accent)] text-white hover:opacity-90"
+            >
+              + New event
+            </button>
+          )}
         </div>
       </div>
 
@@ -219,7 +223,7 @@ export function CalendarPage() {
                 <div
                   key={day}
                   className="min-h-[80px] border-b border-r border-[var(--color-border)] p-1 cursor-pointer hover:bg-[var(--color-surface)]"
-                  onClick={() => openCreate(dateStr)}
+                  onClick={canWrite ? () => openCreate(dateStr) : undefined}
                 >
                   <div
                     className="text-xs font-medium mb-1 w-6 h-6 flex items-center justify-center rounded-full"
@@ -315,7 +319,7 @@ export function CalendarPage() {
                   <p className="text-sm text-[var(--color-fg)] mt-2 whitespace-pre-wrap">{selectedEvent.notes}</p>
                 )}
                 <div className="flex gap-2 mt-5 justify-end">
-                  {selectedEvent.status === 'pending' && (
+                  {selectedEvent.status === 'pending' && canWrite && (
                     <button
                       onClick={handleComplete}
                       disabled={isCompleting}
@@ -324,12 +328,14 @@ export function CalendarPage() {
                       {isCompleting ? 'Marking…' : 'Mark complete'}
                     </button>
                   )}
-                  <button
-                    onClick={() => openEdit(selectedEvent)}
-                    className="px-3 py-1.5 rounded text-sm border border-[var(--color-border)] text-[var(--color-fg)]"
-                  >
-                    Edit
-                  </button>
+                  {canWrite && (
+                    <button
+                      onClick={() => openEdit(selectedEvent)}
+                      className="px-3 py-1.5 rounded text-sm border border-[var(--color-border)] text-[var(--color-fg)]"
+                    >
+                      Edit
+                    </button>
+                  )}
                   <button
                     onClick={closeModal}
                     className="px-3 py-1.5 rounded text-sm text-[var(--color-muted)]"
@@ -402,7 +408,7 @@ export function CalendarPage() {
                 </div>
 
                 <div className="flex gap-2 mt-5 justify-end">
-                  {modal === 'edit' && (
+                  {modal === 'edit' && canWrite && (
                     <button
                       onClick={handleDelete}
                       disabled={isDeleting}
@@ -414,13 +420,15 @@ export function CalendarPage() {
                   <button onClick={closeModal} className="px-3 py-1.5 rounded text-sm text-[var(--color-muted)]">
                     Cancel
                   </button>
-                  <button
-                    onClick={modal === 'create' ? handleCreate : handleUpdate}
-                    disabled={isCreating || isUpdating || !formTitle || !formStartTime}
-                    className="px-4 py-1.5 rounded text-sm bg-[var(--color-accent)] text-white disabled:opacity-50"
-                  >
-                    {isCreating || isUpdating ? 'Saving…' : 'Save'}
-                  </button>
+                  {canWrite && (
+                    <button
+                      onClick={modal === 'create' ? handleCreate : handleUpdate}
+                      disabled={isCreating || isUpdating || !formTitle || !formStartTime}
+                      className="px-4 py-1.5 rounded text-sm bg-[var(--color-accent)] text-white disabled:opacity-50"
+                    >
+                      {isCreating || isUpdating ? 'Saving…' : 'Save'}
+                    </button>
+                  )}
                 </div>
               </>
             )}

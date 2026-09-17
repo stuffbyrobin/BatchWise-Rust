@@ -4,8 +4,10 @@ import { APIError } from '../../api/error'
 import { useConfirm } from '../../components/feedback/ConfirmDialog'
 import { useToast } from '../../components/feedback/Toast'
 import { useFermenters, useCreateFermenter, useDeleteFermenter } from './hooks/useFermenters'
+import { useCanWrite } from '../../auth/useCan'
 
 export default function FermentersPage() {
+  const canWrite = useCanWrite('production')
   const confirm = useConfirm()
   const { toast } = useToast()
   const { data, isLoading, error } = useFermenters({ sort: 'name', page_size: 100 })
@@ -55,50 +57,52 @@ export default function FermentersPage() {
         </Link>
       </div>
 
-      {/* Create form */}
-      <form
-        onSubmit={handleCreate}
-        className="mb-6 p-4 rounded border border-[var(--color-border)] bg-[var(--color-surface)] flex flex-wrap items-end gap-3"
-      >
-        <div className="flex flex-col gap-1">
-          <label className="text-xs text-[var(--color-muted)] uppercase tracking-wide">Name *</label>
-          <input aria-label="Name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
-            placeholder="FV1"
-            className="px-3 py-1.5 rounded border border-[var(--color-border)] bg-[var(--color-bg)] text-[var(--color-fg)] text-sm w-40"
-          />
-        </div>
-        <div className="flex flex-col gap-1">
-          <label className="text-xs text-[var(--color-muted)] uppercase tracking-wide">Capacity (L)</label>
-          <input aria-label="Capacity (L)"
-            type="number"
-            min="0"
-            step="any"
-            value={capacity}
-            onChange={(e) => setCapacity(e.target.value)}
-            placeholder="1000"
-            className="px-3 py-1.5 rounded border border-[var(--color-border)] bg-[var(--color-bg)] text-[var(--color-fg)] text-sm w-32"
-          />
-        </div>
-        <div className="flex flex-col gap-1 flex-1 min-w-48">
-          <label className="text-xs text-[var(--color-muted)] uppercase tracking-wide">Notes</label>
-          <input aria-label="Notes"
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            className="px-3 py-1.5 rounded border border-[var(--color-border)] bg-[var(--color-bg)] text-[var(--color-fg)] text-sm w-full"
-          />
-        </div>
-        <button
-          type="submit"
-          disabled={createMut.isPending || !name.trim()}
-          className="px-4 py-1.5 rounded text-sm bg-[var(--color-accent)] text-white hover:opacity-90 disabled:opacity-50"
+      {canWrite && <>
+        {/* Create form */}
+        <form
+          onSubmit={handleCreate}
+          className="mb-6 p-4 rounded border border-[var(--color-border)] bg-[var(--color-surface)] flex flex-wrap items-end gap-3"
         >
-          {createMut.isPending ? 'Adding…' : 'Add fermenter'}
-        </button>
-      </form>
-      {formErr && <div className="mb-4 text-sm text-[var(--color-danger)]">{formErr}</div>}
+          <div className="flex flex-col gap-1">
+            <label className="text-xs text-[var(--color-muted)] uppercase tracking-wide">Name *</label>
+            <input aria-label="Name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+              placeholder="FV1"
+              className="px-3 py-1.5 rounded border border-[var(--color-border)] bg-[var(--color-bg)] text-[var(--color-fg)] text-sm w-40"
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-xs text-[var(--color-muted)] uppercase tracking-wide">Capacity (L)</label>
+            <input aria-label="Capacity (L)"
+              type="number"
+              min="0"
+              step="any"
+              value={capacity}
+              onChange={(e) => setCapacity(e.target.value)}
+              placeholder="1000"
+              className="px-3 py-1.5 rounded border border-[var(--color-border)] bg-[var(--color-bg)] text-[var(--color-fg)] text-sm w-32"
+            />
+          </div>
+          <div className="flex flex-col gap-1 flex-1 min-w-48">
+            <label className="text-xs text-[var(--color-muted)] uppercase tracking-wide">Notes</label>
+            <input aria-label="Notes"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              className="px-3 py-1.5 rounded border border-[var(--color-border)] bg-[var(--color-bg)] text-[var(--color-fg)] text-sm w-full"
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={createMut.isPending || !name.trim()}
+            className="px-4 py-1.5 rounded text-sm bg-[var(--color-accent)] text-white hover:opacity-90 disabled:opacity-50"
+          >
+            {createMut.isPending ? 'Adding…' : 'Add fermenter'}
+          </button>
+        </form>
+        {formErr && <div className="mb-4 text-sm text-[var(--color-danger)]">{formErr}</div>}
+      </>}
 
       {/* List */}
       {isLoading && <p className="text-[var(--color-muted)]">Loading…</p>}
@@ -124,12 +128,12 @@ export default function FermentersPage() {
                   <td className="p-3 text-[var(--color-fg)]">{f.capacity_liters ?? '—'}</td>
                   <td className="p-3 text-[var(--color-muted)]">{f.notes ?? ''}</td>
                   <td className="p-3 text-right">
-                    <button
+                    {canWrite && <button
                       onClick={() => handleDelete(f.id, f.name)}
                       className="text-xs px-2 py-1 rounded border border-[var(--color-danger)] text-[var(--color-danger)] hover:bg-[var(--color-danger)] hover:text-white"
                     >
                       Delete
-                    </button>
+                    </button>}
                   </td>
                 </tr>
               ))}

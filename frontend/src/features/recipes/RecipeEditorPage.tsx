@@ -7,6 +7,7 @@ import type { components } from '../../api/generated'
 import { EBCSwatch } from '../../components/ui/EBCSwatch'
 import { useTenant } from '../account/hooks/useTenant'
 import { useAuth } from '../../auth/useAuth'
+import { useCanWrite } from '../../auth/useCan'
 import type { IBUMethod } from '../../utils/ibu'
 import { formatEbc } from '../../utils/ebc'
 import { useRecipeAllergens } from './hooks/useRecipeAllergens'
@@ -41,6 +42,7 @@ export default function RecipeEditorPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const isEditMode = !!id
+  const canWrite = useCanWrite('production')
   const { data: tenant } = useTenant()
   const ibuMethod = (tenant?.ibu_method ?? 'tinseth') as IBUMethod
   const { user } = useAuth()
@@ -337,7 +339,8 @@ export default function RecipeEditorPage() {
 
           <div className="bg-[var(--color-surface)] p-6 rounded shadow mb-4">
             <h2 className="text-lg font-semibold mb-4 text-[var(--color-fg)]">Basic Information</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <fieldset disabled={!canWrite} className="contents">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               <div>
                 <label htmlFor="recipe-name" className="block text-sm font-medium text-[var(--color-fg)] mb-1">Name *</label>
                 <input
@@ -418,46 +421,51 @@ export default function RecipeEditorPage() {
                   className="border border-[var(--color-border)] rounded px-3 py-2 w-full bg-[var(--color-surface)] text-[var(--color-fg)]"
                 />
               </div>
-            </div>
+              </div>
+            </fieldset>
           </div>
 
           {/* Fermentables */}
           <div className="bg-[var(--color-surface)] p-6 rounded shadow mb-4">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-lg font-semibold text-[var(--color-fg)]">Fermentables</h2>
-              <button onClick={addFermentable} className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
-                Add Fermentable
-              </button>
+              {canWrite && (
+                <button onClick={addFermentable} className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+                  Add Fermentable
+                </button>
+              )}
             </div>
             <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-[var(--color-bg)] border-b border-[var(--color-border)]">
-                  <tr>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-[var(--color-muted)] uppercase">Order</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-[var(--color-muted)] uppercase">Name</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-[var(--color-muted)] uppercase">Amount</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-[var(--color-muted)] uppercase">Unit</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-[var(--color-muted)] uppercase">Color EBC</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-[var(--color-muted)] uppercase">Potential (PPG)</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-[var(--color-muted)] uppercase">Type</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-[var(--color-muted)] uppercase">Addition</th>
-                    <th className="px-3 py-2"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {fermentables.rows.map((f) => (
-                    <FermentableRow
-                      key={f.uid}
-                      row={f}
-                      custom={fermentables.customRows.has(f.uid)}
-                      options={malts}
-                      onUpdate={updateFermentable}
-                      onPick={pickMalt}
-                      onRemove={removeFermentable}
-                    />
-                  ))}
-                </tbody>
-              </table>
+              <fieldset disabled={!canWrite} className="contents">
+                <table className="w-full">
+                  <thead className="bg-[var(--color-bg)] border-b border-[var(--color-border)]">
+                    <tr>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-[var(--color-muted)] uppercase">Order</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-[var(--color-muted)] uppercase">Name</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-[var(--color-muted)] uppercase">Amount</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-[var(--color-muted)] uppercase">Unit</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-[var(--color-muted)] uppercase">Color EBC</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-[var(--color-muted)] uppercase">Potential (PPG)</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-[var(--color-muted)] uppercase">Type</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-[var(--color-muted)] uppercase">Addition</th>
+                      <th className="px-3 py-2"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {fermentables.rows.map((f) => (
+                      <FermentableRow
+                        key={f.uid}
+                        row={f}
+                        custom={fermentables.customRows.has(f.uid)}
+                        options={malts}
+                        onUpdate={updateFermentable}
+                        onPick={pickMalt}
+                        onRemove={removeFermentable}
+                      />
+                    ))}
+                  </tbody>
+                </table>
+              </fieldset>
             </div>
           </div>
 
@@ -465,43 +473,47 @@ export default function RecipeEditorPage() {
           <div className="bg-[var(--color-surface)] p-6 rounded shadow mb-4">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-lg font-semibold text-[var(--color-fg)]">Hops</h2>
-              <button onClick={addHop} className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
-                Add Hop
-              </button>
+              {canWrite && (
+                <button onClick={addHop} className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+                  Add Hop
+                </button>
+              )}
             </div>
             <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-[var(--color-bg)] border-b border-[var(--color-border)]">
-                  <tr>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-[var(--color-muted)] uppercase">Order</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-[var(--color-muted)] uppercase">Name</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-[var(--color-muted)] uppercase">Amount</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-[var(--color-muted)] uppercase">Unit</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-[var(--color-muted)] uppercase">Alpha Acid %</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-[var(--color-muted)] uppercase">Boil Time (min)</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-[var(--color-muted)] uppercase">Form</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-[var(--color-muted)] uppercase">Use</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-[var(--color-muted)] uppercase">IBU</th>
-                    <th className="px-3 py-2"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {hops.rows.map((h) => (
-                    <HopRow
-                      key={h.uid}
-                      row={h}
-                      custom={hops.customRows.has(h.uid)}
-                      options={hopOptions}
-                      ibuMethod={ibuMethod}
-                      batchSizeLiters={ibuBatchSize}
-                      og={ibuOg}
-                      onUpdate={updateHop}
-                      onPick={pickHopOption}
-                      onRemove={removeHop}
-                    />
-                  ))}
-                </tbody>
-              </table>
+              <fieldset disabled={!canWrite} className="contents">
+                <table className="w-full">
+                  <thead className="bg-[var(--color-bg)] border-b border-[var(--color-border)]">
+                    <tr>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-[var(--color-muted)] uppercase">Order</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-[var(--color-muted)] uppercase">Name</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-[var(--color-muted)] uppercase">Amount</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-[var(--color-muted)] uppercase">Unit</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-[var(--color-muted)] uppercase">Alpha Acid %</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-[var(--color-muted)] uppercase">Boil Time (min)</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-[var(--color-muted)] uppercase">Form</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-[var(--color-muted)] uppercase">Use</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-[var(--color-muted)] uppercase">IBU</th>
+                      <th className="px-3 py-2"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {hops.rows.map((h) => (
+                      <HopRow
+                        key={h.uid}
+                        row={h}
+                        custom={hops.customRows.has(h.uid)}
+                        options={hopOptions}
+                        ibuMethod={ibuMethod}
+                        batchSizeLiters={ibuBatchSize}
+                        og={ibuOg}
+                        onUpdate={updateHop}
+                        onPick={pickHopOption}
+                        onRemove={removeHop}
+                      />
+                    ))}
+                  </tbody>
+                </table>
+              </fieldset>
             </div>
           </div>
 
@@ -509,11 +521,14 @@ export default function RecipeEditorPage() {
           <div className="bg-[var(--color-surface)] p-6 rounded shadow mb-4">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-lg font-semibold text-[var(--color-fg)]">Yeasts</h2>
-              <button onClick={addYeast} className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
-                Add Yeast
-              </button>
+              {canWrite && (
+                <button onClick={addYeast} className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+                  Add Yeast
+                </button>
+              )}
             </div>
             <div className="overflow-x-auto">
+              <fieldset disabled={!canWrite} className="contents">
               <table className="w-full">
                 <thead className="bg-[var(--color-bg)] border-b border-[var(--color-border)]">
                   <tr>
@@ -538,6 +553,7 @@ export default function RecipeEditorPage() {
                   ))}
                 </tbody>
               </table>
+              </fieldset>
             </div>
           </div>
 
@@ -545,11 +561,14 @@ export default function RecipeEditorPage() {
           <div className="bg-[var(--color-surface)] p-6 rounded shadow mb-4">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-lg font-semibold text-[var(--color-fg)]">Mash Steps</h2>
-              <button onClick={addMashStep} className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
-                Add Mash Step
-              </button>
+              {canWrite && (
+                <button onClick={addMashStep} className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+                  Add Mash Step
+                </button>
+              )}
             </div>
             <div className="overflow-x-auto">
+              <fieldset disabled={!canWrite} className="contents">
               <table className="w-full">
                 <thead className="bg-[var(--color-bg)] border-b border-[var(--color-border)]">
                   <tr>
@@ -567,6 +586,7 @@ export default function RecipeEditorPage() {
                   ))}
                 </tbody>
               </table>
+              </fieldset>
             </div>
           </div>
 
@@ -675,13 +695,15 @@ export default function RecipeEditorPage() {
           )}
 
           <div className="flex gap-4">
-            <button
-              onClick={handleSave}
-              disabled={!name || !batchSizeLiters || isSaving}
-              className="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isSaving ? 'Saving...' : 'Save'}
-            </button>
+            {canWrite && (
+              <button
+                onClick={handleSave}
+                disabled={!name || !batchSizeLiters || isSaving}
+                className="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isSaving ? 'Saving...' : 'Save'}
+              </button>
+            )}
             <button
               onClick={() => navigate('/recipes')}
               className="bg-[var(--color-border)] text-[var(--color-fg)] px-6 py-2 rounded hover:opacity-80"

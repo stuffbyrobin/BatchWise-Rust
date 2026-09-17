@@ -4,6 +4,7 @@ import type { components } from '../../api/generated'
 import { ReasonDialog } from '../../components/feedback/ReasonDialog'
 import { useToast } from '../../components/feedback/Toast'
 import { useVoidDistributionMovement } from './hooks/usePackaging'
+import { useCanWrite } from '../../auth/useCan'
 
 type DistributionMovement = components['schemas']['DistributionMovement']
 
@@ -13,12 +14,17 @@ type DistributionMovement = components['schemas']['DistributionMovement']
  * reason rather than deleted.
  */
 export function MovementVoidCell({ movement }: { movement: DistributionMovement }) {
+  const canWrite = useCanWrite('distribution')
   const [open, setOpen] = useState(false)
   const voidMovement = useVoidDistributionMovement()
   const { toast } = useToast()
 
   if (movement.voided_at) {
     return <span className="text-xs text-[var(--color-muted)]">Voided: {movement.void_reason}</span>
+  }
+
+  if (!canWrite) {
+    return null
   }
 
   return (

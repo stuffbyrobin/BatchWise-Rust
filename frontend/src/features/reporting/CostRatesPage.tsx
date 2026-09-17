@@ -3,10 +3,12 @@ import { APIError } from '../../api/error';
 import { useCostRatesList, useCreateCostRate, usePatchCostRate, useDeleteCostRate, RATE_TYPES } from './hooks/useCostRates';
 import type { components } from '../../api/generated';
 import { fmtPence } from '../../utils/format';
+import { useCanWrite } from '../../auth/useCan';
 
 type CostRate = components['schemas']['CostRate'];
 
 const CostRateRow: React.FC<{ item: CostRate; onEditStart: (id: string) => void; onEditCancel: () => void; editingId: string | null }> = ({ item, onEditStart, onEditCancel, editingId }) => {
+  const canWrite = useCanWrite('costs');
   const [editForm, setEditForm] = useState({
     rate_type: '',
     rate_name: '',
@@ -75,7 +77,7 @@ const CostRateRow: React.FC<{ item: CostRate; onEditStart: (id: string) => void;
         <td className="py-2"><input type="date" value={editForm.effective_to} onChange={(e) => handleChange('effective_to', e.target.value)} className="w-full p-2 rounded border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-fg)] text-sm" /></td>
         <td className="py-2"><input type="text" value={editForm.notes} onChange={(e) => handleChange('notes', e.target.value)} className="w-full p-2 rounded border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-fg)] text-sm" /></td>
         <td className="py-2 space-x-2">
-          <button onClick={handleSave} className="px-4 py-2 rounded text-sm bg-[var(--color-accent)] text-white hover:opacity-90">Save</button>
+          {canWrite && <button onClick={handleSave} className="px-4 py-2 rounded text-sm bg-[var(--color-accent)] text-white hover:opacity-90">Save</button>}
           <button onClick={onEditCancel} className="px-4 py-2 rounded text-sm bg-[var(--color-danger)] text-white hover:opacity-90">Cancel</button>
         </td>
       </tr>
@@ -93,14 +95,15 @@ const CostRateRow: React.FC<{ item: CostRate; onEditStart: (id: string) => void;
       <td className="py-2">{item.effective_to}</td>
       <td className="py-2">{item.notes?.substring(0, 30) || '-'}</td>
       <td className="py-2 space-x-2">
-        <button onClick={handleEdit} className="px-4 py-2 rounded text-sm bg-[var(--color-accent)] text-white hover:opacity-90">Edit</button>
-        <button onClick={handleDelete} className="px-4 py-2 rounded text-sm bg-[var(--color-danger)] text-white hover:opacity-90">Delete</button>
+        {canWrite && <button onClick={handleEdit} className="px-4 py-2 rounded text-sm bg-[var(--color-accent)] text-white hover:opacity-90">Edit</button>}
+        {canWrite && <button onClick={handleDelete} className="px-4 py-2 rounded text-sm bg-[var(--color-danger)] text-white hover:opacity-90">Delete</button>}
       </td>
     </tr>
   );
 };
 
 export const CostRatesPage: React.FC = () => {
+  const canWrite = useCanWrite('costs');
   const [page, setPage] = useState(1);
   const [filterType, setFilterType] = useState('');
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -170,9 +173,9 @@ export const CostRatesPage: React.FC = () => {
     <div className="p-6 space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-[var(--color-fg)]">Cost Rates</h1>
-        <button onClick={() => setShowCreateForm((v) => !v)} className="px-4 py-2 rounded text-sm bg-[var(--color-accent)] text-white hover:opacity-90">
+        {canWrite && <button onClick={() => setShowCreateForm((v) => !v)} className="px-4 py-2 rounded text-sm bg-[var(--color-accent)] text-white hover:opacity-90">
           New rate
-        </button>
+        </button>}
       </div>
 
       <div className="flex items-center space-x-4">
@@ -185,7 +188,7 @@ export const CostRatesPage: React.FC = () => {
         </select>
       </div>
 
-      {showCreateForm && (
+      {canWrite && showCreateForm && (
         <div className="p-4 border border-[var(--color-border)] rounded bg-[var(--color-surface)] space-y-4">
           <h2 className="text-lg font-semibold text-[var(--color-fg)]">Create Cost Rate</h2>
           <div className="grid grid-cols-2 gap-4">

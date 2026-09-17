@@ -8,11 +8,13 @@ import {
 } from './hooks/useInventory'
 import { APIError } from '../../api/error'
 import { useConfirm } from '../../components/feedback/ConfirmDialog'
+import { useCanWrite } from '../../auth/useCan'
 
 const INGREDIENT_TYPES = ['fermentable', 'hop', 'yeast', 'adjunct', 'chemical', 'other'] as const
 const UNITS = ['kg', 'g', 'L', 'mL', 'count'] as const
 
 export function InventoryDetailPage() {
+  const canWrite = useCanWrite('production')
   const confirm = useConfirm()
   const navigate = useNavigate()
   const { id } = useParams<{ id: string }>()
@@ -168,6 +170,7 @@ export function InventoryDetailPage() {
           <select aria-label="Type"
             value={type}
             onChange={(e) => setType(e.target.value as typeof INGREDIENT_TYPES[number])}
+            disabled={!canWrite}
             className="p-2 rounded border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-fg)]"
           >
             {INGREDIENT_TYPES.map((t) => (
@@ -182,6 +185,7 @@ export function InventoryDetailPage() {
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
+            disabled={!canWrite}
             className="p-2 rounded border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-fg)]"
           />
         </div>
@@ -192,6 +196,7 @@ export function InventoryDetailPage() {
             type="text"
             value={lotNumber}
             onChange={(e) => setLotNumber(e.target.value)}
+            disabled={!canWrite}
             className="p-2 rounded border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-fg)]"
           />
         </div>
@@ -205,6 +210,7 @@ export function InventoryDetailPage() {
               onChange={(e) => setAmount(e.target.value === '' ? '' : Number(e.target.value))}
               min="0"
               step="0.001"
+              disabled={!canWrite}
               className="p-2 rounded border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-fg)]"
             />
           </div>
@@ -213,6 +219,7 @@ export function InventoryDetailPage() {
             <select aria-label="Unit"
               value={unit}
               onChange={(e) => setUnit(e.target.value as typeof UNITS[number])}
+              disabled={!canWrite}
               className="p-2 rounded border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-fg)]"
             >
               {UNITS.map((u) => (
@@ -229,6 +236,7 @@ export function InventoryDetailPage() {
               type="date"
               value={bestBeforeDate}
               onChange={(e) => setBestBeforeDate(e.target.value)}
+              disabled={!canWrite}
               className="p-2 rounded border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-fg)]"
             />
           </div>
@@ -239,6 +247,7 @@ export function InventoryDetailPage() {
               value={costPence}
               onChange={(e) => setCostPence(e.target.value === '' ? '' : Number(e.target.value))}
               min="0"
+              disabled={!canWrite}
               className="p-2 rounded border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-fg)]"
             />
           </div>
@@ -250,6 +259,7 @@ export function InventoryDetailPage() {
             type="text"
             value={supplier}
             onChange={(e) => setSupplier(e.target.value)}
+            disabled={!canWrite}
             className="p-2 rounded border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-fg)]"
           />
         </div>
@@ -264,6 +274,7 @@ export function InventoryDetailPage() {
               placeholder="e.g. 5.5"
               min="0"
               step="0.1"
+              disabled={!canWrite}
               className="p-2 rounded border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-fg)]"
             />
           </div>
@@ -317,10 +328,12 @@ export function InventoryDetailPage() {
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             rows={3}
+            disabled={!canWrite}
             className="p-2 rounded border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-fg)]"
           />
         </div>
 
+        {canWrite && (
         <div className="flex gap-2">
           <button
             onClick={handleSave}
@@ -337,8 +350,10 @@ export function InventoryDetailPage() {
             {isDeleting ? 'Deleting...' : 'Delete lot'}
           </button>
         </div>
+        )}
       </div>
 
+      {canWrite && (
       <div className="border-t pt-6 mt-8" style={{ borderColor: 'var(--color-border)' }}>
         <h2 className="text-lg font-semibold text-[var(--color-fg)] mb-4">Stock In</h2>
         <div className="flex items-center gap-4 max-w-md">
@@ -363,6 +378,7 @@ export function InventoryDetailPage() {
           </button>
         </div>
       </div>
+      )}
     </div>
   )
 }

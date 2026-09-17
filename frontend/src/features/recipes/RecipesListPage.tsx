@@ -4,6 +4,7 @@ import { useRecipesList } from './hooks/useRecipes'
 import { APIError } from '../../api/error'
 import { formatEbc } from '../../utils/ebc'
 import { SortableHeader } from '../../components/ui/SortableHeader'
+import { useCanWrite } from '../../auth/useCan'
 
 type RecipeType = 'all_grain' | 'extract' | 'partial_mash' | 'cider' | 'mead' | 'other'
 
@@ -24,6 +25,7 @@ function ebcToSrmClass(ebc: number | null | undefined): string {
 }
 
 export default function RecipesListPage() {
+  const canWrite = useCanWrite('production')
   const [nameFilter, setNameFilter] = useState('')
   const [typeFilter, setTypeFilter] = useState<RecipeType | ''>('')
   const [sort, setSort] = useState('')
@@ -70,6 +72,7 @@ export default function RecipesListPage() {
     <div className="p-4">
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-2xl font-bold">Recipes</h1>
+        {canWrite && (
         <div className="flex gap-2">
           <Link to="/recipes/new" className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
             New recipe
@@ -78,6 +81,7 @@ export default function RecipesListPage() {
             Import
           </Link>
         </div>
+        )}
       </div>
 
       <div className="bg-[var(--color-surface)] p-4 rounded shadow mb-4">

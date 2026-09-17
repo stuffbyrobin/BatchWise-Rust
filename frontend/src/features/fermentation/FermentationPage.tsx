@@ -2,6 +2,7 @@ import React from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useReadings, useCreateReading, useDeleteReading } from './hooks/useFermentation'
 import { useBatch } from '../batches/hooks/useBatches'
+import { useCanWrite } from '../../auth/useCan'
 import type { components } from '../../api/generated'
 import { fmtDateTime } from '../../utils/format'
 
@@ -151,8 +152,10 @@ export function FermentationPage() {
   const { batchId } = useParams<{ batchId: string }>()
   const [stageFilter, setStageFilter] = React.useState('')
   const { data: batch } = useBatch(batchId ?? '')
+  const canWrite = useCanWrite('production')
   // Readings of a finished batch are part of its production record.
-  const locked = ['completed', 'cancelled', 'spoiled'].includes(batch?.status ?? '')
+  const finished = ['completed', 'cancelled', 'spoiled'].includes(batch?.status ?? '')
+  const locked = finished || !canWrite
   const { data, isLoading, isError, refetch } = useReadings(batchId ?? '', {
     stage: stageFilter || undefined,
   })
@@ -171,12 +174,12 @@ export function FermentationPage() {
         <h1 className="text-2xl font-bold text-[var(--color-text)]">Fermentation Log</h1>
       </div>
 
-      {locked ? (
+      {finished ? (
         <p className="text-sm text-[var(--color-text-secondary)]">
           This batch is {batch?.status}, so its readings are read-only.
         </p>
       ) : (
-        <LogForm batchId={batchId} onDone={() => refetch()} />
+        canWrite && <LogForm batchId={batchId} onDone={() => refetch()} />
       )}
 
       <div>

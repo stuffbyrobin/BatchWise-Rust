@@ -7,6 +7,7 @@ import MaintenanceDuePage from './MaintenanceDuePage'
 import * as hooks from './hooks/useEquipment'
 
 vi.mock('./hooks/useEquipment')
+vi.mock('../../auth/useAuth', () => ({ useAuth: () => ({ user: { role: 'owner' } }) }))
 
 const idleMutation = { mutate: vi.fn(), mutateAsync: vi.fn(), isPending: false } as never
 

@@ -9,6 +9,7 @@ import { useAllPages } from '../../api/allPages'
 import type { components } from '../../api/generated'
 import { fmtDate } from '../../utils/format'
 import { inputCls } from '../../components/ui/styles'
+import { useCanWrite } from '../../auth/useCan'
 
 type Supplier = components['schemas']['Supplier']
 
@@ -36,6 +37,7 @@ function StatusBadge({ status }: { status: string | null | undefined }) {
 }
 
 function LinesPanel({ po }: { po: PurchaseOrder }) {
+  const canWrite = useCanWrite('production')
   const addLine = useAddLine(po.id ?? '')
   const deleteLine = useDeleteLine(po.id ?? '')
   const [showForm, setShowForm] = React.useState(false)
@@ -92,7 +94,7 @@ function LinesPanel({ po }: { po: PurchaseOrder }) {
                 <td className="pr-3">{l.unit}</td>
                 <td className="pr-3">{fmtGBP(l.unit_cost_pence)}</td>
                 <td className="pr-3">{l.received_quantity != null ? l.received_quantity : '—'}</td>
-                {isDraft && (
+                {isDraft && canWrite && (
                   <td>
                     <button
                       className="text-[var(--color-danger)] hover:underline text-xs"
@@ -110,7 +112,7 @@ function LinesPanel({ po }: { po: PurchaseOrder }) {
         <p className="text-xs text-[var(--color-muted)] mb-2">No lines yet.</p>
       )}
 
-      {isDraft && !showForm && (
+      {isDraft && !showForm && canWrite && (
         <button
           className="text-xs px-2 py-1 rounded border border-[var(--color-border)] hover:bg-[var(--color-surface-alt)]"
           onClick={() => setShowForm(true)}
@@ -119,7 +121,7 @@ function LinesPanel({ po }: { po: PurchaseOrder }) {
         </button>
       )}
 
-      {isDraft && showForm && (
+      {isDraft && showForm && canWrite && (
         <form onSubmit={handleAdd} className="flex flex-wrap gap-2 items-end text-xs mt-1">
           <select
             className="border rounded px-2 py-1 text-xs"
@@ -251,6 +253,7 @@ const NEXT_STATUSES: Record<string, string[]> = {
 }
 
 function PORow({ po }: { po: PurchaseOrder }) {
+  const canWrite = useCanWrite('production')
   const [expanded, setExpanded] = React.useState(false)
   const [showReceive, setShowReceive] = React.useState(false)
   const [statusErr, setStatusErr] = React.useState<string | null>(null)
@@ -297,7 +300,7 @@ function PORow({ po }: { po: PurchaseOrder }) {
         <td className="pr-3 text-sm">{po.lines?.length ?? 0} lines</td>
         <td className="text-sm">
           <div className="flex flex-wrap gap-1 items-center">
-            {nextStatuses.map((s) => (
+            {canWrite && nextStatuses.map((s) => (
               <button key={s}
                 className="text-xs px-2 py-0.5 rounded border border-[var(--color-border)] hover:bg-[var(--color-surface-alt)] disabled:opacity-50"
                 disabled={patchPO.isPending}
@@ -306,7 +309,7 @@ function PORow({ po }: { po: PurchaseOrder }) {
                 → {s}
               </button>
             ))}
-            {canReceive && (
+            {canWrite && canReceive && (
               <button
                 className="text-xs px-2 py-0.5 rounded bg-green-600 text-white hover:opacity-90"
                 onClick={() => { setShowReceive((x) => !x); setExpanded(true) }}
@@ -314,7 +317,7 @@ function PORow({ po }: { po: PurchaseOrder }) {
                 Receive
               </button>
             )}
-            {po.status === 'draft' && (
+            {canWrite && po.status === 'draft' && (
               <button
                 className="text-xs text-[var(--color-danger)] hover:underline disabled:opacity-50"
                 disabled={deletePO.isPending}
@@ -343,6 +346,7 @@ function PORow({ po }: { po: PurchaseOrder }) {
 }
 
 export default function PurchaseOrdersPage() {
+  const canWrite = useCanWrite('production')
   const { data: suppliersData } = useAllPages<Supplier>(['suppliers'], '/api/v1/suppliers')
   const [statusFilter, setStatusFilter] = React.useState('')
   const [sort, setSort] = React.useState('')
@@ -374,15 +378,17 @@ export default function PurchaseOrdersPage() {
     <div className="p-6 max-w-6xl mx-auto">
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-xl font-semibold">Purchase Orders</h1>
-        <button
-          className="px-3 py-1.5 rounded bg-[var(--color-accent)] text-white text-sm hover:opacity-90"
-          onClick={() => setShowForm((x) => !x)}
-        >
-          {showForm ? 'Cancel' : '+ New PO'}
-        </button>
+        {canWrite && (
+          <button
+            className="px-3 py-1.5 rounded bg-[var(--color-accent)] text-white text-sm hover:opacity-90"
+            onClick={() => setShowForm((x) => !x)}
+          >
+            {showForm ? 'Cancel' : '+ New PO'}
+          </button>
+        )}
       </div>
 
-      {showForm && (
+      {canWrite && showForm && (
         <form onSubmit={handleCreate}
           className="mb-6 p-4 border rounded grid grid-cols-2 md:grid-cols-3 gap-3 text-sm bg-[var(--color-surface)]">
           <div className="col-span-2 md:col-span-3 font-medium">New Purchase Order</div>

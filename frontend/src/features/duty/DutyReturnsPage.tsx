@@ -3,6 +3,7 @@ import { APIError } from '../../api/error'
 import { useDutyReturns, useCompileDutyReturn, usePatchDutyReturn } from './hooks/useDuty'
 import type { components } from '../../api/generated'
 import { fmtDate, fmtPence } from '../../utils/format'
+import { useCanWrite } from '../../auth/useCan'
 
 type DutyReturn = components['schemas']['DutyReturn']
 
@@ -18,6 +19,7 @@ function prevMonthRange(): { start: string; end: string } {
 }
 
 function SubmitButton({ ret }: { ret: DutyReturn }) {
+  const canWrite = useCanWrite('duty')
   const patch = usePatchDutyReturn(ret.id ?? '')
   const [err, setErr] = React.useState<string | null>(null)
 
@@ -27,27 +29,30 @@ function SubmitButton({ ret }: { ret: DutyReturn }) {
 
   return (
     <div className="flex items-center gap-2">
-      <button
-        className="px-2 py-1 text-xs rounded bg-[var(--color-accent)] text-white hover:opacity-90 disabled:opacity-50"
-        disabled={patch.isPending || (ret.event_count ?? 0) === 0}
-        title={(ret.event_count ?? 0) === 0 ? 'No duty events in this period' : undefined}
-        onClick={async () => {
-          setErr(null)
-          try {
-            await patch.mutateAsync({ status: 'submitted' })
-          } catch (e) {
-            setErr(e instanceof APIError ? e.message : 'Submit failed.')
-          }
-        }}
-      >
-        {patch.isPending ? 'Submitting…' : 'Submit'}
-      </button>
+      {canWrite && (
+        <button
+          className="px-2 py-1 text-xs rounded bg-[var(--color-accent)] text-white hover:opacity-90 disabled:opacity-50"
+          disabled={patch.isPending || (ret.event_count ?? 0) === 0}
+          title={(ret.event_count ?? 0) === 0 ? 'No duty events in this period' : undefined}
+          onClick={async () => {
+            setErr(null)
+            try {
+              await patch.mutateAsync({ status: 'submitted' })
+            } catch (e) {
+              setErr(e instanceof APIError ? e.message : 'Submit failed.')
+            }
+          }}
+        >
+          {patch.isPending ? 'Submitting…' : 'Submit'}
+        </button>
+      )}
       {err && <span className="text-xs text-[var(--color-danger)]">{err}</span>}
     </div>
   )
 }
 
 export function DutyReturnsPage() {
+  const canWrite = useCanWrite('duty')
   const prev = prevMonthRange()
   const [periodStart, setPeriodStart] = React.useState(prev.start)
   const [periodEnd, setPeriodEnd] = React.useState(prev.end)
@@ -96,6 +101,7 @@ export function DutyReturnsPage() {
               className={inputCls}
               value={periodStart}
               onChange={(e) => setPeriodStart(e.target.value)}
+              disabled={!canWrite}
             />
           </div>
           <div>
@@ -106,15 +112,18 @@ export function DutyReturnsPage() {
               className={inputCls}
               value={periodEnd}
               onChange={(e) => setPeriodEnd(e.target.value)}
+              disabled={!canWrite}
             />
           </div>
-          <button
-            type="submit"
-            disabled={compile.isPending}
-            className="px-4 py-2 rounded text-sm bg-[var(--color-accent)] text-white hover:opacity-90 disabled:opacity-50"
-          >
-            {compile.isPending ? 'Compiling…' : 'Compile'}
-          </button>
+          {canWrite && (
+            <button
+              type="submit"
+              disabled={compile.isPending}
+              className="px-4 py-2 rounded text-sm bg-[var(--color-accent)] text-white hover:opacity-90 disabled:opacity-50"
+            >
+              {compile.isPending ? 'Compiling…' : 'Compile'}
+            </button>
+          )}
           {compileErr && (
             <p className="w-full text-xs text-[var(--color-danger)]">{compileErr}</p>
           )}

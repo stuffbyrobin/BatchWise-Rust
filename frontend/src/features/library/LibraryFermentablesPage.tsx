@@ -5,6 +5,7 @@ import { SortableHeader } from '../../components/ui/SortableHeader'
 import { Skeleton } from '../../components/ui/Skeleton'
 import { useConfirm } from '../../components/feedback/ConfirmDialog'
 import { useToast } from '../../components/feedback/Toast'
+import { useCanWrite } from '../../auth/useCan'
 import {
   useFermentables,
   useCreateFermentable,
@@ -52,6 +53,7 @@ function num(v: string): number | undefined {
 }
 
 export function LibraryFermentablesPage() {
+  const canWrite = useCanWrite('production')
   const confirm = useConfirm()
   const { toast } = useToast()
   const [search, setSearch] = React.useState('')
@@ -130,12 +132,14 @@ export function LibraryFermentablesPage() {
     <div>
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-xl font-bold text-[var(--color-fg)]">Fermentables</h1>
-        <button
-          onClick={openCreate}
-          className="px-4 py-2 rounded text-sm bg-[var(--color-accent)] text-white hover:opacity-90"
-        >
-          + New
-        </button>
+        {canWrite && (
+          <button
+            onClick={openCreate}
+            className="px-4 py-2 rounded text-sm bg-[var(--color-accent)] text-white hover:opacity-90"
+          >
+            + New
+          </button>
+        )}
       </div>
 
       <div className="flex gap-2 mb-4">
@@ -162,7 +166,7 @@ export function LibraryFermentablesPage() {
         </select>
       </div>
 
-      {showForm && (
+      {canWrite && showForm && (
         <div
           className="mb-6 p-4 rounded border"
           style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)' }}
@@ -416,7 +420,7 @@ export function LibraryFermentablesPage() {
                         {row.attributes ?? '—'}
                       </td>
                       <td className="py-2 px-3">
-                        {!isSystem && (
+                        {!isSystem && canWrite && (
                           <div className="flex gap-2 justify-end">
                             <button
                               onClick={() => openEdit(row)}

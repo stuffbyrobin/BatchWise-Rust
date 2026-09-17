@@ -12,6 +12,7 @@ import { mineralPayload, normalizeForm, SALT_FORMS } from './mineralForms'
 import { MineralFormControls } from './MineralFormControls'
 import { useConfirm } from '../../components/feedback/ConfirmDialog'
 import { useToast } from '../../components/feedback/Toast'
+import { useCanWrite } from '../../auth/useCan'
 
 type WaterAdjustment = components['schemas']['WaterAdjustment']
 type WaterResult = components['schemas']['WaterResult']
@@ -82,6 +83,7 @@ function ResultBadge({ result }: { result: WaterResult | undefined }) {
 }
 
 export function WaterAdjustmentsPage() {
+  const canWrite = useCanWrite('production')
   const confirm = useConfirm()
   const { toast } = useToast()
   const { data, isLoading, isError, error, refetch } = useWaterAdjustments({
@@ -176,15 +178,17 @@ export function WaterAdjustmentsPage() {
     <div>
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-xl font-bold text-[var(--color-fg)]">Water Adjustments</h1>
-        <button
-          onClick={openCreate}
-          className="px-4 py-2 rounded text-sm bg-[var(--color-accent)] text-white hover:opacity-90"
-        >
-          + New Adjustment
-        </button>
+        {canWrite && (
+          <button
+            onClick={openCreate}
+            className="px-4 py-2 rounded text-sm bg-[var(--color-accent)] text-white hover:opacity-90"
+          >
+            + New Adjustment
+          </button>
+        )}
       </div>
 
-      {showForm && (
+      {canWrite && showForm && (
         <div
           className="mb-6 p-4 rounded border"
           style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)' }}
@@ -246,12 +250,14 @@ export function WaterAdjustmentsPage() {
           <div className="mb-3">
             <div className="flex items-center justify-between mb-2">
               <p className="text-xs font-medium text-[var(--color-muted)]">Mineral additions</p>
-              <button
-                onClick={addMineral}
-                className="text-xs px-2 py-1 rounded border border-[var(--color-accent)] text-[var(--color-accent)] hover:bg-[var(--color-accent)] hover:text-white"
-              >
-                + Add
-              </button>
+              {canWrite && (
+                <button
+                  onClick={addMineral}
+                  className="text-xs px-2 py-1 rounded border border-[var(--color-accent)] text-[var(--color-accent)] hover:bg-[var(--color-accent)] hover:text-white"
+                >
+                  + Add
+                </button>
+              )}
             </div>
             {minerals.length === 0 && (
               <p className="text-xs text-[var(--color-muted)]">No minerals added.</p>
@@ -287,12 +293,14 @@ export function WaterAdjustmentsPage() {
                     onForm={(v) => updateMineral(m.id, 'form', v)}
                     onStrength={(v) => updateMineral(m.id, 'strength', v)}
                   />
-                  <button
-                    onClick={() => removeMineral(m.id)}
-                    className="text-[var(--color-danger)] text-xs px-1"
-                  >
-                    ✕
-                  </button>
+                  {canWrite && (
+                    <button
+                      onClick={() => removeMineral(m.id)}
+                      className="text-[var(--color-danger)] text-xs px-1"
+                    >
+                      ✕
+                    </button>
+                  )}
                 </div>
               ))}
             </div>
@@ -378,6 +386,7 @@ function AdjustmentRow({
   onEdit: () => void
   onDelete: () => void
 }) {
+  const canWrite = useCanWrite('production')
   const minerals = (adj.mineral_additions ?? []) as MineralAddition[]
 
   return (
@@ -397,6 +406,7 @@ function AdjustmentRow({
           <span className="text-xs text-[var(--color-muted)] mr-2">{adj.volume_liters} L</span>
           <ResultBadge result={adj.result as WaterResult | undefined} />
         </button>
+        {canWrite && (
         <div className="flex gap-2 ml-3">
           <button
             onClick={onEdit}
@@ -411,6 +421,7 @@ function AdjustmentRow({
             Delete
           </button>
         </div>
+        )}
       </div>
 
       {expanded && (

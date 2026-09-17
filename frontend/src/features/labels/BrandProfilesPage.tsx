@@ -8,12 +8,14 @@ import {
 } from './hooks/useLabelDesign'
 import type { components } from '../../api/generated'
 import { fileTooLarge, MAX_LOGO_BYTES } from '../../utils/files'
+import { useCanWrite } from '../../auth/useCan'
 
 type CreateBrandProfileRequest = components['schemas']['CreateBrandProfileRequest']
 
 const FONTS = ['helvetica', 'times', 'courier'] as const
 
 export function BrandProfilesPage() {
+  const canWrite = useCanWrite('production')
   const { data, isLoading, error } = useBrandProfiles()
   const create = useCreateBrandProfile()
   const del = useDeleteBrandProfile()
@@ -79,6 +81,7 @@ export function BrandProfilesPage() {
         </Link>
       </div>
 
+      {canWrite && (
       <div className="border rounded p-4 mb-6" style={{ borderColor: 'var(--color-border)' }}>
         <h2 className="font-semibold mb-3 text-sm">New brand profile</h2>
         {err && <p className="text-sm text-red-600 mb-2">{err}</p>}
@@ -142,6 +145,7 @@ export function BrandProfilesPage() {
           {create.isPending ? 'Saving…' : 'Create profile'}
         </button>
       </div>
+      )}
 
       {isLoading && <p className="text-sm text-[var(--color-muted)]">Loading…</p>}
       {error && <p className="text-sm text-red-600">{error.message}</p>}
@@ -162,9 +166,11 @@ export function BrandProfilesPage() {
                 <span className="text-[var(--color-muted)]">{p.font_family}</span>
                 {p.logo_asset_id && <span className="text-xs text-[var(--color-muted)]">• logo</span>}
               </span>
-              <button onClick={() => p.id && del.mutate(p.id)} className="text-red-600 text-xs">
-                Delete
-              </button>
+              {canWrite && (
+                <button onClick={() => p.id && del.mutate(p.id)} className="text-red-600 text-xs">
+                  Delete
+                </button>
+              )}
             </li>
           ))}
         </ul>

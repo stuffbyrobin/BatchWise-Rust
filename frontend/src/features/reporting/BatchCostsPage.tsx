@@ -3,8 +3,10 @@ import { Link } from 'react-router-dom';
 import { APIError } from '../../api/error';
 import { useBatchCostsList, useComputeBatchCost } from './hooks/useBatchCosts';
 import { fmtPence } from '../../utils/format';
+import { useCanWrite } from '../../auth/useCan';
 
 export const BatchCostsPage: React.FC = () => {
+  const canWrite = useCanWrite('costs');
   const [page, setPage] = useState(1);
   const [showComputeForm, setShowComputeForm] = useState(false);
   const [computeForm, setComputeForm] = useState({
@@ -62,12 +64,12 @@ export const BatchCostsPage: React.FC = () => {
     <div className="p-6 space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-[var(--color-fg)]">Batch Costs</h1>
-        <button onClick={() => setShowComputeForm((v) => !v)} className="px-4 py-2 rounded text-sm bg-[var(--color-accent)] text-white hover:opacity-90">
+        {canWrite && <button onClick={() => setShowComputeForm((v) => !v)} className="px-4 py-2 rounded text-sm bg-[var(--color-accent)] text-white hover:opacity-90">
           Compute cost
-        </button>
+        </button>}
       </div>
 
-      {showComputeForm && (
+      {canWrite && showComputeForm && (
         <div className="p-4 border border-[var(--color-border)] rounded bg-[var(--color-surface)] space-y-4">
           <h2 className="text-lg font-semibold text-[var(--color-fg)]">Compute Batch Cost</h2>
           <div className="grid grid-cols-2 gap-4">

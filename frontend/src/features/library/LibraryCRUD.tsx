@@ -5,6 +5,7 @@ import { SortableHeader } from '../../components/ui/SortableHeader'
 import { Skeleton } from '../../components/ui/Skeleton'
 import { useConfirm } from '../../components/feedback/ConfirmDialog'
 import { useToast } from '../../components/feedback/Toast'
+import { useCanWrite } from '../../auth/useCan'
 
 export interface FieldDef {
   key: string
@@ -45,6 +46,7 @@ export function LibraryCRUD<T extends Record<string, unknown>>({
   idField = 'id',
   extraCols = [],
 }: Props<T>) {
+  const canWrite = useCanWrite('production')
   const confirm = useConfirm()
   const { toast } = useToast()
   const [sort, setSort] = React.useState('')
@@ -113,15 +115,17 @@ export function LibraryCRUD<T extends Record<string, unknown>>({
     <div>
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-xl font-bold text-[var(--color-fg)]">{title}</h1>
-        <button
-          onClick={openCreate}
-          className="px-4 py-2 rounded text-sm bg-[var(--color-accent)] text-white hover:opacity-90"
-        >
-          + New
-        </button>
+        {canWrite && (
+          <button
+            onClick={openCreate}
+            className="px-4 py-2 rounded text-sm bg-[var(--color-accent)] text-white hover:opacity-90"
+          >
+            + New
+          </button>
+        )}
       </div>
 
-      {showForm && (
+      {canWrite && showForm && (
         <div
           className="mb-6 p-4 rounded border"
           style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)' }}
@@ -256,20 +260,22 @@ export function LibraryCRUD<T extends Record<string, unknown>>({
                       </td>
                     ))}
                     <td className="py-2 px-3">
-                      <div className="flex gap-2 justify-end">
-                        <button
-                          onClick={() => openEdit(row)}
-                          className="text-xs px-2 py-1 rounded border border-[var(--color-border)] text-[var(--color-fg)] hover:bg-[var(--color-accent)] hover:text-white"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => handleDelete(String(row[idField]))}
-                          className="text-xs px-2 py-1 rounded border border-[var(--color-danger)] text-[var(--color-danger)] hover:bg-[var(--color-danger)] hover:text-white"
-                        >
-                          Delete
-                        </button>
-                      </div>
+                      {canWrite && (
+                        <div className="flex gap-2 justify-end">
+                          <button
+                            onClick={() => openEdit(row)}
+                            className="text-xs px-2 py-1 rounded border border-[var(--color-border)] text-[var(--color-fg)] hover:bg-[var(--color-accent)] hover:text-white"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => handleDelete(String(row[idField]))}
+                            className="text-xs px-2 py-1 rounded border border-[var(--color-danger)] text-[var(--color-danger)] hover:bg-[var(--color-danger)] hover:text-white"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      )}
                     </td>
                   </tr>
                 ))

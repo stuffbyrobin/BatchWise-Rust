@@ -4,6 +4,9 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { FermentationPage } from '../FermentationPage'
 
 const batchStatus = vi.fn()
+let authRole = 'brewer'
+
+vi.mock('../../../auth/useAuth', () => ({ useAuth: () => ({ user: { role: authRole } }) }))
 
 vi.mock('../hooks/useFermentation', () => ({
   useReadings: () => ({
@@ -30,7 +33,10 @@ function renderPage() {
 }
 
 describe('FermentationPage', () => {
-  beforeEach(() => batchStatus.mockReset())
+  beforeEach(() => {
+    batchStatus.mockReset()
+    authRole = 'brewer'
+  })
 
   it('lets readings be logged and deleted while the batch is open', () => {
     batchStatus.mockReturnValue('fermenting')
@@ -45,5 +51,15 @@ describe('FermentationPage', () => {
     expect(screen.queryByRole('button', { name: 'Log Reading' })).toBeNull()
     expect(screen.queryByRole('button', { name: 'Delete' })).toBeNull()
     expect(screen.getByText(`This batch is ${status}, so its readings are read-only.`)).toBeInTheDocument()
+  })
+
+  it('hides logging and deleting from a role that can only read', () => {
+    authRole = 'viewer'
+    batchStatus.mockReturnValue('fermenting')
+    renderPage()
+    expect(screen.queryByRole('button', { name: 'Log Reading' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Delete' })).toBeNull()
+    // The readings themselves stay visible.
+    expect(screen.getByText('1 reading')).toBeInTheDocument()
   })
 })

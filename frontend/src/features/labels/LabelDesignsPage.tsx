@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { useLabelDesigns, useDeleteLabelDesign } from './hooks/useLabelDesign'
 import { useConfirm } from '../../components/feedback/ConfirmDialog'
+import { useCanWrite } from '../../auth/useCan'
 
 const KIND_LABEL: Record<string, string> = {
   bottle: 'Bottle label',
@@ -10,6 +11,7 @@ const KIND_LABEL: Record<string, string> = {
 }
 
 export function LabelDesignsPage() {
+  const canWrite = useCanWrite('production')
   const confirm = useConfirm()
   const { data, isLoading, error } = useLabelDesigns({ page_size: 100 })
   const del = useDeleteLabelDesign()
@@ -26,13 +28,15 @@ export function LabelDesignsPage() {
           >
             Brand Profiles
           </Link>
-          <Link
-            to="/label-design/new"
-            className="px-3 py-1.5 rounded text-sm text-white"
-            style={{ background: 'var(--color-accent)' }}
-          >
-            New Design
-          </Link>
+          {canWrite && (
+            <Link
+              to="/label-design/new"
+              className="px-3 py-1.5 rounded text-sm text-white"
+              style={{ background: 'var(--color-accent)' }}
+            >
+              New Design
+            </Link>
+          )}
         </div>
       </div>
 
@@ -66,14 +70,16 @@ export function LabelDesignsPage() {
                 <td className="py-2 pr-4">{KIND_LABEL[d.kind ?? ''] ?? d.kind}</td>
                 <td className="py-2 pr-4">{d.size_key}</td>
                 <td className="py-2 pr-4 text-right">
-                  <button
-                    onClick={async () => {
-                      if (d.id && (await confirm({ title: 'Delete this design?', confirmLabel: 'Delete', destructive: true }))) del.mutate(d.id)
-                    }}
-                    className="text-red-600 text-xs"
-                  >
-                    Delete
-                  </button>
+                  {canWrite && (
+                    <button
+                      onClick={async () => {
+                        if (d.id && (await confirm({ title: 'Delete this design?', confirmLabel: 'Delete', destructive: true }))) del.mutate(d.id)
+                      }}
+                      className="text-red-600 text-xs"
+                    >
+                      Delete
+                    </button>
+                  )}
                 </td>
               </tr>
             ))}

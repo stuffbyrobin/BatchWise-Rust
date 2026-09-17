@@ -2,9 +2,11 @@ import React from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useBatchesList, BATCH_STATUSES, STATUS_LABELS, STATUS_COLORS } from './hooks/useBatches'
 import { APIError } from '../../api/error'
+import { useCanWrite } from '../../auth/useCan'
 import { SortableHeader } from '../../components/ui/SortableHeader'
 
 export function BatchesListPage() {
+  const canWrite = useCanWrite('production')
   const navigate = useNavigate()
   const [status, setStatus] = React.useState('')
   const [brewDateFrom, setBrewDateFrom] = React.useState('')
@@ -27,6 +29,7 @@ export function BatchesListPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-xl font-bold text-[var(--color-fg)]">Batches</h1>
+        {canWrite && (
         <div className="flex gap-2">
           <button
             onClick={() => navigate('/batches/import')}
@@ -41,6 +44,7 @@ export function BatchesListPage() {
             New batch
           </button>
         </div>
+        )}
       </div>
 
       <div className="flex flex-wrap gap-3 mb-6">

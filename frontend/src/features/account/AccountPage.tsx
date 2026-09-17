@@ -2,8 +2,10 @@ import React from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../auth/useAuth'
 import { useTenant, useUpdateTenant } from './hooks/useTenant'
+import { useCanWrite } from '../../auth/useCan'
 
 export function AccountPage() {
+  const canEditTenant = useCanWrite('tenant')
   const { user, updateMe, deleteMe, logout } = useAuth()
   const navigate = useNavigate()
   const { data: tenant } = useTenant()
@@ -271,6 +273,7 @@ export function AccountPage() {
               className={inputCls}
               value={nextBatchNum}
               onChange={(e) => setNextBatchNum(e.target.value)}
+              disabled={!canEditTenant}
             />
           </div>
           <div className="mb-4">
@@ -280,6 +283,7 @@ export function AccountPage() {
               className={inputCls}
               value={ibuMethod}
               onChange={(e) => setIbuMethod(e.target.value as 'tinseth' | 'rager')}
+              disabled={!canEditTenant}
             >
               <option value="tinseth">Tinseth (recommended for craft/homebrewing)</option>
               <option value="rager">Rager</option>
@@ -290,13 +294,15 @@ export function AccountPage() {
               {breweryMsg.text}
             </p>
           )}
-          <button
-            type="submit"
-            disabled={brewerySaving}
-            className="px-4 py-2 rounded text-sm bg-[var(--color-accent)] text-white hover:opacity-90 disabled:opacity-50"
-          >
-            {brewerySaving ? 'Saving…' : 'Save'}
-          </button>
+          {canEditTenant && (
+            <button
+              type="submit"
+              disabled={brewerySaving}
+              className="px-4 py-2 rounded text-sm bg-[var(--color-accent)] text-white hover:opacity-90 disabled:opacity-50"
+            >
+              {brewerySaving ? 'Saving…' : 'Save'}
+            </button>
+          )}
         </form>
       </div>
 
@@ -318,6 +324,7 @@ export function AccountPage() {
               className={inputCls}
               value={nextOrderNum}
               onChange={(e) => setNextOrderNum(e.target.value)}
+              disabled={!canEditTenant}
             />
             <p className="text-xs mt-1" style={{ color: 'var(--color-muted)' }}>
               Current next order will be ORD-{nextOrderNum || (tenant?.next_order_number ?? 1)}.
@@ -328,13 +335,15 @@ export function AccountPage() {
               {orderNumMsg.text}
             </p>
           )}
-          <button
-            type="submit"
-            disabled={orderNumSaving}
-            className="px-4 py-2 rounded text-sm bg-[var(--color-accent)] text-white hover:opacity-90 disabled:opacity-50"
-          >
-            {orderNumSaving ? 'Saving…' : 'Save'}
-          </button>
+          {canEditTenant && (
+            <button
+              type="submit"
+              disabled={orderNumSaving}
+              className="px-4 py-2 rounded text-sm bg-[var(--color-accent)] text-white hover:opacity-90 disabled:opacity-50"
+            >
+              {orderNumSaving ? 'Saving…' : 'Save'}
+            </button>
+          )}
         </form>
       </div>
 
@@ -354,6 +363,7 @@ export function AccountPage() {
               value={address}
               onChange={(e) => setAddress(e.target.value)}
               placeholder="e.g. 1 Brewery Lane, London, EC1A 1BB"
+              disabled={!canEditTenant}
             />
           </div>
           {addressMsg && (
@@ -361,13 +371,15 @@ export function AccountPage() {
               {addressMsg.text}
             </p>
           )}
-          <button
-            type="submit"
-            disabled={addressSaving}
-            className="px-4 py-2 rounded text-sm bg-[var(--color-accent)] text-white hover:opacity-90 disabled:opacity-50"
-          >
-            {addressSaving ? 'Saving…' : 'Save'}
-          </button>
+          {canEditTenant && (
+            <button
+              type="submit"
+              disabled={addressSaving}
+              className="px-4 py-2 rounded text-sm bg-[var(--color-accent)] text-white hover:opacity-90 disabled:opacity-50"
+            >
+              {addressSaving ? 'Saving…' : 'Save'}
+            </button>
+          )}
         </form>
       </div>
 
@@ -392,6 +404,7 @@ export function AccountPage() {
                 className={inputCls}
                 value={sbrProduction}
                 onChange={(e) => setSbrProduction(e.target.value)}
+                disabled={!canEditTenant}
               />
               <p className="text-xs mt-1" style={{ color: 'var(--color-muted)' }}>
                 ≤2100 hLPA = 50% relief · 2100–4500 hLPA = sliding scale · &gt;4500 = no relief
@@ -402,13 +415,15 @@ export function AccountPage() {
                 {sbrMsg.text}
               </p>
             )}
-            <button
-              type="submit"
-              disabled={sbrSaving}
-              className="px-4 py-2 rounded text-sm bg-[var(--color-accent)] text-white hover:opacity-90 disabled:opacity-50"
-            >
-              {sbrSaving ? 'Saving…' : 'Save'}
-            </button>
+            {canEditTenant && (
+              <button
+                type="submit"
+                disabled={sbrSaving}
+                className="px-4 py-2 rounded text-sm bg-[var(--color-accent)] text-white hover:opacity-90 disabled:opacity-50"
+              >
+                {sbrSaving ? 'Saving…' : 'Save'}
+              </button>
+            )}
           </form>
         </div>
 
