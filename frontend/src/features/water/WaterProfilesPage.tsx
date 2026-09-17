@@ -7,6 +7,8 @@ import {
   useDeleteWaterProfile,
 } from './hooks/useWater'
 import type { components } from '../../api/generated'
+import { useConfirm } from '../../components/feedback/ConfirmDialog'
+import { useToast } from '../../components/feedback/Toast'
 
 type WaterProfile = components['schemas']['WaterProfile']
 
@@ -77,6 +79,8 @@ function IonGrid({
 }
 
 export function WaterProfilesPage() {
+  const confirm = useConfirm()
+  const { toast } = useToast()
   const { data, isLoading, isError, error, refetch } = useWaterProfiles({ page_size: 100, sort: 'name' })
   const createMut = useCreateWaterProfile()
   const deleteMut = useDeleteWaterProfile()
@@ -131,11 +135,11 @@ export function WaterProfilesPage() {
   }
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm('Delete this profile?')) return
+    if (!(await confirm({ title: 'Delete this profile?', confirmLabel: 'Delete', destructive: true }))) return
     try {
       await deleteMut.mutateAsync(id)
     } catch (e) {
-      alert(e instanceof APIError ? e.message : 'Delete failed')
+      toast({ title: 'Delete failed', description: e instanceof APIError ? e.message : undefined, variant: 'destructive' })
     }
   }
 

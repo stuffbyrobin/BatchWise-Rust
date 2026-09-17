@@ -28,8 +28,10 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     [],
   )
 
+  const value = React.useMemo(() => ({ toast }), [toast])
+
   return (
-    <ToastContext.Provider value={{ toast }}>
+    <ToastContext.Provider value={value}>
       <RadixToast.Provider swipeDirection="right">
         {children}
         {toasts.map((t) => (

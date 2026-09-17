@@ -10,6 +10,8 @@ import {
 import type { components } from '../../api/generated'
 import { mineralPayload, normalizeForm, SALT_FORMS } from './mineralForms'
 import { MineralFormControls } from './MineralFormControls'
+import { useConfirm } from '../../components/feedback/ConfirmDialog'
+import { useToast } from '../../components/feedback/Toast'
 
 type WaterAdjustment = components['schemas']['WaterAdjustment']
 type WaterResult = components['schemas']['WaterResult']
@@ -80,6 +82,8 @@ function ResultBadge({ result }: { result: WaterResult | undefined }) {
 }
 
 export function WaterAdjustmentsPage() {
+  const confirm = useConfirm()
+  const { toast } = useToast()
   const { data, isLoading, isError, error, refetch } = useWaterAdjustments({
     page_size: 100,
     sort: '-created_at',
@@ -153,12 +157,12 @@ export function WaterAdjustmentsPage() {
   }
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm('Delete this adjustment?')) return
+    if (!(await confirm({ title: 'Delete this adjustment?', confirmLabel: 'Delete', destructive: true }))) return
     try {
       await deleteMut.mutateAsync(id)
       if (expanded === id) setExpanded(null)
     } catch (e) {
-      alert(e instanceof APIError ? e.message : 'Delete failed')
+      toast({ title: 'Delete failed', description: e instanceof APIError ? e.message : undefined, variant: 'destructive' })
     }
   }
 

@@ -9,6 +9,7 @@ import {
   useRenderModel,
   fetchRenderPDF,
 } from './hooks/useLabelDesign'
+import { usePdfWindow } from './usePdfWindow'
 import type { components } from '../../api/generated'
 
 type CreateLabelDesignRequest = components['schemas']['CreateLabelDesignRequest']
@@ -267,22 +268,13 @@ function useQueryList(path: string): ListResp {
 
 function Preview({ id }: { id: string }) {
   const { data: m, error } = useRenderModel(id)
-  const [pdfUrl, setPdfUrl] = React.useState<string | null>(null)
   const [pdfErr, setPdfErr] = React.useState<string | null>(null)
-
-  React.useEffect(() => {
-    return () => {
-      if (pdfUrl) URL.revokeObjectURL(pdfUrl)
-    }
-  }, [pdfUrl])
+  const openPdfWindow = usePdfWindow()
 
   async function openPdf(print: boolean) {
     setPdfErr(null)
     try {
-      const url = await fetchRenderPDF(id)
-      setPdfUrl(url)
-      const w = window.open(url, '_blank')
-      if (print && w) w.addEventListener('load', () => w.print())
+      openPdfWindow(await fetchRenderPDF(id), print)
     } catch (e) {
       setPdfErr((e as Error).message)
     }

@@ -14,8 +14,10 @@ import { useCalendarEvents } from '../calendar/hooks/useCalendar'
 import { useBatchCost, useComputeBatchCost } from '../reporting/hooks/useBatchCosts'
 import { BatchIngredientsEditor } from './BatchIngredientsEditor'
 import { APIError } from '../../api/error'
+import { ConfirmDialog, useConfirm } from '../../components/feedback/ConfirmDialog'
 
 export function BatchDetailPage() {
+  const confirm = useConfirm()
   const navigate = useNavigate()
   const { id } = useParams<{ id: string }>()
 
@@ -90,11 +92,11 @@ export function BatchDetailPage() {
     }
   }
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!id) return
-    if (window.confirm('Delete this batch? This cannot be undone.')) {
-      deleteBatch(undefined, { onSuccess: () => navigate('/batches') })
-    }
+    const ok = await confirm({ title: 'Delete this batch?', description: 'This cannot be undone.', confirmLabel: 'Delete', destructive: true })
+    if (!ok) return
+    deleteBatch(undefined, { onSuccess: () => navigate('/batches') })
   }
 
   if (isError) {
@@ -137,32 +139,17 @@ export function BatchDetailPage() {
 
   return (
     <div>
-      {/* Confirmation dialog for brewing transition */}
-      {confirmBrewing && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-[var(--color-surface)] rounded-lg border border-[var(--color-border)] p-6 max-w-sm w-full mx-4 shadow-lg">
-            <h2 className="text-lg font-semibold text-[var(--color-fg)] mb-2">Start brewing?</h2>
-            <p className="text-sm text-[var(--color-muted)] mb-4">
-              This will deduct ingredients from inventory based on the recipe snapshot. Make sure all required lots are available.
-            </p>
-            <div className="flex gap-3 justify-end">
-              <button
-                onClick={() => { setConfirmBrewing(false); setPendingTransition(null) }}
-                className="px-4 py-2 rounded text-sm border border-[var(--color-border)] text-[var(--color-fg)]"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleConfirmBrewing}
-                disabled={isTransitioning}
-                className="px-4 py-2 rounded text-sm bg-[var(--color-accent)] text-white disabled:opacity-50"
-              >
-                {isTransitioning ? 'Starting…' : 'Start brewing'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmDialog
+        open={confirmBrewing}
+        title="Start brewing?"
+        description="This will deduct ingredients from inventory based on the recipe snapshot. Make sure all required lots are available."
+        confirmLabel="Start brewing"
+        onConfirm={handleConfirmBrewing}
+        onCancel={() => {
+          setConfirmBrewing(false)
+          setPendingTransition(null)
+        }}
+      />
 
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">

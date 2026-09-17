@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { useLabelDesigns, useDeleteLabelDesign } from './hooks/useLabelDesign'
+import { useConfirm } from '../../components/feedback/ConfirmDialog'
 
 const KIND_LABEL: Record<string, string> = {
   bottle: 'Bottle label',
@@ -9,6 +10,7 @@ const KIND_LABEL: Record<string, string> = {
 }
 
 export function LabelDesignsPage() {
+  const confirm = useConfirm()
   const { data, isLoading, error } = useLabelDesigns({ page_size: 100 })
   const del = useDeleteLabelDesign()
 
@@ -65,8 +67,8 @@ export function LabelDesignsPage() {
                 <td className="py-2 pr-4">{d.size_key}</td>
                 <td className="py-2 pr-4 text-right">
                   <button
-                    onClick={() => {
-                      if (d.id && confirm('Delete this design?')) del.mutate(d.id)
+                    onClick={async () => {
+                      if (d.id && (await confirm({ title: 'Delete this design?', confirmLabel: 'Delete', destructive: true }))) del.mutate(d.id)
                     }}
                     className="text-red-600 text-xs"
                   >

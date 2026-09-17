@@ -1,93 +1,102 @@
+import { lazy, type ComponentType } from 'react'
 import { createBrowserRouter } from 'react-router-dom'
 import { AppShell } from '../components/layout/AppShell'
 import { ProtectedRoute } from '../auth/ProtectedRoute'
 import { LoginPage } from '../features/auth/LoginPage'
 import { RegisterPage } from '../features/auth/RegisterPage'
-import { DashboardPage } from '../features/dashboard/DashboardPage'
 import { LandingPage } from '../features/marketing/LandingPage'
 
+// Protected pages are split into their own chunks and load on first visit;
+// the public landing, login and register pages stay in the entry chunk.
+function named<K extends string, M extends Record<K, ComponentType>>(load: () => Promise<M>, name: K) {
+  return lazy(() => load().then((m) => ({ default: m[name] })))
+}
+
+// Dashboard
+const DashboardPage = named(() => import('../features/dashboard/DashboardPage'), 'DashboardPage')
+
 // Inventory
-import { InventoryListPage } from '../features/inventory/InventoryListPage'
-import { InventoryCreatePage } from '../features/inventory/InventoryCreatePage'
-import { InventoryDetailPage } from '../features/inventory/InventoryDetailPage'
-import { InventorySummaryPage } from '../features/inventory/InventorySummaryPage'
-import { InventoryMovementsPage } from '../features/inventory/InventoryMovementsPage'
-import { InventoryImportPage } from '../features/inventory/InventoryImportPage'
+const InventoryListPage = named(() => import('../features/inventory/InventoryListPage'), 'InventoryListPage')
+const InventoryCreatePage = named(() => import('../features/inventory/InventoryCreatePage'), 'InventoryCreatePage')
+const InventoryDetailPage = named(() => import('../features/inventory/InventoryDetailPage'), 'InventoryDetailPage')
+const InventorySummaryPage = named(() => import('../features/inventory/InventorySummaryPage'), 'InventorySummaryPage')
+const InventoryMovementsPage = named(() => import('../features/inventory/InventoryMovementsPage'), 'InventoryMovementsPage')
+const InventoryImportPage = named(() => import('../features/inventory/InventoryImportPage'), 'InventoryImportPage')
 
 // Recipes
-import RecipesListPage from '../features/recipes/RecipesListPage'
-import RecipeEditorPage from '../features/recipes/RecipeEditorPage'
-import RecipeImportPage from '../features/recipes/RecipeImportPage'
+const RecipesListPage = lazy(() => import('../features/recipes/RecipesListPage'))
+const RecipeEditorPage = lazy(() => import('../features/recipes/RecipeEditorPage'))
+const RecipeImportPage = lazy(() => import('../features/recipes/RecipeImportPage'))
 
 // Library
-import { StylesPage } from '../features/library/StylesPage'
-import { EquipmentProfilesPage } from '../features/library/EquipmentProfilesPage'
-import { MashProfilesPage } from '../features/library/MashProfilesPage'
-import { YeastsPage } from '../features/library/YeastsPage'
-import { LibraryFermentablesPage } from '../features/library/LibraryFermentablesPage'
+const StylesPage = named(() => import('../features/library/StylesPage'), 'StylesPage')
+const EquipmentProfilesPage = named(() => import('../features/library/EquipmentProfilesPage'), 'EquipmentProfilesPage')
+const MashProfilesPage = named(() => import('../features/library/MashProfilesPage'), 'MashProfilesPage')
+const YeastsPage = named(() => import('../features/library/YeastsPage'), 'YeastsPage')
+const LibraryFermentablesPage = named(() => import('../features/library/LibraryFermentablesPage'), 'LibraryFermentablesPage')
 
 // Batches
-import { BatchesListPage } from '../features/batches/BatchesListPage'
-import { BatchCreatePage } from '../features/batches/BatchCreatePage'
-import FermentersPage from '../features/fermenters/FermentersPage'
-import FermenterSchedulePage from '../features/fermenters/FermenterSchedulePage'
-import { BatchDetailPage } from '../features/batches/BatchDetailPage'
-import { BatchImportPage } from '../features/batches/BatchImportPage'
+const BatchesListPage = named(() => import('../features/batches/BatchesListPage'), 'BatchesListPage')
+const BatchCreatePage = named(() => import('../features/batches/BatchCreatePage'), 'BatchCreatePage')
+const FermentersPage = lazy(() => import('../features/fermenters/FermentersPage'))
+const FermenterSchedulePage = lazy(() => import('../features/fermenters/FermenterSchedulePage'))
+const BatchDetailPage = named(() => import('../features/batches/BatchDetailPage'), 'BatchDetailPage')
+const BatchImportPage = named(() => import('../features/batches/BatchImportPage'), 'BatchImportPage')
 
 // Calendar
-import { CalendarPage } from '../features/calendar/CalendarPage'
+const CalendarPage = named(() => import('../features/calendar/CalendarPage'), 'CalendarPage')
 
 // Yeast kinetics
-import { YeastKineticsPage } from '../features/yeast-kinetics/YeastKineticsPage'
+const YeastKineticsPage = named(() => import('../features/yeast-kinetics/YeastKineticsPage'), 'YeastKineticsPage')
 
 // Account
-import { AccountPage } from '../features/account/AccountPage'
+const AccountPage = named(() => import('../features/account/AccountPage'), 'AccountPage')
 
 // Water chemistry
-import { WaterProfilesPage } from '../features/water/WaterProfilesPage'
-import { WaterCalculatorPage } from '../features/water/WaterCalculatorPage'
-import { WaterAdjustmentsPage } from '../features/water/WaterAdjustmentsPage'
+const WaterProfilesPage = named(() => import('../features/water/WaterProfilesPage'), 'WaterProfilesPage')
+const WaterCalculatorPage = named(() => import('../features/water/WaterCalculatorPage'), 'WaterCalculatorPage')
+const WaterAdjustmentsPage = named(() => import('../features/water/WaterAdjustmentsPage'), 'WaterAdjustmentsPage')
 
 // Beer Duty
-import { DutyReturnsPage } from '../features/duty/DutyReturnsPage'
+const DutyReturnsPage = named(() => import('../features/duty/DutyReturnsPage'), 'DutyReturnsPage')
 
 // Label Records
-import { LabelRecordsPage } from '../features/labels/LabelRecordsPage'
+const LabelRecordsPage = named(() => import('../features/labels/LabelRecordsPage'), 'LabelRecordsPage')
 
 // Label & Print Design
-import { LabelDesignsPage } from '../features/labels/LabelDesignsPage'
-import { LabelDesignEditorPage } from '../features/labels/LabelDesignEditorPage'
-import { BrandProfilesPage } from '../features/labels/BrandProfilesPage'
+const LabelDesignsPage = named(() => import('../features/labels/LabelDesignsPage'), 'LabelDesignsPage')
+const LabelDesignEditorPage = named(() => import('../features/labels/LabelDesignEditorPage'), 'LabelDesignEditorPage')
+const BrandProfilesPage = named(() => import('../features/labels/BrandProfilesPage'), 'BrandProfilesPage')
 
 // Packaging & Traceability
-import PackagingRunsPage from '../features/packaging/PackagingRunsPage'
-import DistributionMovementsPage from '../features/packaging/DistributionMovementsPage'
-import TraceabilityPage from '../features/traceability/TraceabilityPage'
+const PackagingRunsPage = lazy(() => import('../features/packaging/PackagingRunsPage'))
+const DistributionMovementsPage = lazy(() => import('../features/packaging/DistributionMovementsPage'))
+const TraceabilityPage = lazy(() => import('../features/traceability/TraceabilityPage'))
 
 // Procurement
-import SuppliersPage from '../features/procurement/SuppliersPage'
-import PurchaseOrdersPage from '../features/procurement/PurchaseOrdersPage'
+const SuppliersPage = lazy(() => import('../features/procurement/SuppliersPage'))
+const PurchaseOrdersPage = lazy(() => import('../features/procurement/PurchaseOrdersPage'))
 
 // Yeast Bank
-import YeastBankPage from '../features/yeast-bank/YeastBankPage'
+const YeastBankPage = lazy(() => import('../features/yeast-bank/YeastBankPage'))
 
 // Fermentation
-import { FermentationPage } from '../features/fermentation/FermentationPage'
+const FermentationPage = named(() => import('../features/fermentation/FermentationPage'), 'FermentationPage')
 
 // Equipment maintenance
-import EquipmentPage from '../features/equipment/EquipmentPage'
-import MaintenanceDuePage from '../features/equipment/MaintenanceDuePage'
+const EquipmentPage = lazy(() => import('../features/equipment/EquipmentPage'))
+const MaintenanceDuePage = lazy(() => import('../features/equipment/MaintenanceDuePage'))
 
 // Compliance Audit
-import ComplianceAuditPage from '../features/compliance/ComplianceAuditPage'
+const ComplianceAuditPage = lazy(() => import('../features/compliance/ComplianceAuditPage'))
 
 // Phase 07d — reporting & container assets
-import { ContainerAssetsListPage } from '../features/reporting/ContainerAssetsListPage'
-import { ContainerAssetDetailPage } from '../features/reporting/ContainerAssetDetailPage'
-import { ContainerAssetQRPage } from '../features/reporting/ContainerAssetQRPage'
-import { CostRatesPage } from '../features/reporting/CostRatesPage'
-import { BatchCostsPage } from '../features/reporting/BatchCostsPage'
-import { CostReportsPage } from '../features/reporting/CostReportsPage'
+const ContainerAssetsListPage = named(() => import('../features/reporting/ContainerAssetsListPage'), 'ContainerAssetsListPage')
+const ContainerAssetDetailPage = named(() => import('../features/reporting/ContainerAssetDetailPage'), 'ContainerAssetDetailPage')
+const ContainerAssetQRPage = named(() => import('../features/reporting/ContainerAssetQRPage'), 'ContainerAssetQRPage')
+const CostRatesPage = named(() => import('../features/reporting/CostRatesPage'), 'CostRatesPage')
+const BatchCostsPage = named(() => import('../features/reporting/BatchCostsPage'), 'BatchCostsPage')
+const CostReportsPage = named(() => import('../features/reporting/CostReportsPage'), 'CostReportsPage')
 
 const router = createBrowserRouter([
   { path: '/', element: <LandingPage /> },
