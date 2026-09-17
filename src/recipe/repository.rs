@@ -2,7 +2,8 @@
 //!
 //! Port of the Go `internal/recipe/repository.go`. `NUMERIC` columns are
 //! selected as `float8`. Child arrays are replaced wholesale (DELETE + INSERT)
-//! inside the caller's transaction.
+//! inside the caller's transaction. Child rows carry the recipe's `tenant_id`
+//! (a composite foreign key keeps it in step), and every child query filters on it.
 
 use sqlx::{PgConnection, PgExecutor, PgPool, Postgres, QueryBuilder};
 use uuid::Uuid;
@@ -221,19 +222,15 @@ pub async fn is_referenced_by_batch(pool: &PgPool, id: Uuid) -> Result<bool, sql
 
 // ---- child replacement (DELETE + INSERT inside the tx) ----
 
-/// Deletes a recipe's rows from one child table, but only when the recipe belongs
-/// to `tenant_id` (child tables have no tenant column of their own). `table` is
-/// always a literal from this module.
+/// Deletes a recipe's rows from one child table, scoped to `tenant_id`. `table`
+/// is always a literal from this module.
 async fn delete_children(
     conn: &mut PgConnection,
     table: &'static str,
     tenant_id: Uuid,
     recipe_id: Uuid,
 ) -> Result<(), sqlx::Error> {
-    let sql = format!(
-        "DELETE FROM {table} WHERE recipe_id = $1 \
-         AND EXISTS (SELECT 1 FROM recipes r WHERE r.id = $1 AND r.tenant_id = $2)"
-    );
+    let sql = format!("DELETE FROM {table} WHERE recipe_id = $1 AND tenant_id = $2");
     sqlx::query(&sql)
         .bind(recipe_id)
         .bind(tenant_id)
@@ -255,11 +252,12 @@ pub async fn replace_fermentables(
         return Ok(());
     }
     let mut qb = QueryBuilder::<Postgres>::new(
-        "INSERT INTO recipe_fermentables (recipe_id, step_order, name, amount, unit, \
+        "INSERT INTO recipe_fermentables (recipe_id, tenant_id, step_order, name, amount, unit, \
          color_ebc, potential_ppg, type, addition) ",
     );
     qb.push_values(rows, |mut b, f| {
         b.push_bind(recipe_id)
+            .push_bind(tenant_id)
             .push_bind(f.step_order)
             .push_bind(&f.name)
             .push_bind(f.amount)
@@ -286,11 +284,12 @@ pub async fn replace_hops(
         return Ok(());
     }
     let mut qb = QueryBuilder::<Postgres>::new(
-        "INSERT INTO recipe_hops (recipe_id, step_order, name, amount, unit, alpha_acid_pct, \
+        "INSERT INTO recipe_hops (recipe_id, tenant_id, step_order, name, amount, unit, alpha_acid_pct, \
          boil_time_minutes, form, use) ",
     );
     qb.push_values(rows, |mut b, h| {
         b.push_bind(recipe_id)
+            .push_bind(tenant_id)
             .push_bind(h.step_order)
             .push_bind(&h.name)
             .push_bind(h.amount)
@@ -317,10 +316,11 @@ pub async fn replace_yeasts(
         return Ok(());
     }
     let mut qb = QueryBuilder::<Postgres>::new(
-        "INSERT INTO recipe_yeasts (recipe_id, yeast_id, name, amount, unit, attenuation_pct) ",
+        "INSERT INTO recipe_yeasts (recipe_id, tenant_id, yeast_id, name, amount, unit, attenuation_pct) ",
     );
     qb.push_values(rows, |mut b, y| {
         b.push_bind(recipe_id)
+            .push_bind(tenant_id)
             .push_bind(y.yeast_id)
             .push_bind(&y.name)
             .push_bind(y.amount)
@@ -343,10 +343,11 @@ pub async fn replace_mash_steps(
         return Ok(());
     }
     let mut qb = QueryBuilder::<Postgres>::new(
-        "INSERT INTO recipe_mash_steps (recipe_id, step_order, step_type, target_temp_c, hold_minutes, infusion_volume_liters) ",
+        "INSERT INTO recipe_mash_steps (recipe_id, tenant_id, step_order, step_type, target_temp_c, hold_minutes, infusion_volume_liters) ",
     );
     qb.push_values(rows, |mut b, ms| {
         b.push_bind(recipe_id)
+            .push_bind(tenant_id)
             .push_bind(ms.step_order)
             .push_bind(&ms.step_type)
             .push_bind(ms.target_temp_c)
@@ -359,55 +360,69 @@ pub async fn replace_mash_steps(
 
 // ---- child selects ----
 
-/// Fetches a recipe's fermentables ordered by step_order.
+/// Fetches a recipe's fermentables ordered by step_order, tenant-scoped.
 pub async fn select_fermentables(
     pool: &PgPool,
+    tenant_id: Uuid,
     recipe_id: Uuid,
 ) -> Result<Vec<Fermentable>, sqlx::Error> {
     sqlx::query_as::<_, Fermentable>(
         "SELECT id, recipe_id, step_order, name, amount::float8 AS amount, unit, \
          color_ebc::float8 AS color_ebc, potential_ppg::float8 AS potential_ppg, type, addition \
-         FROM recipe_fermentables WHERE recipe_id=$1 ORDER BY step_order",
+         FROM recipe_fermentables WHERE recipe_id=$1 AND tenant_id=$2 ORDER BY step_order",
     )
     .bind(recipe_id)
+    .bind(tenant_id)
     .fetch_all(pool)
     .await
 }
 
-/// Fetches a recipe's hops ordered by step_order.
-pub async fn select_hops(pool: &PgPool, recipe_id: Uuid) -> Result<Vec<Hop>, sqlx::Error> {
+/// Fetches a recipe's hops ordered by step_order, tenant-scoped.
+pub async fn select_hops(
+    pool: &PgPool,
+    tenant_id: Uuid,
+    recipe_id: Uuid,
+) -> Result<Vec<Hop>, sqlx::Error> {
     sqlx::query_as::<_, Hop>(
         "SELECT id, recipe_id, step_order, name, amount::float8 AS amount, unit, \
          alpha_acid_pct::float8 AS alpha_acid_pct, boil_time_minutes::float8 AS boil_time_minutes, \
-         form, use FROM recipe_hops WHERE recipe_id=$1 ORDER BY step_order",
+         form, use FROM recipe_hops WHERE recipe_id=$1 AND tenant_id=$2 ORDER BY step_order",
     )
     .bind(recipe_id)
+    .bind(tenant_id)
     .fetch_all(pool)
     .await
 }
 
-/// Fetches a recipe's yeasts.
-pub async fn select_yeasts(pool: &PgPool, recipe_id: Uuid) -> Result<Vec<Yeast>, sqlx::Error> {
+/// Fetches a recipe's yeasts, tenant-scoped.
+pub async fn select_yeasts(
+    pool: &PgPool,
+    tenant_id: Uuid,
+    recipe_id: Uuid,
+) -> Result<Vec<Yeast>, sqlx::Error> {
     sqlx::query_as::<_, Yeast>(
         "SELECT id, recipe_id, yeast_id, name, amount::float8 AS amount, unit, \
-         attenuation_pct::float8 AS attenuation_pct FROM recipe_yeasts WHERE recipe_id=$1",
+         attenuation_pct::float8 AS attenuation_pct FROM recipe_yeasts WHERE recipe_id=$1 AND tenant_id=$2",
     )
     .bind(recipe_id)
+    .bind(tenant_id)
     .fetch_all(pool)
     .await
 }
 
-/// Fetches a recipe's mash steps ordered by step_order.
+/// Fetches a recipe's mash steps ordered by step_order, tenant-scoped.
 pub async fn select_mash_steps(
     pool: &PgPool,
+    tenant_id: Uuid,
     recipe_id: Uuid,
 ) -> Result<Vec<MashStep>, sqlx::Error> {
     sqlx::query_as::<_, MashStep>(
         "SELECT id, recipe_id, step_order, step_type, target_temp_c::float8 AS target_temp_c, \
          hold_minutes, infusion_volume_liters::float8 AS infusion_volume_liters \
-         FROM recipe_mash_steps WHERE recipe_id=$1 ORDER BY step_order",
+         FROM recipe_mash_steps WHERE recipe_id=$1 AND tenant_id=$2 ORDER BY step_order",
     )
     .bind(recipe_id)
+    .bind(tenant_id)
     .fetch_all(pool)
     .await
 }

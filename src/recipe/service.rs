@@ -127,10 +127,10 @@ async fn load(
         .await?
         .ok_or_else(|| ApiError::not_found("recipe"))?;
     Ok(RecipeWithIngredients {
-        fermentables: repo::select_fermentables(&state.pool, id).await?,
-        hops: repo::select_hops(&state.pool, id).await?,
-        yeasts: repo::select_yeasts(&state.pool, id).await?,
-        mash_steps: repo::select_mash_steps(&state.pool, id).await?,
+        fermentables: repo::select_fermentables(&state.pool, tenant_id, id).await?,
+        hops: repo::select_hops(&state.pool, tenant_id, id).await?,
+        yeasts: repo::select_yeasts(&state.pool, tenant_id, id).await?,
+        mash_steps: repo::select_mash_steps(&state.pool, tenant_id, id).await?,
         recipe,
     })
 }
