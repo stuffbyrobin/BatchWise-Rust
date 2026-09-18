@@ -19,6 +19,7 @@ use axum::response::Response;
 use super::authz;
 use super::context::RequestContext;
 use super::errors::ApiError;
+use super::redis_limits::RedisRateLimits;
 use crate::state::AppState;
 
 /// Validates the `Authorization: Bearer <jwt>` header, checks the account is
@@ -101,45 +102,92 @@ pub async fn check_feature(
         Err(ApiError::feature_disabled(key, &tier))
     }
 }
-/// (per-IP for auth routes). In-memory only; Redis is a future enhancement.
+/// Sliding-window rate limiter keyed by the caller: the client IP for route
+/// limits, the e-mail address for the failed-login limit. The window is kept in
+/// memory and, when a [`RedisRateLimits`] is configured, in Redis as well; the
+/// shared answer then decides, so every instance shares one limit.
 /// Keys are evicted lazily during a sweep triggered every `sweep_every` operations
 /// to prevent unbounded growth when an attacker rotates source IPs.
 #[derive(Debug)]
 pub struct RateLimiter {
+    name: &'static str,
     limit: usize,
     window: Duration,
     sweep_every: usize,
     ops: AtomicUsize,
     hits: Mutex<HashMap<String, Vec<Instant>>>,
+    shared: Option<Arc<RedisRateLimits>>,
 }
 
 impl RateLimiter {
-    /// New limiter allowing `limit` requests per 60-second window.
-    pub fn per_minute(limit: u32) -> Self {
+    /// New limiter allowing `limit` requests per 60-second window, shared
+    /// through Redis when `shared` is set. `name` separates the limiters
+    /// sharing one Redis.
+    pub fn per_minute(
+        name: &'static str,
+        limit: u32,
+        shared: Option<Arc<RedisRateLimits>>,
+    ) -> Self {
         Self {
+            name,
             limit: limit.max(1) as usize,
             window: Duration::from_secs(60),
             sweep_every: 1024,
             ops: AtomicUsize::new(0),
             hits: Mutex::new(HashMap::new()),
+            shared,
         }
     }
 
-    /// New limiter with a custom window for testing.
+    /// New in-memory limiter with a custom window for testing.
     #[cfg(test)]
     pub fn with_window(limit: usize, window: Duration) -> Self {
         Self {
+            name: "test",
             limit,
             window,
             sweep_every: 1024,
             ops: AtomicUsize::new(0),
             hits: Mutex::new(HashMap::new()),
+            shared: None,
         }
     }
 
     /// Records a hit for `key`. Returns `Err(retry_after_seconds)` when the
     /// limit is exceeded, `Ok(())` otherwise.
-    pub fn check(&self, key: &str) -> Result<(), u64> {
+    pub async fn check(&self, key: &str) -> Result<(), u64> {
+        self.hit(key, true).await
+    }
+
+    /// Returns `Some(retry_after_seconds)` when the bucket for `key` is already
+    /// at the limit, without recording a hit. Used for the per-account failed-login
+    /// check, where only failures count as hits.
+    pub async fn is_limited(&self, key: &str) -> Option<u64> {
+        self.hit(key, false).await.err()
+    }
+
+    async fn hit(&self, key: &str, record: bool) -> Result<(), u64> {
+        // The in-memory window keeps counting even while Redis answers, so an
+        // outage falls back to per-instance limiting with a warm window.
+        let local = self.local(key, record);
+        let Some(shared) = &self.shared else {
+            return local;
+        };
+        match shared
+            .hit(self.name, key, self.window, self.limit, record)
+            .await
+        {
+            Ok(None) => Ok(()),
+            Ok(Some(retry)) => Err(retry),
+            Err(e) => {
+                shared.warn(self.name, &e);
+                local
+            }
+        }
+    }
+
+    /// The in-memory half of [`Self::hit`].
+    fn local(&self, key: &str, record: bool) -> Result<(), u64> {
         let now = Instant::now();
         let mut hits = self.hits.lock().expect("rate limiter mutex");
         // Every call counts toward the sweep, including rejected ones, so a
@@ -158,25 +206,10 @@ impl RateLimiter {
             let retry = self.window.saturating_sub(now.duration_since(oldest));
             return Err(retry.as_secs().max(1));
         }
-        bucket.push(now);
-        Ok(())
-    }
-
-    /// Returns `Some(retry_after_seconds)` when the bucket for `key` is already
-    /// at the limit, without recording a hit. Used for the per-account failed-login
-    /// check, where only failures count as hits.
-    pub fn is_limited(&self, key: &str) -> Option<u64> {
-        let now = Instant::now();
-        let mut hits = self.hits.lock().expect("rate limiter mutex");
-        let bucket = hits.entry(key.to_string()).or_default();
-        bucket.retain(|&t| now.duration_since(t) < self.window);
-        if bucket.len() >= self.limit {
-            let oldest = bucket.first().copied().unwrap_or(now);
-            let retry = self.window.saturating_sub(now.duration_since(oldest));
-            Some(retry.as_secs().max(1))
-        } else {
-            None
+        if record {
+            bucket.push(now);
         }
+        Ok(())
     }
 
     /// Returns the number of tracked keys, for testing sweep behavior.
@@ -215,10 +248,15 @@ pub struct RateLimit {
 }
 
 impl RateLimit {
-    /// A fresh per-minute limiter.
-    pub fn per_minute(limit: u32, trust_proxy_headers: bool) -> Self {
+    /// A fresh per-minute limiter, shared through Redis when `shared` is set.
+    pub fn per_minute(
+        name: &'static str,
+        limit: u32,
+        trust_proxy_headers: bool,
+        shared: Option<Arc<RedisRateLimits>>,
+    ) -> Self {
         Self {
-            limiter: Arc::new(RateLimiter::per_minute(limit)),
+            limiter: Arc::new(RateLimiter::per_minute(name, limit, shared)),
             trust_proxy_headers,
         }
     }
@@ -232,7 +270,11 @@ pub async fn rate_limit(
     req: Request,
     next: Next,
 ) -> Result<Response, ApiError> {
-    match rl.limiter.check(&client_ip(&req, rl.trust_proxy_headers)) {
+    match rl
+        .limiter
+        .check(&client_ip(&req, rl.trust_proxy_headers))
+        .await
+    {
         Ok(()) => Ok(next.run(req).await),
         Err(retry) => Err(ApiError::rate_limited(retry)),
     }
@@ -242,41 +284,41 @@ pub async fn rate_limit(
 mod tests {
     use super::*;
 
-    #[test]
-    fn allows_up_to_limit_then_blocks() {
-        let rl = RateLimiter::per_minute(3);
-        assert!(rl.check("ip").is_ok());
-        assert!(rl.check("ip").is_ok());
-        assert!(rl.check("ip").is_ok());
-        assert!(rl.check("ip").is_err());
+    #[tokio::test]
+    async fn allows_up_to_limit_then_blocks() {
+        let rl = RateLimiter::per_minute("test", 3, None);
+        assert!(rl.check("ip").await.is_ok());
+        assert!(rl.check("ip").await.is_ok());
+        assert!(rl.check("ip").await.is_ok());
+        assert!(rl.check("ip").await.is_err());
     }
 
-    #[test]
-    fn separate_keys_are_independent() {
-        let rl = RateLimiter::per_minute(1);
-        assert!(rl.check("a").is_ok());
-        assert!(rl.check("b").is_ok());
-        assert!(rl.check("a").is_err());
+    #[tokio::test]
+    async fn separate_keys_are_independent() {
+        let rl = RateLimiter::per_minute("test", 1, None);
+        assert!(rl.check("a").await.is_ok());
+        assert!(rl.check("b").await.is_ok());
+        assert!(rl.check("a").await.is_err());
     }
 
-    #[test]
-    fn is_limited_does_not_record() {
-        let rl = RateLimiter::per_minute(1);
-        assert_eq!(rl.is_limited("key"), None);
-        assert!(rl.check("key").is_ok());
-        assert!(rl.is_limited("key").is_some());
+    #[tokio::test]
+    async fn is_limited_does_not_record() {
+        let rl = RateLimiter::per_minute("test", 1, None);
+        assert_eq!(rl.is_limited("key").await, None);
+        assert!(rl.check("key").await.is_ok());
+        assert!(rl.is_limited("key").await.is_some());
     }
 
-    #[test]
-    fn sweep_evicts_idle_keys() {
+    #[tokio::test]
+    async fn sweep_evicts_idle_keys() {
         let rl = RateLimiter::with_window(1, Duration::from_millis(10));
-        assert!(rl.check("a").is_ok());
-        assert!(rl.check("b").is_ok());
+        assert!(rl.check("a").await.is_ok());
+        assert!(rl.check("b").await.is_ok());
         assert_eq!(rl.len(), 2);
-        std::thread::sleep(Duration::from_millis(20));
+        tokio::time::sleep(Duration::from_millis(20)).await;
         // Rejected checks still count toward the sweep; 1024 ops trigger it.
         for _ in 0..1024 {
-            let _ = rl.check("c");
+            let _ = rl.check("c").await;
         }
         assert_eq!(rl.len(), 1);
     }

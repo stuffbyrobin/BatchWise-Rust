@@ -4,6 +4,8 @@
 //! [`ValidatedJson`], call the service, and render. Rate limits apply per-IP to
 //! register/login/refresh; `/me` routes require a valid JWT.
 
+use std::sync::Arc;
+
 use axum::extract::State;
 use axum::http::{header, HeaderMap, StatusCode};
 use axum::middleware::from_fn_with_state;
@@ -19,6 +21,7 @@ use super::service;
 use crate::platform::context::RequestContext;
 use crate::platform::errors::ApiError;
 use crate::platform::middleware::{rate_limit, require_auth, RateLimit};
+use crate::platform::redis_limits::RedisRateLimits;
 use crate::platform::web::ValidatedJson;
 use crate::state::AppState;
 
@@ -30,18 +33,21 @@ pub fn routes(state: AppState) -> Router {
             post(register),
             state.config.rate_limit_register_per_minute,
             state.config.trust_proxy_headers,
+            state.rate_limits.clone(),
         ))
         .merge(rate_limited(
             "/login",
             post(login),
             state.config.rate_limit_login_per_minute,
             state.config.trust_proxy_headers,
+            state.rate_limits.clone(),
         ))
         .merge(rate_limited(
             "/refresh",
             post(refresh),
             state.config.rate_limit_refresh_per_minute,
             state.config.trust_proxy_headers,
+            state.rate_limits.clone(),
         ))
         // Invitation links are public; they share the registration limit.
         .merge(rate_limited(
@@ -49,12 +55,14 @@ pub fn routes(state: AppState) -> Router {
             post(preview_invitation),
             state.config.rate_limit_register_per_minute,
             state.config.trust_proxy_headers,
+            state.rate_limits.clone(),
         ))
         .merge(rate_limited(
             "/accept-invitation",
             post(accept_invitation),
             state.config.rate_limit_register_per_minute,
             state.config.trust_proxy_headers,
+            state.rate_limits.clone(),
         ))
         .route("/logout", post(logout));
 
@@ -65,15 +73,22 @@ pub fn routes(state: AppState) -> Router {
     public.merge(protected).with_state(state)
 }
 
-/// Wraps a single route with a per-IP rate-limit layer.
+/// Wraps a single route with a per-IP rate-limit layer. The path names the
+/// limiter, so instances sharing a Redis share that route's limit.
 fn rate_limited(
-    path: &str,
+    path: &'static str,
     handler: axum::routing::MethodRouter<AppState>,
     limit: u32,
     trust_proxy_headers: bool,
+    shared: Option<Arc<RedisRateLimits>>,
 ) -> Router<AppState> {
     let layer = from_fn_with_state(
-        RateLimit::per_minute(limit, trust_proxy_headers),
+        RateLimit::per_minute(
+            path.trim_start_matches('/'),
+            limit,
+            trust_proxy_headers,
+            shared,
+        ),
         rate_limit,
     );
     Router::new().route(path, handler).route_layer(layer)

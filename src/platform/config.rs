@@ -35,6 +35,12 @@ pub struct Config {
     pub rate_limit_default_per_minute: u32,
     /// Trust `X-Forwarded-For` for rate-limit keying (only behind a trusted proxy).
     pub trust_proxy_headers: bool,
+    /// Redis holding the rate-limit windows. Unset (the default) limits per
+    /// instance, which is right for a single replica; set it once there are
+    /// several, so they share one limit.
+    pub redis_url: Option<String>,
+    /// Key prefix in Redis, so several deployments can share one server.
+    pub redis_key_prefix: String,
     pub migrations_disabled: bool,
     pub log_level: String,
 }
@@ -76,6 +82,9 @@ impl std::fmt::Debug for Config {
                 &self.rate_limit_default_per_minute,
             )
             .field("trust_proxy_headers", &self.trust_proxy_headers)
+            // The URL can carry a password.
+            .field("redis_url", &self.redis_url.as_ref().map(|_| "[redacted]"))
+            .field("redis_key_prefix", &self.redis_key_prefix)
             .field("migrations_disabled", &self.migrations_disabled)
             .field("log_level", &self.log_level)
             .finish()
@@ -129,9 +138,19 @@ impl Config {
             rate_limit_refresh_per_minute: parse_opt("RATE_LIMIT_REFRESH_PER_MINUTE", 30)?,
             rate_limit_default_per_minute: parse_opt("RATE_LIMIT_DEFAULT_PER_MINUTE", 600)?,
             trust_proxy_headers: parse_opt("TRUST_PROXY_HEADERS", false)?,
+            redis_url: env::var("REDIS_URL")
+                .ok()
+                .map(|v| v.trim().to_string())
+                .filter(|v| !v.is_empty()),
+            redis_key_prefix: opt("REDIS_KEY_PREFIX", "batchwise"),
             migrations_disabled: parse_opt("MIGRATIONS_DISABLED", false)?,
             log_level: opt("LOG_LEVEL", "info"),
         };
+
+        if let Some(url) = &cfg.redis_url {
+            redis::Client::open(url.as_str())
+                .map_err(|e| ConfigError::Invalid("REDIS_URL", e.to_string()))?;
+        }
 
         // A short HS256 secret is brute-forceable offline and a forged token
         // carries an arbitrary tenant_id, so the length floor applies in every

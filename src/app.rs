@@ -82,7 +82,12 @@ pub fn build_router(state: AppState) -> Router {
     // Global per-IP limit on the API only (not /healthz). CORS preflights are
     // answered by the CORS layer further out and never reach it.
     let api = api.layer(from_fn_with_state(
-        RateLimit::per_minute(cfg.rate_limit_default_per_minute, cfg.trust_proxy_headers),
+        RateLimit::per_minute(
+            "api",
+            cfg.rate_limit_default_per_minute,
+            cfg.trust_proxy_headers,
+            state.rate_limits.clone(),
+        ),
         rate_limit,
     ));
     let hsts = (!cfg.is_development()).then(|| HeaderValue::from_static(HSTS));
@@ -228,6 +233,8 @@ mod tests {
             rate_limit_refresh_per_minute: 1000,
             rate_limit_default_per_minute: default_per_minute,
             trust_proxy_headers: false,
+            redis_url: None,
+            redis_key_prefix: "batchwise-test".into(),
             migrations_disabled: true,
             log_level: "info".into(),
         }

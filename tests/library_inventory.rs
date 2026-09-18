@@ -42,6 +42,8 @@ fn test_config(database_url: String, allow_overdraft: bool) -> Config {
         rate_limit_refresh_per_minute: 1000,
         rate_limit_default_per_minute: 1000,
         trust_proxy_headers: false,
+        redis_url: None,
+        redis_key_prefix: "batchwise-test".into(),
         migrations_disabled: false,
         log_level: "info".into(),
     }
