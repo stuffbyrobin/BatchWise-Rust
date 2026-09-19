@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { apiClient } from '../../api/client'
 import { APIError } from '../../api/error'
 import type { components } from '../../api/generated'
+import { PASSWORD_HINT, PASSWORD_MIN_LENGTH, passwordProblem } from '../../auth/password'
 import { ROLE_LABELS, type Role } from '../../auth/permissions'
 import { useAuth } from '../../auth/useAuth'
 
@@ -52,6 +53,11 @@ export function AcceptInvitationPage() {
     e.preventDefault()
     if (password !== confirmPassword) {
       setError('The passwords do not match.')
+      return
+    }
+    const problem = passwordProblem(password)
+    if (problem) {
+      setError(problem)
       return
     }
     setSubmitting(true)
@@ -118,9 +124,13 @@ export function AcceptInvitationPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full p-2 border rounded"
                 autoComplete="new-password"
-                minLength={12}
+                minLength={PASSWORD_MIN_LENGTH}
+                aria-describedby="invite-password-hint"
                 required
               />
+              <p id="invite-password-hint" className="mt-1 text-xs text-[var(--color-muted)]">
+                {PASSWORD_HINT}
+              </p>
             </div>
             <div>
               <label htmlFor="invite-confirm" className="block text-sm font-medium mb-1">
