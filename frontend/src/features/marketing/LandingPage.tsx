@@ -1,21 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-
-// ─── Logo ────────────────────────────────────────────────────────────────────
-
-function Logo() {
-  return (
-    <div className="flex items-center gap-2.5">
-      <div className="w-[30px] h-[30px] rounded-[9px] bg-(--lp-malt) flex items-center justify-center shrink-0">
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-          <path d="M3 1 L13 1 L13 5 Q13 8 10 9.5 L10 15 L6 15 L6 9.5 Q3 8 3 5 Z" fill="white" />
-          <circle cx="8" cy="5" r="1.4" fill="var(--lp-malt)" />
-        </svg>
-      </div>
-      <span className="text-[18px] font-bold tracking-[-0.5px] text-(--lp-ink) font-dm-sans">BatchWise</span>
-    </div>
-  )
-}
+import { BrandMark } from '../../components/BrandMark'
 
 // ─── Nav ─────────────────────────────────────────────────────────────────────
 
@@ -26,7 +11,7 @@ function Nav() {
         className="bg-(--lp-card) rounded-full pl-6 pr-2 py-2 flex items-center gap-7 border border-(--lp-rule)"
         style={{ boxShadow: '0 1px 2px rgba(28,17,8,.05), 0 8px 32px rgba(28,17,8,.08)' }}
       >
-        <Logo />
+        <BrandMark />
         <nav className="hidden md:flex gap-6 text-[14px] text-(--lp-muted) font-medium">
           {['Recipes', 'Brewhouse', 'Inventory', 'Calendar', 'Pricing'].map((l) => (
             <a key={l} href="#" className="hover:text-(--lp-ink) transition-colors duration-150">{l}</a>
@@ -554,7 +539,7 @@ function Footer() {
   return (
     <footer className="px-16 pb-10 max-w-[1280px] mx-auto">
       <div className="border-t border-(--lp-rule) pt-8 flex items-center justify-between flex-wrap gap-4">
-        <Logo />
+        <BrandMark />
         <div className="flex gap-6 text-[13px] text-(--lp-muted)">
           {['Privacy', 'Terms', 'Contact'].map((l) => (
             <a key={l} href="#" className="hover:text-(--lp-ink) transition-colors duration-150">{l}</a>

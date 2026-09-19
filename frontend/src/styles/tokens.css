@@ -23,14 +23,17 @@
   --srm-text-on-5: #ffffff; --srm-text-on-6: #ffffff; --srm-text-on-7: #ffffff;
   --srm-text-on-8: #ffffff; --srm-text-on-9: #ffffff; --srm-text-on-10: #ffffff;
   --color-bg: #faf7ef; --color-fg: #1a0c05; --color-surface: #ffffff;
-  --color-border: #e0d8c2; --color-muted: #6b6357; --color-accent: var(--srm-5);
-  --color-danger: #b3261e; --color-success: #2e7d32; --color-warning: var(--srm-4);
-  --color-success-bg: rgba(46, 125, 50, 0.12); --color-danger-bg: rgba(179, 38, 30, 0.10); --color-warning-bg: rgba(180, 120, 40, 0.12);
+  --color-border: #e0d8c2; --color-muted: #6b6357;
+  /* Brand accent, danger and success reuse the landing page's malt/hop/alert
+     tones (above), so the signed-in app reads as the same product. */
+  --color-accent: var(--lp-malt-deep); --color-accent-soft: var(--lp-malt);
+  --color-danger: var(--lp-alert); --color-success: var(--lp-hop); --color-warning: var(--srm-4);
+  --color-success-bg: rgba(106, 139, 58, 0.12); --color-danger-bg: rgba(192, 83, 60, 0.10); --color-warning-bg: rgba(180, 120, 40, 0.12);
 }
 @media (prefers-color-scheme: dark) {
   :root {
     --color-bg: #1a0c05; --color-fg: #faf7ef; --color-surface: #2c1a10;
     --color-border: #4a3424; --color-muted: #b0a597;
-    --color-success-bg: rgba(46, 125, 50, 0.28); --color-danger-bg: rgba(179, 38, 30, 0.30); --color-warning-bg: rgba(180, 120, 40, 0.28);
+    --color-success-bg: rgba(106, 139, 58, 0.28); --color-danger-bg: rgba(192, 83, 60, 0.30); --color-warning-bg: rgba(180, 120, 40, 0.28);
   }
 }

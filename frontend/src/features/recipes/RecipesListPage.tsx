@@ -74,10 +74,13 @@ export default function RecipesListPage() {
         <h1 className="text-2xl font-bold">Recipes</h1>
         {canWrite && (
         <div className="flex gap-2">
-          <Link to="/recipes/new" className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
+          <Link to="/recipes/new" className="bg-[var(--color-accent)] text-white px-4 py-2 rounded hover:brightness-110">
             New recipe
           </Link>
-          <Link to="/recipes/import" className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+          <Link
+            to="/recipes/import"
+            className="border border-[var(--color-border)] text-[var(--color-fg)] px-4 py-2 rounded hover:bg-[var(--color-border)]"
+          >
             Import
           </Link>
         </div>
@@ -138,7 +141,7 @@ export default function RecipesListPage() {
                     <td className="px-4 py-3">
                       <Link
                         to={`/recipes/${recipe.id}`}
-                        className="text-blue-600 hover:underline font-medium"
+                        className="text-[var(--color-accent)] hover:underline font-medium"
                       >
                         {recipe.name}
                       </Link>
@@ -167,7 +170,7 @@ export default function RecipesListPage() {
                     <td className="px-4 py-3 text-right">
                       <Link
                         to={`/recipes/${recipe.id}`}
-                        className="text-blue-600 hover:underline text-sm"
+                        className="text-[var(--color-accent)] hover:underline text-sm"
                       >
                         View
                       </Link>
