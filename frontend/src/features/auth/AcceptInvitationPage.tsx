@@ -6,6 +6,7 @@ import type { components } from '../../api/generated'
 import { PASSWORD_HINT, PASSWORD_MIN_LENGTH, passwordProblem } from '../../auth/password'
 import { ROLE_LABELS, type Role } from '../../auth/permissions'
 import { useAuth } from '../../auth/useAuth'
+import { AuthLayout, authAlertCls, authButtonCls, authInputCls } from '../../components/layout/AuthLayout'
 
 type InvitationPreview = components['schemas']['InvitationPreview']
 
@@ -75,32 +76,31 @@ export function AcceptInvitationPage() {
   const problem = token ? loadError : 'This invite link is incomplete.'
 
   return (
-    <div className="p-6 max-w-md mx-auto">
-      <h1 className="text-2xl font-bold mb-6">Join a brewery</h1>
+    <AuthLayout title="Join a brewery">
       {problem && (
-        <div role="alert" className="bg-red-100 text-red-700 p-3 rounded mb-4">
+        <div role="alert" className={authAlertCls}>
           {problem}{' '}
-          <Link to="/login" className="underline">
+          <Link to="/login" className="font-semibold underline">
             Sign in
           </Link>
         </div>
       )}
-      {!problem && !preview && <p className="text-sm text-[var(--color-muted)]">Checking your invitation…</p>}
+      {!problem && !preview && <p className="text-sm text-(--lp-muted)">Checking your invitation…</p>}
       {!problem && preview && (
         <>
-          <p className="mb-4 text-sm">
-            You have been invited to <strong>{preview.tenant_name}</strong> as{' '}
-            <strong>{ROLE_LABELS[preview.role as Role]}</strong>. Your account will use{' '}
-            <strong>{preview.email}</strong>.
+          <p className="mb-4 text-sm text-(--lp-muted)">
+            You have been invited to <strong className="text-(--lp-ink)">{preview.tenant_name}</strong> as{' '}
+            <strong className="text-(--lp-ink)">{ROLE_LABELS[preview.role as Role]}</strong>. Your account will use{' '}
+            <strong className="text-(--lp-ink)">{preview.email}</strong>.
           </p>
           {error && (
-            <div role="alert" className="bg-red-100 text-red-700 p-3 rounded mb-4">
+            <div role="alert" className={authAlertCls}>
               {error}
             </div>
           )}
           <form className="space-y-4" onSubmit={submit}>
             <div>
-              <label htmlFor="invite-name" className="block text-sm font-medium mb-1">
+              <label htmlFor="invite-name" className="block text-sm font-medium text-(--lp-ink) mb-1">
                 Your Name
               </label>
               <input
@@ -108,13 +108,13 @@ export function AcceptInvitationPage() {
                 type="text"
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
-                className="w-full p-2 border rounded"
+                className={authInputCls}
                 autoComplete="name"
                 required
               />
             </div>
             <div>
-              <label htmlFor="invite-password" className="block text-sm font-medium mb-1">
+              <label htmlFor="invite-password" className="block text-sm font-medium text-(--lp-ink) mb-1">
                 Password
               </label>
               <input
@@ -122,18 +122,18 @@ export function AcceptInvitationPage() {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full p-2 border rounded"
+                className={authInputCls}
                 autoComplete="new-password"
                 minLength={PASSWORD_MIN_LENGTH}
                 aria-describedby="invite-password-hint"
                 required
               />
-              <p id="invite-password-hint" className="mt-1 text-xs text-[var(--color-muted)]">
+              <p id="invite-password-hint" className="mt-1 text-xs text-(--lp-muted)">
                 {PASSWORD_HINT}
               </p>
             </div>
             <div>
-              <label htmlFor="invite-confirm" className="block text-sm font-medium mb-1">
+              <label htmlFor="invite-confirm" className="block text-sm font-medium text-(--lp-ink) mb-1">
                 Confirm password
               </label>
               <input
@@ -141,21 +141,17 @@ export function AcceptInvitationPage() {
                 type="password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                className="w-full p-2 border rounded"
+                className={authInputCls}
                 autoComplete="new-password"
                 required
               />
             </div>
-            <button
-              type="submit"
-              disabled={submitting}
-              className="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700 disabled:opacity-50"
-            >
+            <button type="submit" disabled={submitting} className={authButtonCls}>
               {submitting ? 'Creating account…' : 'Create account and join'}
             </button>
           </form>
         </>
       )}
-    </div>
+    </AuthLayout>
   )
 }

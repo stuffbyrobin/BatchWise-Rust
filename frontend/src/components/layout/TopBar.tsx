@@ -20,7 +20,11 @@ export function TopBar() {
   return (
     <header
       className="flex items-center justify-between px-6 py-3 border-b"
-      style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)' }}
+      style={{
+        background: 'var(--color-surface)',
+        borderColor: 'var(--color-border)',
+        boxShadow: '0 1px 2px rgba(28,17,8,.04)',
+      }}
     >
       <span className="font-semibold text-[var(--color-fg)]">{user?.tenant_name ?? ''}</span>
       <div className="flex items-center gap-4">

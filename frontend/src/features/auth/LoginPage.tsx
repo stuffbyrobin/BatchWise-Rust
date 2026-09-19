@@ -3,6 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../auth/useAuth';
 import { safeRedirectPath } from '../../auth/redirect';
 import { APIError } from '../../api/error';
+import { AuthLayout, authAlertCls, authButtonCls, authInputCls } from '../../components/layout/AuthLayout';
 
 export function LoginPage() {
   const [email, setEmail] = useState('');
@@ -28,47 +29,42 @@ export function LoginPage() {
   };
 
   return (
-    <div className="p-6 max-w-md mx-auto">
-      <h1 className="text-2xl font-bold mb-6">Sign In</h1>
+    <AuthLayout title="Welcome back" subtitle="Sign in to keep brewing.">
       {error && (
-        <div className="bg-red-100 text-red-700 p-3 rounded mb-4">{error}</div>
+        <div className={authAlertCls}>{error}</div>
       )}
       <form className="space-y-4" onSubmit={handleLogin}>
         <div>
-          <label htmlFor="login-email" className="block text-sm font-medium mb-1">Email</label>
+          <label htmlFor="login-email" className="block text-sm font-medium text-(--lp-ink) mb-1">Email</label>
           <input
             id="login-email"
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full p-2 border rounded"
+            className={authInputCls}
             autoComplete="email" required
           />
         </div>
         <div>
-          <label htmlFor="login-password" className="block text-sm font-medium mb-1">Password</label>
+          <label htmlFor="login-password" className="block text-sm font-medium text-(--lp-ink) mb-1">Password</label>
           <input
             id="login-password"
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full p-2 border rounded"
+            className={authInputCls}
             autoComplete="current-password" required
           />
         </div>
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700 disabled:opacity-50"
-        >
+        <button type="submit" disabled={loading} className={authButtonCls}>
           {loading ? 'Signing in...' : 'Sign in'}
         </button>
       </form>
-      <div className="mt-4 text-center">
-        <Link to="/register" className="text-blue-600 hover:underline">
+      <div className="mt-6 text-center text-[13px] text-(--lp-muted)">
+        <Link to="/register" className="text-(--lp-malt-deep) font-semibold no-underline hover:text-(--lp-ink) transition-colors">
           Create an account
         </Link>
       </div>
-    </div>
+    </AuthLayout>
   );
 }

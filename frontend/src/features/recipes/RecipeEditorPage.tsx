@@ -430,7 +430,7 @@ export default function RecipeEditorPage() {
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-lg font-semibold text-[var(--color-fg)]">Fermentables</h2>
               {canWrite && (
-                <button onClick={addFermentable} className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+                <button onClick={addFermentable} className="bg-[var(--color-accent)] text-white px-4 py-2 rounded hover:brightness-110">
                   Add Fermentable
                 </button>
               )}
@@ -474,7 +474,7 @@ export default function RecipeEditorPage() {
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-lg font-semibold text-[var(--color-fg)]">Hops</h2>
               {canWrite && (
-                <button onClick={addHop} className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+                <button onClick={addHop} className="bg-[var(--color-accent)] text-white px-4 py-2 rounded hover:brightness-110">
                   Add Hop
                 </button>
               )}
@@ -522,7 +522,7 @@ export default function RecipeEditorPage() {
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-lg font-semibold text-[var(--color-fg)]">Yeasts</h2>
               {canWrite && (
-                <button onClick={addYeast} className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+                <button onClick={addYeast} className="bg-[var(--color-accent)] text-white px-4 py-2 rounded hover:brightness-110">
                   Add Yeast
                 </button>
               )}
@@ -562,7 +562,7 @@ export default function RecipeEditorPage() {
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-lg font-semibold text-[var(--color-fg)]">Mash Steps</h2>
               {canWrite && (
-                <button onClick={addMashStep} className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+                <button onClick={addMashStep} className="bg-[var(--color-accent)] text-white px-4 py-2 rounded hover:brightness-110">
                   Add Mash Step
                 </button>
               )}
