@@ -23,7 +23,3 @@ Thumbs.db
 
 # Claude Code project config (local only)
 .claude/
-
-# Scratch notes written next to the repo (project-info.md is a stale June 2026
-# orientation dump; README.md and CLAUDE.md are the maintained ones)
-/project-info.md
