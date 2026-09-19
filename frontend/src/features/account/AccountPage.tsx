@@ -1,6 +1,7 @@
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../auth/useAuth'
+import { PASSWORD_HINT, PASSWORD_MIN_LENGTH, passwordProblem } from '../../auth/password'
 import { useTenant, useUpdateTenant } from './hooks/useTenant'
 import { useCanWrite } from '../../auth/useCan'
 
@@ -43,8 +44,9 @@ export function AccountPage() {
       setPwMsg({ ok: false, text: 'New passwords do not match.' })
       return
     }
-    if (newPw.length < 8) {
-      setPwMsg({ ok: false, text: 'Password must be at least 8 characters.' })
+    const problem = passwordProblem(newPw)
+    if (problem) {
+      setPwMsg({ ok: false, text: problem })
       return
     }
     setPwSaving(true)
@@ -234,7 +236,8 @@ export function AccountPage() {
           </div>
           <div className="mb-3">
             <label className={labelCls} htmlFor="newPw">New Password</label>
-            <input id="newPw" type="password" className={inputCls} value={newPw} onChange={(e) => setNewPw(e.target.value)} required minLength={8} autoComplete="new-password" />
+            <input id="newPw" type="password" className={inputCls} value={newPw} onChange={(e) => setNewPw(e.target.value)} required minLength={PASSWORD_MIN_LENGTH} autoComplete="new-password" aria-describedby="newPw-hint" />
+            <p id="newPw-hint" className="mt-1 text-xs" style={{ color: 'var(--color-muted)' }}>{PASSWORD_HINT}</p>
           </div>
           <div className="mb-4">
             <label className={labelCls} htmlFor="confirmPw">Confirm New Password</label>

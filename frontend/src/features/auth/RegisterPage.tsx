@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/useAuth';
+import { PASSWORD_HINT, PASSWORD_MIN_LENGTH, passwordProblem } from '../../auth/password';
 import { APIError } from '../../api/error';
 
 export function RegisterPage() {
@@ -15,6 +16,11 @@ export function RegisterPage() {
 
   const handleRegister = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    const problem = passwordProblem(password);
+    if (problem) {
+      setError(problem);
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
@@ -65,7 +71,10 @@ export function RegisterPage() {
             onChange={(e) => setPassword(e.target.value)}
             className="w-full p-2 border rounded"
             autoComplete="new-password" required
+            minLength={PASSWORD_MIN_LENGTH}
+            aria-describedby="reg-password-hint"
           />
+          <p id="reg-password-hint" className="mt-1 text-xs text-[var(--color-muted)]">{PASSWORD_HINT}</p>
         </div>
         <div>
           <label htmlFor="reg-tenant" className="block text-sm font-medium mb-1">Brewery Name</label>
