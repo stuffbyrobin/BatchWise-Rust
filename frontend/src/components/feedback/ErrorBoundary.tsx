@@ -27,7 +27,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
     if (this.state.hasError) {
       if (this.props.fallback) return this.props.fallback
       return (
-        <div className="p-4 rounded border border-[var(--color-danger)] bg-red-50 text-[var(--color-danger)]">
+        <div className="p-4 rounded border border-[var(--color-danger)] bg-[var(--color-danger-bg)] text-[var(--color-danger)]">
           <p className="font-semibold">Something went wrong.</p>
           <p className="text-sm mt-1">{this.state.message}</p>
           <button

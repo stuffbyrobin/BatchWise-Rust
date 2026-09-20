@@ -64,7 +64,7 @@ export function InventoryListPage() {
 
   if (isError) {
     return (
-      <div className="p-4 rounded border border-[var(--color-danger)] bg-red-50 text-[var(--color-danger)]">
+      <div className="p-4 rounded border border-[var(--color-danger)] bg-[var(--color-danger-bg)] text-[var(--color-danger)]">
         <p className="font-semibold">Failed to load inventory.</p>
         <p className="text-sm mt-1">
           {error instanceof APIError ? error.message : error instanceof Error ? error.message : 'Unknown error'}

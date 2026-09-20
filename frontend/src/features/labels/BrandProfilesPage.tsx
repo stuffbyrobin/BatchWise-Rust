@@ -84,7 +84,7 @@ export function BrandProfilesPage() {
       {canWrite && (
       <div className="border rounded p-4 mb-6" style={{ borderColor: 'var(--color-border)' }}>
         <h2 className="font-semibold mb-3 text-sm">New brand profile</h2>
-        {err && <p className="text-sm text-red-600 mb-2">{err}</p>}
+        {err && <p className="text-sm text-[var(--color-danger)] mb-2">{err}</p>}
         <div className="grid grid-cols-2 gap-3 text-sm">
           <label className="flex flex-col gap-1">
             Name
@@ -148,7 +148,7 @@ export function BrandProfilesPage() {
       )}
 
       {isLoading && <p className="text-sm text-[var(--color-muted)]">Loading…</p>}
-      {error && <p className="text-sm text-red-600">{error.message}</p>}
+      {error && <p className="text-sm text-[var(--color-danger)]">{error.message}</p>}
       {data && data.items && (
         <ul className="space-y-2">
           {data.items.map((p) => (
@@ -167,7 +167,7 @@ export function BrandProfilesPage() {
                 {p.logo_asset_id && <span className="text-xs text-[var(--color-muted)]">• logo</span>}
               </span>
               {canWrite && (
-                <button onClick={() => p.id && del.mutate(p.id)} className="text-red-600 text-xs">
+                <button onClick={() => p.id && del.mutate(p.id)} className="text-[var(--color-danger)] text-xs">
                   Delete
                 </button>
               )}

@@ -61,7 +61,7 @@ export const YeastRow = memo(function YeastRow({ row, custom, options, onUpdate,
         />
       </td>
       <td className="px-3 py-2">
-        <button type="button" onClick={() => onRemove(uid)} className="text-red-600 hover:underline">
+        <button type="button" onClick={() => onRemove(uid)} className="text-[var(--color-danger)] hover:underline">
           Remove
         </button>
       </td>

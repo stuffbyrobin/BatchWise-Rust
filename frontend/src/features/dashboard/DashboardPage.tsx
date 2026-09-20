@@ -1,15 +1,9 @@
 import { useDashboardStats } from './useDashboardStats'
 import { useAuth } from '../../auth/useAuth'
-
-const STATUS_COLORS: Record<string, string> = {
-  planned: 'var(--srm-4)',
-  brewing: 'var(--srm-5)',
-  fermenting: 'var(--srm-7)',
-  conditioning: 'var(--srm-8)',
-  packaging: 'var(--color-muted)',
-  completed: 'var(--color-success)',
-  cancelled: 'var(--color-border)',
-}
+// One colour per batch status, shared with the batches list and detail pages
+// (previously duplicated here with different, disagreeing values and a
+// missing `spoiled` entry).
+import { STATUS_COLORS } from '../batches/hooks/useBatches'
 
 function StatCard({ label, value }: { label: string; value: number | null | undefined }) {
   return (
@@ -55,7 +49,7 @@ export function DashboardPage() {
 
   if (isError) {
     return (
-      <div className="p-4 rounded border border-[var(--color-danger)] bg-red-50 text-[var(--color-danger)]">
+      <div className="p-4 rounded border border-[var(--color-danger)] bg-[var(--color-danger-bg)] text-[var(--color-danger)]">
         <p className="font-semibold">Failed to load dashboard.</p>
         <p className="text-sm mt-1">{error instanceof Error ? error.message : 'Unknown error'}</p>
         <button
@@ -108,7 +102,7 @@ export function DashboardPage() {
                 title={`${status}: ${count}`}
                 style={{
                   width: `${((count ?? 0) / totalBatches) * 100}%`,
-                  background: STATUS_COLORS[status] ?? 'var(--color-muted)',
+                  background: STATUS_COLORS[status as keyof typeof STATUS_COLORS] ?? 'var(--color-muted)',
                 }}
               />
             ))}
@@ -118,7 +112,7 @@ export function DashboardPage() {
               <span key={status} className="flex items-center gap-1 text-xs text-[var(--color-muted)]">
                 <span
                   className="inline-block w-3 h-3 rounded-sm"
-                  style={{ background: STATUS_COLORS[status] ?? 'var(--color-muted)' }}
+                  style={{ background: STATUS_COLORS[status as keyof typeof STATUS_COLORS] ?? 'var(--color-muted)' }}
                 />
                 {status} ({count})
               </span>

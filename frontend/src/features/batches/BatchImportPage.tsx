@@ -334,7 +334,7 @@ export function BatchImportPage() {
           <div className="flex items-center justify-between mb-3 gap-4">
             <div className="flex items-center gap-3 text-sm text-[var(--color-muted)]">
               <span>{parsed.batches.length} batches</span>
-              {doneCount > 0 && <span className="text-green-600">{doneCount} imported</span>}
+              {doneCount > 0 && <span className="text-[var(--color-success)]">{doneCount} imported</span>}
             </div>
             <div className="flex items-center gap-2">
               <input
@@ -401,7 +401,7 @@ export function BatchImportPage() {
                       <td className="p-2 text-xs text-[var(--color-muted)] capitalize">{mapBfStatus(bfStatus)}</td>
                       <td className="p-2 text-[var(--color-muted)]">{bd || '—'}</td>
                       <td className="p-2 text-center text-xs">
-                        {status === 'done' && <span className="text-green-600">✓</span>}
+                        {status === 'done' && <span className="text-[var(--color-success)]">✓</span>}
                         {status === 'importing' && <span className="text-[var(--color-muted)]">…</span>}
                         {status === 'error' && (
                           <span className="text-[var(--color-danger)]" title={statusErrors[i]}>✗</span>

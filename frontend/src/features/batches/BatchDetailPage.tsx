@@ -117,7 +117,7 @@ export function BatchDetailPage() {
 
   if (isError) {
     return (
-      <div className="p-4 rounded border border-[var(--color-danger)] bg-red-50 text-[var(--color-danger)]">
+      <div className="p-4 rounded border border-[var(--color-danger)] bg-[var(--color-danger-bg)] text-[var(--color-danger)]">
         <p className="font-semibold">Failed to load batch.</p>
         <p className="text-sm mt-1">
           {error instanceof APIError ? error.message : error instanceof Error ? error.message : 'Unknown error'}
@@ -215,7 +215,7 @@ export function BatchDetailPage() {
           </div>
 
           {transitionErrorMessage && (
-            <div className="mt-3 p-3 rounded border border-[var(--color-danger)] bg-red-50 text-[var(--color-danger)]">
+            <div className="mt-3 p-3 rounded border border-[var(--color-danger)] bg-[var(--color-danger-bg)] text-[var(--color-danger)]">
               <p className="text-sm font-semibold">{transitionErrorMessage}</p>
               {transitionDetails?.rule === 'insufficient_stock' && (
                 <p className="text-xs mt-1">

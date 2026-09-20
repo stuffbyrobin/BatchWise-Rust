@@ -61,7 +61,7 @@ export default function RecipesListPage() {
   if (isError) {
     return (
       <div className="p-4">
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+        <div className="bg-[var(--color-danger-bg)] border border-[var(--color-danger)] text-[var(--color-danger)] px-4 py-3 rounded">
           Error loading recipes: {(error as APIError).message}
         </div>
       </div>

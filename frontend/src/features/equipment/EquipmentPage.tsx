@@ -317,7 +317,7 @@ function EquipmentRow({ equipment }: { equipment: Equipment }) {
         </td>
         <td className="pr-3">{equipment.equipment_type}</td>
         <td className="pr-3">
-          <span className={equipment.status === 'retired' ? 'text-[var(--color-muted)]' : 'text-green-600'}>
+          <span className={equipment.status === 'retired' ? 'text-[var(--color-muted)]' : 'text-[var(--color-success)]'}>
             {equipment.status}
           </span>
         </td>

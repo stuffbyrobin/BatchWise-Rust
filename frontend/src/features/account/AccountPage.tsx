@@ -212,7 +212,7 @@ export function AccountPage() {
             />
           </div>
           {profileMsg && (
-            <p className={`text-xs mb-3 ${profileMsg.ok ? 'text-green-600' : 'text-[var(--color-danger)]'}`}>
+            <p className={`text-xs mb-3 ${profileMsg.ok ? 'text-[var(--color-success)]' : 'text-[var(--color-danger)]'}`}>
               {profileMsg.text}
             </p>
           )}
@@ -244,7 +244,7 @@ export function AccountPage() {
             <input id="confirmPw" type="password" className={inputCls} value={confirmPw} onChange={(e) => setConfirmPw(e.target.value)} required autoComplete="new-password" />
           </div>
           {pwMsg && (
-            <p className={`text-xs mb-3 ${pwMsg.ok ? 'text-green-600' : 'text-[var(--color-danger)]'}`}>
+            <p className={`text-xs mb-3 ${pwMsg.ok ? 'text-[var(--color-success)]' : 'text-[var(--color-danger)]'}`}>
               {pwMsg.text}
             </p>
           )}
@@ -293,7 +293,7 @@ export function AccountPage() {
             </select>
           </div>
           {breweryMsg && (
-            <p className={`text-xs mb-3 ${breweryMsg.ok ? 'text-green-600' : 'text-[var(--color-danger)]'}`}>
+            <p className={`text-xs mb-3 ${breweryMsg.ok ? 'text-[var(--color-success)]' : 'text-[var(--color-danger)]'}`}>
               {breweryMsg.text}
             </p>
           )}
@@ -334,7 +334,7 @@ export function AccountPage() {
             </p>
           </div>
           {orderNumMsg && (
-            <p className={`text-xs mb-3 ${orderNumMsg.ok ? 'text-green-600' : 'text-[var(--color-danger)]'}`}>
+            <p className={`text-xs mb-3 ${orderNumMsg.ok ? 'text-[var(--color-success)]' : 'text-[var(--color-danger)]'}`}>
               {orderNumMsg.text}
             </p>
           )}
@@ -370,7 +370,7 @@ export function AccountPage() {
             />
           </div>
           {addressMsg && (
-            <p className={`text-xs mb-3 ${addressMsg.ok ? 'text-green-600' : 'text-[var(--color-danger)]'}`}>
+            <p className={`text-xs mb-3 ${addressMsg.ok ? 'text-[var(--color-success)]' : 'text-[var(--color-danger)]'}`}>
               {addressMsg.text}
             </p>
           )}
@@ -414,7 +414,7 @@ export function AccountPage() {
               </p>
             </div>
             {sbrMsg && (
-              <p className={`text-xs mb-3 ${sbrMsg.ok ? 'text-green-600' : 'text-[var(--color-danger)]'}`}>
+              <p className={`text-xs mb-3 ${sbrMsg.ok ? 'text-[var(--color-success)]' : 'text-[var(--color-danger)]'}`}>
                 {sbrMsg.text}
               </p>
             )}

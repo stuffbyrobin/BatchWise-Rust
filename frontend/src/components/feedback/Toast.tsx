@@ -42,7 +42,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
             }}
             className={`rounded p-4 shadow-lg border ${
               t.variant === 'destructive'
-                ? 'bg-[var(--color-danger)] text-white border-red-700'
+                ? 'bg-[var(--color-danger)] text-white border-[var(--color-danger)]'
                 : 'bg-[var(--color-surface)] text-[var(--color-fg)] border-[var(--color-border)]'
             }`}
           >

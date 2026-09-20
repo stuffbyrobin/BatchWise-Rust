@@ -128,7 +128,7 @@ export function LabelDesignEditorPage() {
         </Link>
       </div>
 
-      {err && <p className="text-sm text-red-600 mb-3">{err}</p>}
+      {err && <p className="text-sm text-[var(--color-danger)] mb-3">{err}</p>}
 
       <div className="grid grid-cols-2 gap-6">
         {/* ── form ── */}
@@ -291,7 +291,7 @@ function Preview({ id }: { id: string }) {
   if (error) {
     return (
       <div className="border rounded p-4 text-sm" style={{ borderColor: 'var(--color-border)' }}>
-        <p className="text-red-600">{error.message}</p>
+        <p className="text-[var(--color-danger)]">{error.message}</p>
         <p className="text-[var(--color-muted)] mt-1">
           Compliance labels require an approved label record for the batch.
         </p>
@@ -350,7 +350,7 @@ function Preview({ id }: { id: string }) {
           Print
         </button>
       </div>
-      {pdfErr && <p className="text-xs text-red-600 text-center">{pdfErr}</p>}
+      {pdfErr && <p className="text-xs text-[var(--color-danger)] text-center">{pdfErr}</p>}
     </div>
   )
 }
