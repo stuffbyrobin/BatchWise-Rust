@@ -41,7 +41,7 @@ export function LabelDesignsPage() {
       </div>
 
       {isLoading && <p className="text-sm text-[var(--color-muted)]">Loading…</p>}
-      {error && <p className="text-sm text-red-600">{error.message}</p>}
+      {error && <p className="text-sm text-[var(--color-danger)]">{error.message}</p>}
 
       {data && data.items && data.items.length === 0 && (
         <p className="text-sm text-[var(--color-muted)]">
@@ -75,7 +75,7 @@ export function LabelDesignsPage() {
                       onClick={async () => {
                         if (d.id && (await confirm({ title: 'Delete this design?', confirmLabel: 'Delete', destructive: true }))) del.mutate(d.id)
                       }}
-                      className="text-red-600 text-xs"
+                      className="text-[var(--color-danger)] text-xs"
                     >
                       Delete
                     </button>

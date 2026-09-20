@@ -13,8 +13,8 @@ type YeastBankEntry = components['schemas']['YeastBankEntry']
 type Propagation = components['schemas']['Propagation']
 
 const STATUS_COLORS: Record<string, string> = {
-  active: 'text-green-600',
-  depleted: 'text-yellow-600',
+  active: 'text-[var(--color-success)]',
+  depleted: 'text-[var(--color-warning)]',
   discarded: 'text-[var(--color-muted)]',
 }
 
@@ -284,10 +284,10 @@ function EntryRow({ entry }: { entry: YeastBankEntry }) {
           {canWrite && (
           <>
           {!isDiscarded && entry.status !== 'active' && (
-            <button className="hover:underline text-green-600" onClick={() => setStatus('active')}>Active</button>
+            <button className="hover:underline text-[var(--color-success)]" onClick={() => setStatus('active')}>Active</button>
           )}
           {!isDiscarded && entry.status !== 'depleted' && (
-            <button className="hover:underline text-yellow-600" onClick={() => setStatus('depleted')}>Depleted</button>
+            <button className="hover:underline text-[var(--color-warning)]" onClick={() => setStatus('depleted')}>Depleted</button>
           )}
           {!isDiscarded && (
             <button className="hover:underline text-[var(--color-muted)]" onClick={() => setStatus('discarded')}>Discard</button>

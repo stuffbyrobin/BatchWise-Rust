@@ -117,7 +117,7 @@ export const HopRow = memo(function HopRow({ row, custom, options, ibuMethod, ba
         {ibu > 0 ? ibu.toFixed(1) : '—'}
       </td>
       <td className="px-3 py-2">
-        <button type="button" onClick={() => onRemove(uid)} className="text-red-600 hover:underline">
+        <button type="button" onClick={() => onRemove(uid)} className="text-[var(--color-danger)] hover:underline">
           Remove
         </button>
       </td>

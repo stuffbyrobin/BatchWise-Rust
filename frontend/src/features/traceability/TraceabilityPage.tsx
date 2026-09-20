@@ -86,19 +86,19 @@ function BackwardTraceView({ trace }: { trace: BackwardTrace }) {
 
 function RecallScopeView({ scope, lotNumber }: { scope: RecallScope; lotNumber: string }) {
   return (
-    <div className="mt-4 border border-red-200 rounded p-4 bg-red-50">
-      <h3 className="font-semibold text-sm text-red-700 mb-2">Recall Scope — {lotNumber}</h3>
+    <div className="mt-4 border border-[var(--color-danger)] rounded p-4 bg-[var(--color-danger-bg)]">
+      <h3 className="font-semibold text-sm text-[var(--color-danger)] mb-2">Recall Scope — {lotNumber}</h3>
       <div className="grid grid-cols-3 gap-3 mb-3 text-sm">
         <div className="text-center">
-          <p className="text-2xl font-bold text-red-600">{scope.affected_batches}</p>
+          <p className="text-2xl font-bold text-[var(--color-danger)]">{scope.affected_batches}</p>
           <p className="text-xs text-[var(--color-muted)]">Batches</p>
         </div>
         <div className="text-center">
-          <p className="text-2xl font-bold text-red-600">{scope.affected_packaging_runs}</p>
+          <p className="text-2xl font-bold text-[var(--color-danger)]">{scope.affected_packaging_runs}</p>
           <p className="text-xs text-[var(--color-muted)]">Packaging Runs</p>
         </div>
         <div className="text-center">
-          <p className="text-2xl font-bold text-red-600">{scope.affected_orders}</p>
+          <p className="text-2xl font-bold text-[var(--color-danger)]">{scope.affected_orders}</p>
           <p className="text-xs text-[var(--color-muted)]">Orders</p>
         </div>
       </div>
@@ -161,7 +161,7 @@ function IngredientLotTab() {
         <>
           <ForwardTraceView trace={traceQ.data} />
           <button
-            className="mt-3 px-3 py-1.5 rounded border border-red-400 text-red-600 text-sm hover:bg-red-50"
+            className="mt-3 px-3 py-1.5 rounded border border-[var(--color-danger)] text-[var(--color-danger)] text-sm hover:bg-[var(--color-danger-bg)]"
             onClick={() => setShowRecall((x) => !x)}
           >
             {showRecall ? 'Hide Recall' : 'Show Recall Scope'}

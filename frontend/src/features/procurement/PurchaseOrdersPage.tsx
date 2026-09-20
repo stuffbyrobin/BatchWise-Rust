@@ -311,7 +311,7 @@ function PORow({ po }: { po: PurchaseOrder }) {
             ))}
             {canWrite && canReceive && (
               <button
-                className="text-xs px-2 py-0.5 rounded bg-green-600 text-white hover:opacity-90"
+                className="text-xs px-2 py-0.5 rounded bg-[var(--color-success)] text-white hover:opacity-90"
                 onClick={() => { setShowReceive((x) => !x); setExpanded(true) }}
               >
                 Receive

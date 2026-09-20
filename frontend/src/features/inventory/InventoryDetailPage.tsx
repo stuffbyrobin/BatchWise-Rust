@@ -104,7 +104,7 @@ export function InventoryDetailPage() {
 
   if (isLoadError) {
     return (
-      <div className="p-4 rounded border border-[var(--color-danger)] bg-red-50 text-[var(--color-danger)]">
+      <div className="p-4 rounded border border-[var(--color-danger)] bg-[var(--color-danger-bg)] text-[var(--color-danger)]">
         <p className="font-semibold">Failed to load lot.</p>
         <p className="text-sm mt-1">
           {loadError instanceof APIError ? loadError.message : loadError instanceof Error ? loadError.message : 'Unknown error'}
@@ -155,7 +155,7 @@ export function InventoryDetailPage() {
       </div>
 
       {(isUpdateError || isStockInError) && (
-        <div className="mb-4 p-4 rounded border border-[var(--color-danger)] bg-red-50 text-[var(--color-danger)]">
+        <div className="mb-4 p-4 rounded border border-[var(--color-danger)] bg-[var(--color-danger-bg)] text-[var(--color-danger)]">
           <p className="font-semibold">Error</p>
           <p className="text-sm mt-1">
             {updateError instanceof APIError ? updateError.message : updateError instanceof Error ? updateError.message : ''}

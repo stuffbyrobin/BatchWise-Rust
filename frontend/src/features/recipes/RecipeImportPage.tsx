@@ -255,7 +255,7 @@ export default function RecipeImportPage() {
           <div className="flex items-center justify-between mb-3 gap-4">
             <div className="flex items-center gap-3 text-sm text-[var(--color-muted)]">
               <span>{recipeList.length} recipes</span>
-              {doneCount > 0 && <span className="text-green-600">{doneCount} imported</span>}
+              {doneCount > 0 && <span className="text-[var(--color-success)]">{doneCount} imported</span>}
               {errorCount > 0 && (
                 <span className="text-[var(--color-danger)]">{errorCount} skipped</span>
               )}
@@ -323,7 +323,7 @@ export default function RecipeImportPage() {
                       <td className="p-2 text-[var(--color-muted)]">{type}</td>
                       <td className="p-2 text-right text-[var(--color-muted)]">{batchSize}</td>
                       <td className="p-2 text-center text-xs">
-                        {status === 'done' && <span className="text-green-600">✓</span>}
+                        {status === 'done' && <span className="text-[var(--color-success)]">✓</span>}
                         {status === 'importing' && <span className="text-[var(--color-muted)]">…</span>}
                         {status === 'error' && (
                           <span className="text-[var(--color-danger)]" title={statusErrors[i]}>✗</span>

@@ -195,7 +195,7 @@ export function InventoryImportPage() {
             <div className="flex items-center gap-4 text-sm">
               <span className="text-[var(--color-fg)]">{rows.length} rows</span>
               {invalidRows > 0 && <span className="text-[var(--color-danger)]">{invalidRows} need fixing</span>}
-              {done && <span className="text-green-600">{imported} imported</span>}
+              {done && <span className="text-[var(--color-success)]">{imported} imported</span>}
               {done && failed > 0 && <span className="text-[var(--color-danger)]">{failed} failed</span>}
             </div>
             {!done ? (
@@ -254,7 +254,7 @@ export function InventoryImportPage() {
                       }}
                     >
                       <td className="p-2 text-center w-6 shrink-0">
-                        {isOk && <span className="text-green-600">&#10003;</span>}
+                        {isOk && <span className="text-[var(--color-success)]">&#10003;</span>}
                         {hasError && <span className="text-[var(--color-danger)]">&#10007;</span>}
                       </td>
 

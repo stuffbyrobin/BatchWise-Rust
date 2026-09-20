@@ -151,7 +151,7 @@ function IngredientsEditor({ batch, canEdit, ibuMethod, batchOg, batchVolL }: {
         {canEdit && (
           <div className="flex items-center gap-3">
             {saveError && <span className="text-xs text-[var(--color-danger)]">{saveError}</span>}
-            {saved && <span className="text-xs text-green-600">Saved</span>}
+            {saved && <span className="text-xs text-[var(--color-success)]">Saved</span>}
             <button
               onClick={handleSave}
               disabled={patchMut.isPending}

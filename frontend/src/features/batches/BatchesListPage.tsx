@@ -78,7 +78,7 @@ export function BatchesListPage() {
       </div>
 
       {isError && (
-        <div className="p-4 rounded border border-[var(--color-danger)] bg-red-50 text-[var(--color-danger)] mb-4">
+        <div className="p-4 rounded border border-[var(--color-danger)] bg-[var(--color-danger-bg)] text-[var(--color-danger)] mb-4">
           <p className="font-semibold">Failed to load batches.</p>
           <p className="text-sm mt-1">
             {error instanceof APIError ? error.message : error instanceof Error ? error.message : 'Unknown error'}

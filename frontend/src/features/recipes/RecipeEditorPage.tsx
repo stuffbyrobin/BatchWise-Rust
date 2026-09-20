@@ -305,7 +305,7 @@ export default function RecipeEditorPage() {
   if (isLoadError) {
     return (
       <div className="p-4">
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+        <div className="bg-[var(--color-danger-bg)] border border-[var(--color-danger)] text-[var(--color-danger)] px-4 py-3 rounded">
           Error loading recipe: {(loadError as APIError).message}
         </div>
       </div>
@@ -332,7 +332,7 @@ export default function RecipeEditorPage() {
       ) : (
         <>
           {errorMsg && (
-            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+            <div className="bg-[var(--color-danger-bg)] border border-[var(--color-danger)] text-[var(--color-danger)] px-4 py-3 rounded mb-4">
               {errorMsg}
             </div>
           )}
@@ -699,7 +699,7 @@ export default function RecipeEditorPage() {
               <button
                 onClick={handleSave}
                 disabled={!name || !batchSizeLiters || isSaving}
-                className="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="bg-[var(--color-accent)] text-white px-6 py-2 rounded hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isSaving ? 'Saving...' : 'Save'}
               </button>

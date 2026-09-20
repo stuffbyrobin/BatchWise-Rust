@@ -185,7 +185,7 @@ export const CostReportsPage: React.FC = () => {
 
   if (isError) {
     return (
-      <div className="p-4 border border-red-500 rounded bg-[var(--color-surface)]">
+      <div className="p-4 border border-[var(--color-danger)] rounded bg-[var(--color-danger-bg)]">
         <p className="text-[var(--color-danger)]">{error instanceof APIError ? error.message : 'Unknown error'}</p>
         <button onClick={() => refetch()} className="mt-2 px-4 py-2 rounded text-sm bg-[var(--color-accent)] text-white hover:opacity-90">
           Retry

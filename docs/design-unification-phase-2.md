@@ -98,10 +98,15 @@ page in its own right, not just inheriting whatever the shared tokens give it.
 
 ## Proposed phases
 
-- **Phase A — tokenize hardcoded danger/success colours + fix the batch
+- [x] **Phase A — tokenize hardcoded danger/success colours + fix the batch
   status-colour duplication.** Mechanical, scriptable, no visual-taste calls,
   and it fixes a real (if small) dark-mode bug and a real data-inconsistency
-  bug. Lowest risk, good first step.
+  bug. Lowest risk, good first step. (32 files: every raw `bg-red-*`/`text-red-*`/
+  `text-green-*`/`text-yellow-*` used for danger/success/warning semantics now
+  reads `--color-danger`/`--color-success`/`--color-warning`; `DashboardPage`
+  imports the batch-status colour map from `useBatches.ts` instead of keeping
+  its own, divergent copy. `CostReportsPage`'s categorical cost-breakdown
+  legend was left alone, per Phase E below.)
 - **Phase B — the shared `Badge` component**, migrating the five to seven
   existing status-badge implementations onto it.
 - **Phase C — the `Panel`/`Card` treatment**, applied to the ~30 list pages'
