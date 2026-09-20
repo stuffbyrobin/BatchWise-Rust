@@ -29,11 +29,15 @@
   --color-accent: var(--lp-malt-deep); --color-accent-soft: var(--lp-malt);
   --color-danger: var(--lp-alert); --color-success: var(--lp-hop); --color-warning: var(--srm-4);
   --color-success-bg: rgba(106, 139, 58, 0.12); --color-danger-bg: rgba(192, 83, 60, 0.10); --color-warning-bg: rgba(180, 120, 40, 0.12);
+  /* Badge tones with no dedicated brand colour: info reuses the accent
+     (the landing page has no separate "blue"), neutral reuses muted grey. */
+  --color-info-bg: rgba(163, 101, 29, 0.12); --color-neutral-bg: rgba(107, 99, 87, 0.12);
 }
 @media (prefers-color-scheme: dark) {
   :root {
     --color-bg: #1a0c05; --color-fg: #faf7ef; --color-surface: #2c1a10;
     --color-border: #4a3424; --color-muted: #b0a597;
     --color-success-bg: rgba(106, 139, 58, 0.28); --color-danger-bg: rgba(192, 83, 60, 0.30); --color-warning-bg: rgba(180, 120, 40, 0.28);
+    --color-info-bg: rgba(163, 101, 29, 0.28); --color-neutral-bg: rgba(176, 165, 151, 0.20);
   }
 }

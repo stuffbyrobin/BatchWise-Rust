@@ -3,6 +3,7 @@ import { useAuditEvents } from './hooks/useAudit'
 import type { AuditParams } from './hooks/useAudit'
 import type { components } from '../../api/generated'
 import { SortableHeader } from '../../components/ui/SortableHeader'
+import { Badge, type BadgeTone } from '../../components/ui/Badge'
 
 type AuditEvent = components['schemas']['AuditEvent']
 
@@ -30,11 +31,11 @@ const ENTITY_TYPES = [
   'ingredient_lot',
 ]
 
-function eventBadgeClass(eventType: string): string {
-  if (eventType.endsWith('.deleted')) return 'bg-red-100 text-red-800'
-  if (eventType.endsWith('.approved') || eventType.endsWith('.submitted')) return 'bg-green-100 text-green-800'
-  if (eventType.endsWith('.created')) return 'bg-blue-100 text-blue-800'
-  return 'bg-gray-100 text-gray-700'
+function eventBadgeTone(eventType: string): BadgeTone {
+  if (eventType.endsWith('.deleted')) return 'negative'
+  if (eventType.endsWith('.approved') || eventType.endsWith('.submitted')) return 'positive'
+  if (eventType.endsWith('.created')) return 'info'
+  return 'neutral'
 }
 
 function truncateUUID(id: string | null | undefined): string {
@@ -60,9 +61,9 @@ function EventRow({ event }: { event: AuditEvent }) {
           {event.created_at ? new Date(event.created_at).toLocaleString() : '—'}
         </td>
         <td className="px-4 py-2">
-          <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${eventBadgeClass(event.event_type ?? '')}`}>
+          <Badge tone={eventBadgeTone(event.event_type ?? '')}>
             {event.event_type}
-          </span>
+          </Badge>
         </td>
         <td className="px-4 py-2 text-sm text-[var(--color-fg)]">{event.entity_type}</td>
         <td className="px-4 py-2 text-xs text-[var(--color-muted)] font-mono">{truncateUUID(event.entity_id)}</td>
