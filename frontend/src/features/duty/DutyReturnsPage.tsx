@@ -4,6 +4,7 @@ import { useDutyReturns, useCompileDutyReturn, usePatchDutyReturn } from './hook
 import type { components } from '../../api/generated'
 import { fmtDate, fmtPence } from '../../utils/format'
 import { useCanWrite } from '../../auth/useCan'
+import { Badge } from '../../components/ui/Badge'
 
 type DutyReturn = components['schemas']['DutyReturn']
 
@@ -180,15 +181,7 @@ export function DutyReturnsPage() {
                       </td>
                       <td className="py-2 pr-4 font-semibold">{fmtPence(r.net_duty_pence)}</td>
                       <td className="py-2 pr-4">
-                        <span
-                          className={`px-2 py-0.5 rounded text-xs font-medium ${
-                            r.status === 'submitted'
-                              ? 'bg-green-100 text-green-700'
-                              : 'bg-yellow-100 text-yellow-700'
-                          }`}
-                        >
-                          {r.status}
-                        </span>
+                        <Badge tone={r.status === 'submitted' ? 'positive' : 'warning'}>{r.status}</Badge>
                       </td>
                       <td className="py-2">
                         <SubmitButton ret={r} />

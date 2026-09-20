@@ -107,8 +107,18 @@ page in its own right, not just inheriting whatever the shared tokens give it.
   imports the batch-status colour map from `useBatches.ts` instead of keeping
   its own, divergent copy. `CostReportsPage`'s categorical cost-breakdown
   legend was left alone, per Phase E below.)
-- **Phase B — the shared `Badge` component**, migrating the five to seven
-  existing status-badge implementations onto it.
+- [x] **Phase B — the shared `Badge` component**, migrating the five to seven
+  existing status-badge implementations onto it. (`components/ui/Badge.tsx`:
+  one component, five tones — neutral/info/positive/warning/negative — built
+  on the app's own tokens (two new ones, `--color-info-bg` and
+  `--color-neutral-bg`, since neither existed; `info` reuses the brand accent
+  rather than an unrelated blue). Migrated Purchase Orders, Label Records,
+  Compliance Audit, Duty Returns and Container Assets onto it, including
+  standardising Container Assets' solid-fill badges to the same soft-tint
+  pill shape the others use — and that the landing page's own hero mockup
+  already uses for its "FERMENTING" badge. `AllergenBadges` was deliberately
+  left alone: a food-safety warning is meant to read louder than a routine
+  status.)
 - **Phase C — the `Panel`/`Card` treatment**, applied to the ~30 list pages'
   filter boxes and table containers. The single biggest visual lift toward
   "looks like the landing page."

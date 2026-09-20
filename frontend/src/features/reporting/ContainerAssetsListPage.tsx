@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useContainerAssetsList, CONTAINER_TYPES } from './hooks/useContainerAssets'
 import { APIError } from '../../api/error'
 import { Skeleton } from '../../components/ui/Skeleton'
+import { Badge, type BadgeTone } from '../../components/ui/Badge'
 import { useCanWrite } from '../../auth/useCan'
 
 export function ContainerAssetsListPage() {
@@ -18,12 +19,12 @@ export function ContainerAssetsListPage() {
 
   const totalPages = data?.total_pages || 1
 
-  const getStatusBadge = (status: string) => {
-    const baseClass = 'px-2 py-1 rounded text-xs'
-    if (status === 'lost') return <span className={baseClass + ' bg-[var(--color-danger)] text-white'}>{status}</span>
-    if (status === 'filled' || status === 'delivered') return <span className={baseClass + ' bg-[var(--color-success)] text-white'}>{status}</span>
-    return <span className={baseClass + ' bg-[var(--color-border)] text-[var(--color-muted)]'}>{status}</span>
+  const statusTone = (status: string): BadgeTone => {
+    if (status === 'lost') return 'negative'
+    if (status === 'filled' || status === 'delivered') return 'positive'
+    return 'neutral'
   }
+  const getStatusBadge = (status: string) => <Badge tone={statusTone(status)}>{status}</Badge>
 
   const formatDeposit = (pence: number | null | undefined) => {
     if (!pence) return '-'

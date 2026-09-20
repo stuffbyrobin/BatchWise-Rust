@@ -2,6 +2,7 @@ import React from 'react'
 import { APIError } from '../../api/error'
 import { useLabelRecords, useCreateLabelRecord, usePatchLabelRecord, useDeleteLabelRecord } from './hooks/useLabels'
 import { AllergenBadges } from '../../components/AllergenBadges'
+import { Badge } from '../../components/ui/Badge'
 import type { components } from '../../api/generated'
 import { fmtDate } from '../../utils/format'
 import { useCanWrite, useIsManager } from '../../auth/useCan'
@@ -9,13 +10,7 @@ import { useCanWrite, useIsManager } from '../../auth/useCan'
 type LabelRecord = components['schemas']['LabelRecord']
 
 function StatusBadge({ status }: { status: string }) {
-  const cls =
-    status === 'approved'
-      ? 'bg-green-100 text-green-700'
-      : 'bg-yellow-100 text-yellow-700'
-  return (
-    <span className={`px-2 py-0.5 rounded text-xs font-medium ${cls}`}>{status}</span>
-  )
+  return <Badge tone={status === 'approved' ? 'positive' : 'warning'}>{status}</Badge>
 }
 
 function ApproveButton({ rec }: { rec: LabelRecord }) {

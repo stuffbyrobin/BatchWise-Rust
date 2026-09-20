@@ -10,6 +10,7 @@ import type { components } from '../../api/generated'
 import { fmtDate } from '../../utils/format'
 import { inputCls } from '../../components/ui/styles'
 import { useCanWrite } from '../../auth/useCan'
+import { Badge, type BadgeTone } from '../../components/ui/Badge'
 
 type Supplier = components['schemas']['Supplier']
 
@@ -24,16 +25,16 @@ function fmtGBP(pence: number | null | undefined): string {
   return `£${(pence / 100).toFixed(2)}`
 }
 
+const STATUS_TONES: Record<string, BadgeTone> = {
+  draft: 'neutral',
+  sent: 'info',
+  partially_received: 'warning',
+  received: 'positive',
+  cancelled: 'negative',
+}
+
 function StatusBadge({ status }: { status: string | null | undefined }) {
-  const colors: Record<string, string> = {
-    draft: 'bg-gray-100 text-gray-600',
-    sent: 'bg-blue-100 text-blue-700',
-    partially_received: 'bg-yellow-100 text-yellow-700',
-    received: 'bg-green-100 text-green-700',
-    cancelled: 'bg-red-100 text-red-600',
-  }
-  const cls = colors[status ?? ''] ?? 'bg-gray-100 text-gray-600'
-  return <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${cls}`}>{status ?? '—'}</span>
+  return <Badge tone={STATUS_TONES[status ?? ''] ?? 'neutral'}>{status ?? '—'}</Badge>
 }
 
 function LinesPanel({ po }: { po: PurchaseOrder }) {
